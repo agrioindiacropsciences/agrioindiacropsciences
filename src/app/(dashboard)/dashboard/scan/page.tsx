@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 import {
   QrCode,
   Keyboard,
@@ -13,6 +13,7 @@ import {
   Download,
   Sparkles,
   XCircle,
+  StopCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,9 +48,9 @@ export default function ScanPage() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const [cameraError, setCameraError] = useState<string>("");
+  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const qrCodeScannerRef = useRef<Html5Qrcode | null>(null);
-  const scannerElementId = "qr-reader";
+  const qrCodeRegionId = "qr-reader";
 
   // Detect mobile device
   useEffect(() => {
@@ -63,63 +64,6 @@ export default function ScanPage() {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // QR Code scanning using camera
-  const startCamera = async () => {
-    try {
-      setCameraError("");
-      setIsScanning(true);
-      
-      const html5QrCode = new Html5Qrcode(scannerElementId);
-      qrCodeScannerRef.current = html5QrCode;
-
-      await html5QrCode.start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-        },
-        (decodedText) => {
-          // QR Code detected
-          stopCamera();
-          verifyCoupon(decodedText);
-        },
-        (errorMessage) => {
-          // Ignore scan errors (they're frequent during scanning)
-        }
-      );
-    } catch (error: any) {
-      console.error("Camera error:", error);
-      setCameraError(
-        error.name === 'NotAllowedError' 
-          ? (language === "en" ? "Camera permission denied. Please allow camera access." : "कैमरा अनुमति अस्वीकृत। कृपया कैमरा पहुंच की अनुमति दें।")
-          : (language === "en" ? "Failed to access camera. Please try again." : "कैमरा तक पहुंचने में विफल। कृपया पुनः प्रयास करें।")
-      );
-      setIsScanning(false);
-    }
-  };
-
-  const stopCamera = async () => {
-    if (qrCodeScannerRef.current) {
-      try {
-        await qrCodeScannerRef.current.stop();
-        await qrCodeScannerRef.current.clear();
-      } catch (error) {
-        console.error("Error stopping camera:", error);
-      }
-      qrCodeScannerRef.current = null;
-    }
-    setIsScanning(false);
-  };
-
-  // Cleanup camera on unmount
-  useEffect(() => {
-    return () => {
-      if (qrCodeScannerRef.current) {
-        qrCodeScannerRef.current.stop().catch(() => {});
-      }
-    };
   }, []);
 
   // Initialize scratch canvas
@@ -260,8 +204,89 @@ export default function ScanPage() {
     verifyCoupon(manualCode);
   };
 
+  // Start QR Scanner
+  const startQRScanner = async () => {
+    if (isScanning) return;
+    
+    try {
+      setIsScanning(true);
+      const scanner = new Html5Qrcode(qrCodeRegionId);
+      qrCodeScannerRef.current = scanner;
+      
+      await scanner.start(
+        { facingMode: facingMode },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+        },
+        (decodedText) => {
+          // Success callback
+          handleQRScanSuccess(decodedText);
+        },
+        (errorMessage) => {
+          // Error callback - ignore, scanner will keep trying
+        }
+      );
+    } catch (error) {
+      console.error("QR Scanner error:", error);
+      setIsScanning(false);
+      toast({
+        title: language === "en" ? "Camera Error" : "कैमरा त्रुटि",
+        description: language === "en"
+          ? "Unable to access camera. Please check permissions."
+          : "कैमरा तक पहुंचने में असमर्थ। कृपया अनुमतियां जांचें।",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Stop QR Scanner
+  const stopQRScanner = async () => {
+    if (qrCodeScannerRef.current && isScanning) {
+      try {
+        await qrCodeScannerRef.current.stop();
+        await qrCodeScannerRef.current.clear();
+        qrCodeScannerRef.current = null;
+        setIsScanning(false);
+      } catch (error) {
+        console.error("Error stopping scanner:", error);
+        setIsScanning(false);
+      }
+    }
+  };
+
+  // Handle QR scan success
+  const handleQRScanSuccess = async (code: string) => {
+    await stopQRScanner();
+    verifyCoupon(code);
+  };
+
+  // Toggle camera
+  const toggleCamera = async () => {
+    await stopQRScanner();
+    setFacingMode(facingMode === "environment" ? "user" : "environment");
+    // Restart scanner with new facing mode
+    setTimeout(() => {
+      if (isMobile) {
+        startQRScanner();
+      }
+    }, 100);
+  };
+
+  // Cleanup scanner on unmount
+  useEffect(() => {
+    return () => {
+      if (qrCodeScannerRef.current) {
+        qrCodeScannerRef.current.stop().catch(() => {});
+        qrCodeScannerRef.current.clear().catch(() => {});
+      }
+    };
+  }, []);
+
   // Reset state
-  const resetScan = () => {
+  const resetScan = async () => {
+    await stopQRScanner();
     setState("idle");
     setManualCode("");
     setErrorMessage("");
@@ -356,40 +381,36 @@ export default function ScanPage() {
               <TabsContent value="scan">
                 <Card>
                   <CardContent className="p-6">
-                    {!isScanning ? (
-                      <>
-                        <div id={scannerElementId} className="aspect-square max-w-sm mx-auto rounded-xl bg-gray-900 flex items-center justify-center relative overflow-hidden">
+                    <div className="aspect-square max-w-sm mx-auto rounded-xl bg-gray-900 flex items-center justify-center relative overflow-hidden">
+                      <div id={qrCodeRegionId} className="w-full h-full" />
+                      {!isScanning && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-900/90">
                           <div className="text-center text-white">
                             <Camera className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                            <p className="text-sm opacity-70">
+                            <p className="text-sm opacity-70 mb-4">
                               {language === "en"
-                                ? "Click Start to scan QR code"
-                                : "QR कोड स्कैन करने के लिए Start पर क्लिक करें"}
+                                ? "Click Start to begin scanning"
+                                : "स्कैनिंग शुरू करने के लिए Start पर क्लिक करें"}
                             </p>
+                            <Button onClick={startQRScanner} size="lg">
+                              <Camera className="h-4 w-4 mr-2" />
+                              {language === "en" ? "Start Scanner" : "स्कैनर शुरू करें"}
+                            </Button>
                           </div>
                         </div>
-                        {cameraError && (
-                          <div className="mt-4 p-3 bg-destructive/10 text-destructive text-sm rounded-lg text-center">
-                            {cameraError}
-                          </div>
-                        )}
-                        <div className="flex gap-3 mt-4 justify-center">
-                          <Button onClick={startCamera} className="w-full sm:w-auto">
-                            <Camera className="h-4 w-4 mr-2" />
-                            {language === "en" ? "Start Camera" : "कैमरा शुरू करें"}
-                          </Button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div id={scannerElementId} className="aspect-square max-w-sm mx-auto rounded-xl overflow-hidden" />
-                        <div className="flex gap-3 mt-4 justify-center">
-                          <Button variant="outline" size="sm" onClick={stopCamera}>
-                            <XCircle className="h-4 w-4 mr-2" />
-                            {language === "en" ? "Stop Camera" : "कैमरा बंद करें"}
-                          </Button>
-                        </div>
-                      </>
+                      )}
+                    </div>
+                    {isScanning && (
+                      <div className="flex gap-3 mt-4 justify-center">
+                        <Button variant="outline" size="sm" onClick={toggleCamera}>
+                          <FlipHorizontal className="h-4 w-4 mr-2" />
+                          {language === "en" ? "Flip Camera" : "कैमरा बदलें"}
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={stopQRScanner}>
+                          <StopCircle className="h-4 w-4 mr-2" />
+                          {language === "en" ? "Stop Scanner" : "स्कैनर रोकें"}
+                        </Button>
+                      </div>
                     )}
                   </CardContent>
                 </Card>

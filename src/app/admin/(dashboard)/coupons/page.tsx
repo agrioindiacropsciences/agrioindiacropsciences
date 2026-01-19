@@ -366,11 +366,22 @@ export default function CouponsPage() {
                           variant="link" 
                           size="sm" 
                           className="text-primary"
-                          onClick={() => {
-                            toast({
-                              title: "Coupon Details",
-                              description: `Code: ${coupon.code}\nProduct: ${coupon.product?.name || "N/A"}\nReward: ${coupon.reward_type} - ${coupon.reward_value}\nStatus: ${coupon.is_used ? "Used" : "Unused"}\nRedeemed by: ${coupon.redeemed_by?.name || "N/A"}`,
-                            });
+                          onClick={async () => {
+                            try {
+                              const response = await api.getAdminCoupon(coupon.id);
+                              if (response.success && response.data) {
+                                toast({
+                                  title: "Coupon Details",
+                                  description: `Code: ${response.data.code}, Status: ${response.data.is_used ? 'Used' : 'Unused'}`,
+                                });
+                              }
+                            } catch (error) {
+                              toast({
+                                title: "Error",
+                                description: "Failed to load coupon details",
+                                variant: "destructive",
+                              });
+                            }
                           }}
                         >
                           View

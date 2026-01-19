@@ -33,7 +33,6 @@ import { Separator } from "@/components/ui/separator";
 import { useAdminStore } from "@/store/useStore";
 import { cn } from "@/lib/utils";
 import * as api from "@/lib/api";
-import { useToast } from "@/hooks/use-toast";
 
 const navItems = [
   { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -52,7 +51,6 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   const pathname = usePathname();
   const router = useRouter();
   const { admin, isAdminAuthenticated, adminLogout, setAdmin, setAdminAuthenticated } = useAdminStore();
-  const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
@@ -244,19 +242,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
             {/* Right: Actions */}
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" className="relative">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    // TODO: Implement notifications dropdown
-                    toast({
-                      title: "Notifications",
-                      description: "No new notifications",
-                    });
-                  }}
-                >
-                  <Bell className="h-5 w-5" />
-                </Button>
+                <Bell className="h-5 w-5" />
                 <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
               </Button>
 

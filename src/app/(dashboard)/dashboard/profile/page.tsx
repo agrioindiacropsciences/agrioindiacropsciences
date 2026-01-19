@@ -158,6 +158,9 @@ export default function ProfilePage() {
       const response = await api.updateAvatar(file);
       if (response.success && response.data) {
         setProfileImageUrl(response.data.profile_image_url);
+        if (user) {
+          setUser({ ...user, profileImageUrl: response.data.profile_image_url });
+        }
         toast({
           title: language === "en" ? "Avatar Updated!" : "अवतार अपडेट हो गया!",
           description: response.data.message || (language === "en" ? "Your profile picture has been updated" : "आपकी प्रोफ़ाइल तस्वीर अपडेट हो गई है"),
@@ -342,14 +345,12 @@ export default function ProfilePage() {
         <CardContent>
           <div className="flex items-start gap-6">
             {/* Avatar */}
-            <div className="relative">
-              <Avatar className="h-20 w-20">
+            <div className="relative group">
+              <Avatar className="h-24 w-24 border-4 border-primary/20">
                 {profileImageUrl ? (
-                  <div className="h-full w-full relative">
-                    <img src={profileImageUrl} alt={user.name} className="h-full w-full object-cover rounded-full" />
-                  </div>
+                  <img src={profileImageUrl} alt={user.name} className="h-full w-full object-cover" />
                 ) : (
-                  <AvatarFallback className="bg-primary text-white text-2xl">
+                  <AvatarFallback className="bg-primary text-white text-3xl">
                     {user.name.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 )}
@@ -365,18 +366,24 @@ export default function ProfilePage() {
               />
               <Button
                 type="button"
-                variant="outline"
+                variant="default"
                 size="sm"
-                className="absolute -bottom-2 -right-2 rounded-full h-8 w-8 p-0"
+                className="absolute -bottom-2 -right-2 rounded-full h-10 w-10 p-0 shadow-lg hover:scale-110 transition-transform"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploadingAvatar}
+                title={language === "en" ? "Change Profile Picture" : "प्रोफ़ाइल तस्वीर बदलें"}
               >
                 {isUploadingAvatar ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  <Camera className="h-4 w-4" />
+                  <Camera className="h-5 w-5" />
                 )}
               </Button>
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-full transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                <span className="text-white text-xs font-medium">
+                  {language === "en" ? "Click to change" : "बदलने के लिए क्लिक करें"}
+                </span>
+              </div>
             </div>
 
             {/* Form / Display */}

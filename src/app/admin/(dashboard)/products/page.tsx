@@ -71,8 +71,15 @@ export default function ProductsPage() {
     description: "",
     description_hi: "",
     composition: "",
+    dosage: "",
+    application_method: "",
     category_id: "",
     suitable_crops: [] as string[],
+    target_pests: [] as string[],
+    safety_precautions: [] as string[],
+    pack_sizes: [] as { size: string; sku: string; mrp: number; selling_price: number }[],
+    is_active: true,
+    is_best_seller: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -116,6 +123,129 @@ export default function ProductsPage() {
     });
   }, [products, searchQuery, categoryFilter]);
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setSelectedImages(files);
+      const previews = files.map(file => URL.createObjectURL(file));
+      setImagePreviews(previews);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      name_hi: "",
+      description: "",
+      description_hi: "",
+      composition: "",
+      dosage: "",
+      application_method: "",
+      category_id: "",
+      suitable_crops: [],
+      target_pests: [],
+      safety_precautions: [],
+      pack_sizes: [],
+      is_active: true,
+      is_best_seller: false,
+    });
+    setSelectedImages([]);
+    setImagePreviews([]);
+    setEditingProduct(null);
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setEditingProduct(product);
+    setFormData({
+      name: product.name || "",
+      name_hi: product.name_hi || "",
+      description: product.description || "",
+      description_hi: product.description_hi || "",
+      composition: product.composition || "",
+      dosage: product.dosage || "",
+      application_method: product.application_method || "",
+      category_id: product.category?.id || "",
+      suitable_crops: product.suitable_crops || [],
+      target_pests: product.target_pests || [],
+      safety_precautions: product.safety_precautions || [],
+      pack_sizes: product.pack_sizes || [],
+      is_active: product.is_active ?? true,
+      is_best_seller: product.is_best_seller ?? false,
+    });
+    setImagePreviews(product.images || []);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateProduct = async () => {
+    if (!editingProduct || !formData.name || !formData.category_id) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Create FormData for file upload
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      if (formData.name_hi) formDataToSend.append('name_hi', formData.name_hi);
+      if (formData.description) formDataToSend.append('description', formData.description);
+      if (formData.description_hi) formDataToSend.append('description_hi', formData.description_hi);
+      if (formData.composition) formDataToSend.append('composition', formData.composition);
+      if (formData.dosage) formDataToSend.append('dosage', formData.dosage);
+      if (formData.application_method) formDataToSend.append('application_method', formData.application_method);
+      formDataToSend.append('category_id', formData.category_id);
+      formDataToSend.append('is_active', String(formData.is_active));
+      formDataToSend.append('is_best_seller', String(formData.is_best_seller));
+      
+      if (formData.suitable_crops.length > 0) {
+        formDataToSend.append('suitable_crops', JSON.stringify(formData.suitable_crops));
+      }
+      if (formData.target_pests.length > 0) {
+        formDataToSend.append('target_pests', JSON.stringify(formData.target_pests));
+      }
+      if (formData.safety_precautions.length > 0) {
+        formDataToSend.append('safety_precautions', JSON.stringify(formData.safety_precautions));
+      }
+      if (formData.pack_sizes.length > 0) {
+        formDataToSend.append('pack_sizes', JSON.stringify(formData.pack_sizes));
+      }
+
+      // Add images
+      selectedImages.forEach(image => {
+        formDataToSend.append('images', image);
+      });
+
+      const response = await api.updateProductWithFiles(editingProduct.id, formDataToSend);
+
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "Product updated successfully",
+        });
+        setEditDialogOpen(false);
+        resetForm();
+        fetchData();
+      } else {
+        toast({
+          title: "Error",
+          description: response.error?.message || "Failed to update product",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong",
+        variant: "destructive",
+      });
+    }
+    setIsSubmitting(false);
+  };
+
   const handleCreateProduct = async () => {
     if (!formData.name || !formData.category_id) {
       toast({
@@ -128,21 +258,38 @@ export default function ProductsPage() {
 
     setIsSubmitting(true);
     try {
-      const images = (window as any).productImages || [];
-      const response = await api.createProduct({
-        name: formData.name,
-        name_hi: formData.name_hi,
-        description: formData.description,
-        description_hi: formData.description_hi,
-        composition: formData.composition,
-        category_id: formData.category_id,
-        suitable_crops: formData.suitable_crops,
-        dosage: "",
-        application_method: "",
-        pack_sizes: [],
-        is_active: true,
-        is_best_seller: false,
-      }, images);
+      // Create FormData for file upload
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      if (formData.name_hi) formDataToSend.append('name_hi', formData.name_hi);
+      if (formData.description) formDataToSend.append('description', formData.description);
+      if (formData.description_hi) formDataToSend.append('description_hi', formData.description_hi);
+      if (formData.composition) formDataToSend.append('composition', formData.composition);
+      if (formData.dosage) formDataToSend.append('dosage', formData.dosage);
+      if (formData.application_method) formDataToSend.append('application_method', formData.application_method);
+      formDataToSend.append('category_id', formData.category_id);
+      formDataToSend.append('is_active', String(formData.is_active));
+      formDataToSend.append('is_best_seller', String(formData.is_best_seller));
+      
+      if (formData.suitable_crops.length > 0) {
+        formDataToSend.append('suitable_crops', JSON.stringify(formData.suitable_crops));
+      }
+      if (formData.target_pests.length > 0) {
+        formDataToSend.append('target_pests', JSON.stringify(formData.target_pests));
+      }
+      if (formData.safety_precautions.length > 0) {
+        formDataToSend.append('safety_precautions', JSON.stringify(formData.safety_precautions));
+      }
+      if (formData.pack_sizes.length > 0) {
+        formDataToSend.append('pack_sizes', JSON.stringify(formData.pack_sizes));
+      }
+
+      // Add images
+      selectedImages.forEach(image => {
+        formDataToSend.append('images', image);
+      });
+
+      const response = await api.createProductWithFiles(formDataToSend);
 
       if (response.success) {
         toast({
@@ -150,16 +297,7 @@ export default function ProductsPage() {
           description: "Product created successfully",
         });
         setCreateDialogOpen(false);
-        setFormData({
-          name: "",
-          name_hi: "",
-          description: "",
-          description_hi: "",
-          composition: "",
-          category_id: "",
-          suitable_crops: [],
-        });
-        (window as any).productImages = [];
+        resetForm();
         fetchData();
       } else {
         toast({
@@ -189,8 +327,8 @@ export default function ProductsPage() {
           description: "Product deleted successfully",
         });
         // Remove from local state immediately
-        setProducts(prev => prev.filter(p => p.id !== id));
-        // Refresh data
+        setProducts(products.filter(p => p.id !== id));
+        // Refresh data from server
         fetchData();
       } else {
         toast({
@@ -334,20 +472,7 @@ export default function ProductsPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setFormData({
-                                  name: product.name,
-                                  name_hi: product.name_hi || "",
-                                  description: product.description || "",
-                                  description_hi: product.description_hi || "",
-                                  composition: product.composition || "",
-                                  category_id: product.category?.id || "",
-                                  suitable_crops: product.suitable_crops || [],
-                                });
-                                setCreateDialogOpen(true);
-                              }}
-                            >
+                            <DropdownMenuItem onClick={() => handleEditProduct(product)}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit Product
                             </DropdownMenuItem>
@@ -421,36 +546,47 @@ export default function ProductsPage() {
           <div className="grid md:grid-cols-2 gap-6">
             {/* Image Upload */}
             <div>
-              <Label className="mb-2 block">Product Image</Label>
+              <Label className="mb-2 block">Product Images</Label>
               <input
                 type="file"
                 accept="image/*"
                 multiple
-                id="product-image-upload"
+                onChange={handleImageSelect}
                 className="hidden"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files || []);
-                  if (files.length > 0) {
-                    // Store files for later use in form submission
-                    (window as any).productImages = files;
-                    toast({
-                      title: "Images Selected",
-                      description: `${files.length} image(s) selected. They will be uploaded when you save the product.`,
-                    });
-                  }
-                }}
+                id="product-images"
               />
-              <div 
-                className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-primary transition-colors"
-                onClick={() => document.getElementById('product-image-upload')?.click()}
+              <label
+                htmlFor="product-images"
+                className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-primary transition-colors block"
               >
                 <Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
                 <p className="text-sm font-medium">Click to upload</p>
                 <p className="text-xs text-muted-foreground">or drag and drop</p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  SVG, PNG, JPG or GIF. MAX. 800×400px
+                  PNG, JPG or GIF (Multiple images allowed)
                 </p>
-              </div>
+              </label>
+              {imagePreviews.length > 0 && (
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden border">
+                      <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newPreviews = imagePreviews.filter((_, i) => i !== index);
+                          const newImages = selectedImages.filter((_, i) => i !== index);
+                          setImagePreviews(newPreviews);
+                          setSelectedImages(newImages);
+                        }}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Product Information */}
@@ -522,6 +658,129 @@ export default function ProductsPage() {
             <Button onClick={handleCreateProduct} disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Save Product
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Product Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={(open) => { setEditDialogOpen(open); if (!open) resetForm(); }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+          </DialogHeader>
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Image Upload */}
+            <div>
+              <Label className="mb-2 block">Product Images</Label>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageSelect}
+                className="hidden"
+                id="edit-product-images"
+              />
+              <label
+                htmlFor="edit-product-images"
+                className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-primary transition-colors block"
+              >
+                <Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+                <p className="text-sm font-medium">Click to upload new images</p>
+                <p className="text-xs text-muted-foreground">or drag and drop</p>
+              </label>
+              {imagePreviews.length > 0 && (
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden border">
+                      <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newPreviews = imagePreviews.filter((_, i) => i !== index);
+                          const newImages = selectedImages.filter((_, i) => i !== index);
+                          setImagePreviews(newPreviews);
+                          setSelectedImages(newImages);
+                        }}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Product Information */}
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-productName">Product Name *</Label>
+                <Input 
+                  id="edit-productName" 
+                  placeholder="e.g., Agrio Boost" 
+                  className="mt-1"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-productNameHi">Product Name (Hindi)</Label>
+                <Input 
+                  id="edit-productNameHi" 
+                  placeholder="e.g., एग्रियो बूस्ट" 
+                  className="mt-1"
+                  value={formData.name_hi}
+                  onChange={(e) => setFormData({ ...formData, name_hi: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-composition">Technical Composition</Label>
+                <Input 
+                  id="edit-composition" 
+                  placeholder="e.g., NPK 20:20:20" 
+                  className="mt-1"
+                  value={formData.composition}
+                  onChange={(e) => setFormData({ ...formData, composition: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea
+                  id="edit-description"
+                  placeholder="Describe the product's primary uses..."
+                  className="mt-1"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-category">Category *</Label>
+                <Select 
+                  value={formData.category_id}
+                  onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setEditDialogOpen(false); resetForm(); }}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateProduct} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Update Product
             </Button>
           </DialogFooter>
         </DialogContent>

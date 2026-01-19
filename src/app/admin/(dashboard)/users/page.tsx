@@ -104,50 +104,24 @@ export default function UsersPage() {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const token = api.getAccessToken();
-      if (!token) {
-        toast({
-          title: "Error",
-          description: "Not authenticated",
-          variant: "destructive",
-        });
-        setIsExporting(false);
-        return;
-      }
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/admin/users/export`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      const blob = await api.exportUsers();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `users-export-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Successful",
+        description: "User data has been exported successfully.",
       });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `users-export-${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        toast({
-          title: "Export Successful",
-          description: "User data has been downloaded.",
-        });
-      } else {
-        const errorData = await response.json();
-        toast({
-          title: "Export Failed",
-          description: errorData.error?.message || "Unable to export users.",
-          variant: "destructive",
-        });
-      }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Something went wrong during export.",
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Unable to export users.",
         variant: "destructive",
       });
     }
@@ -285,8 +259,8 @@ export default function UsersPage() {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium">{user.name || "Unknown"}</p>
-                            <p className="text-sm text-muted-foreground">{user.email || "-"}</p>
+                            <p className="font-medium">{user.name || user.full_name || "Unknown"}</p>
+                            <p className="text-sm text-muted-foreground">{user.email || user.phone_number || "-"}</p>
                           </div>
                         </div>
                       </TableCell>
@@ -400,15 +374,15 @@ export default function UsersPage() {
                 </Avatar>
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-bold">{selectedUser.name || "Unknown"}</h3>
-                    <Badge variant={selectedUser.role === "SUSPENDED" ? "destructive" : "success"}>
-                      {selectedUser.role === "SUSPENDED" ? "Suspended" : "Active"}
+                    <h3 className="text-xl font-bold">{selectedUser.name || selectedUser.full_name || "Unknown"}</h3>
+                    <Badge variant={selectedUser.is_active === false ? "destructive" : "success"}>
+                      {selectedUser.is_active === false ? "Inactive" : "Active"}
                     </Badge>
                   </div>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>+91 {selectedUser.phone_number}</span>
+                      <span>+91 {selectedUser.phone_number || "N/A"}</span>
                     </div>
                     {selectedUser.pincode && (
                       <div className="flex items-center gap-2">
@@ -416,10 +390,25 @@ export default function UsersPage() {
                         <span>PIN: {selectedUser.pincode}</span>
                       </div>
                     )}
+                    {selectedUser.email && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">Email:</span>
+                        <span>{selectedUser.email}</span>
+                      </div>
+                    )}
+                    {selectedUser.full_address && (
+                      <div className="flex items-center gap-2 col-span-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span>{selectedUser.full_address}</span>
+                      </div>
+                    )}
+                    {selectedUser.state && selectedUser.district && (
+                      <div className="flex items-center gap-2 col-span-2">
+                        <span className="text-muted-foreground">Location:</span>
+                        <span>{selectedUser.district}, {selectedUser.state}</span>
+                      </div>
+                    )}
                   </div>
-                  {selectedUser.email && (
-                    <p className="text-sm text-muted-foreground mt-2">{selectedUser.email}</p>
-                  )}
                 </div>
               </div>
 

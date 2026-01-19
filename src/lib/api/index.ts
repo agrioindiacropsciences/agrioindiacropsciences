@@ -3,7 +3,7 @@
  * Updated to match Backend API v2.1
  */
 
-import { get, post, put, del, patch, patchFormData, setTokens, clearTokens, getAccessToken, ApiResponse } from './client';
+import { get, post, put, del, patch, patchFormData, setTokens, clearTokens, getAccessToken, ApiResponse, API_BASE_URL } from './client';
 import type * as T from './types';
 
 // Re-export types and utilities
@@ -466,30 +466,6 @@ async function adminGet<T>(endpoint: string): Promise<ApiResponse<T>> {
   }
 }
 
-async function adminPostFormData<T>(endpoint: string, formData: FormData): Promise<ApiResponse<T>> {
-  const token = getAdminToken();
-  if (!token) {
-    return { success: false, error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } };
-  }
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
-  const headers: HeadersInit = {
-    'Authorization': `Bearer ${token}`,
-  };
-  try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
-    return response.json();
-  } catch (error) {
-    return {
-      success: false,
-      error: { code: 'NETWORK_ERROR', message: error instanceof Error ? error.message : 'Network error' },
-    };
-  }
-}
-
 async function adminPost<T>(endpoint: string, body: unknown): Promise<ApiResponse<T>> {
   const token = getAdminToken();
   const headers: HeadersInit = {
@@ -561,6 +537,52 @@ async function adminDelete<T>(endpoint: string): Promise<ApiResponse<T>> {
   }
 }
 
+async function adminPostFormData<T>(endpoint: string, formData: FormData): Promise<ApiResponse<T>> {
+  const token = getAdminToken();
+  const headers: HeadersInit = {
+    ...(token && { 'Authorization': `Bearer ${token}` }),
+  };
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    return response.json();
+  } catch (error) {
+    return {
+      success: false,
+      error: { code: 'NETWORK_ERROR', message: error instanceof Error ? error.message : 'Network error' },
+    };
+  }
+}
+
+async function adminPutFormData<T>(endpoint: string, formData: FormData): Promise<ApiResponse<T>> {
+  const token = getAdminToken();
+  const headers: HeadersInit = {
+    ...(token && { 'Authorization': `Bearer ${token}` }),
+  };
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'PUT',
+      headers,
+      body: formData,
+    });
+    return response.json();
+  } catch (error) {
+    return {
+      success: false,
+      error: { code: 'NETWORK_ERROR', message: error instanceof Error ? error.message : 'Network error' },
+    };
+  }
+}
+
 // Admin Users
 export async function getAdminUsers(
   pageOrOptions: number | { page?: number; limit?: number; query?: string } = 1, 
@@ -588,8 +610,21 @@ export async function getAdminUserDetails(id: string): Promise<ApiResponse<T.Adm
   return adminGet<T.AdminUser>(`/admin/users/${id}`);
 }
 
-export async function exportUsers(): Promise<ApiResponse<unknown>> {
-  return adminGet<unknown>('/admin/users/export');
+export async function exportUsers(): Promise<Blob> {
+  const token = getAdminToken();
+  if (!token) throw new Error('Admin token not found');
+  
+  const response = await fetch(`${API_BASE_URL}/admin/users/export`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to export users');
+  }
+  
+  return response.blob();
 }
 
 export async function updateUserStatus(id: string, is_active: boolean): Promise<ApiResponse<null>> {
@@ -623,31 +658,20 @@ export async function getAdminProduct(id: string): Promise<ApiResponse<T.Product
   return adminGet<T.Product>(`/admin/products/${id}`);
 }
 
-export async function createProduct(data: T.CreateProductRequest, images: File[] = []): Promise<ApiResponse<T.Product>> {
-  if (images.length > 0) {
-    const formData = new FormData();
-    formData.append('name', data.name);
-    formData.append('name_hi', data.name_hi || '');
-    formData.append('category_id', data.category_id);
-    formData.append('description', data.description || '');
-    formData.append('description_hi', data.description_hi || '');
-    formData.append('composition', data.composition || '');
-    formData.append('dosage', data.dosage || '');
-    formData.append('application_method', data.application_method || '');
-    formData.append('is_best_seller', String(data.is_best_seller || false));
-    formData.append('is_active', String(data.is_active !== undefined ? data.is_active : true));
-    if (data.target_pests) formData.append('target_pests', JSON.stringify(data.target_pests));
-    if (data.suitable_crops) formData.append('suitable_crops', JSON.stringify(data.suitable_crops));
-    if (data.safety_precautions) formData.append('safety_precautions', JSON.stringify(data.safety_precautions));
-    if (data.pack_sizes) formData.append('pack_sizes', JSON.stringify(data.pack_sizes));
-    images.forEach(image => formData.append('images', image));
-    return adminPostFormData<T.Product>('/admin/products', formData);
-  }
+export async function createProduct(data: T.CreateProductRequest): Promise<ApiResponse<T.Product>> {
   return adminPost<T.Product>('/admin/products', data);
+}
+
+export async function createProductWithFiles(formData: FormData): Promise<ApiResponse<T.Product>> {
+  return adminPostFormData<T.Product>('/admin/products', formData);
 }
 
 export async function updateProduct(id: string, data: Partial<T.CreateProductRequest>): Promise<ApiResponse<T.Product>> {
   return adminPut<T.Product>(`/admin/products/${id}`, data);
+}
+
+export async function updateProductWithFiles(id: string, formData: FormData): Promise<ApiResponse<T.Product>> {
+  return adminPutFormData<T.Product>(`/admin/products/${id}`, formData);
 }
 
 export async function deleteProduct(id: string): Promise<ApiResponse<null>> {

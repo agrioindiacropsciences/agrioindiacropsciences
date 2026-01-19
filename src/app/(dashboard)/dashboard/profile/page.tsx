@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import Image from "next/image";
 import {
   User,
   Phone,
@@ -158,9 +159,6 @@ export default function ProfilePage() {
       const response = await api.updateAvatar(file);
       if (response.success && response.data) {
         setProfileImageUrl(response.data.profile_image_url);
-        if (user) {
-          setUser({ ...user, profileImageUrl: response.data.profile_image_url });
-        }
         toast({
           title: language === "en" ? "Avatar Updated!" : "अवतार अपडेट हो गया!",
           description: response.data.message || (language === "en" ? "Your profile picture has been updated" : "आपकी प्रोफ़ाइल तस्वीर अपडेट हो गई है"),
@@ -348,7 +346,13 @@ export default function ProfilePage() {
             <div className="relative group">
               <Avatar className="h-24 w-24 border-4 border-primary/20">
                 {profileImageUrl ? (
-                  <img src={profileImageUrl} alt={user.name} className="h-full w-full object-cover" />
+                  <Image 
+                    src={profileImageUrl} 
+                    alt={user.name} 
+                    width={96}
+                    height={96}
+                    className="h-full w-full object-cover rounded-full"
+                  />
                 ) : (
                   <AvatarFallback className="bg-primary text-white text-3xl">
                     {user.name.charAt(0).toUpperCase()}

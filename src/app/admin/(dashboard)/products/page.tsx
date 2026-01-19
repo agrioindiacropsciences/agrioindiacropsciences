@@ -570,7 +570,17 @@ export default function ProductsPage() {
                 <div className="mt-4 grid grid-cols-3 gap-2">
                   {imagePreviews.map((preview, index) => (
                     <div key={index} className="relative aspect-square rounded-lg overflow-hidden border">
-                      <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                      {preview.startsWith('blob:') || preview.startsWith('http') ? (
+                        <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                      ) : (
+                        <Image 
+                          src={preview} 
+                          alt={`Preview ${index + 1}`} 
+                          width={100}
+                          height={100}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => {
@@ -693,7 +703,17 @@ export default function ProductsPage() {
                 <div className="mt-4 grid grid-cols-3 gap-2">
                   {imagePreviews.map((preview, index) => (
                     <div key={index} className="relative aspect-square rounded-lg overflow-hidden border">
-                      <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                      {preview.startsWith('blob:') || preview.startsWith('http') ? (
+                        <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                      ) : (
+                        <Image 
+                          src={preview} 
+                          alt={`Preview ${index + 1}`} 
+                          width={100}
+                          height={100}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => {

@@ -188,7 +188,7 @@ export default function RewardsPage() {
                               </span>
                             </div>
                             <h3 className="font-semibold text-lg">
-                              ₹{reward.amount || reward.value || reward.prize?.value || 0}
+                              ₹{reward.amount || 0}
                             </h3>
                             <p className="text-sm text-muted-foreground">
                               {reward.product_name} • {formatDate(reward.won_at)}
@@ -217,8 +217,8 @@ export default function RewardsPage() {
                           <Button
                             variant={reward.status === "CLAIMED" ? "default" : "outline"}
                             size="sm"
-                            onClick={() => downloadCertificate(reward.id || reward.redemption_id || "")}
-                            disabled={!reward.id && !reward.redemption_id}
+                            onClick={() => downloadCertificate(reward.id)}
+                            disabled={!reward.id}
                           >
                             <Download className="h-4 w-4 mr-2" />
                             {language === "en" ? "Download Letter" : "पत्र डाउनलोड करें"}

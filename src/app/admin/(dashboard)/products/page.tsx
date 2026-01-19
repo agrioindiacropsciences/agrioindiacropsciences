@@ -571,6 +571,7 @@ export default function ProductsPage() {
                   {imagePreviews.map((preview, index) => (
                     <div key={index} className="relative aspect-square rounded-lg overflow-hidden border">
                       {preview.startsWith('blob:') || preview.startsWith('http') ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
                       ) : (
                         <Image 
@@ -704,6 +705,7 @@ export default function ProductsPage() {
                   {imagePreviews.map((preview, index) => (
                     <div key={index} className="relative aspect-square rounded-lg overflow-hidden border">
                       {preview.startsWith('blob:') || preview.startsWith('http') ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
                       ) : (
                         <Image 

@@ -133,58 +133,84 @@ export default function ScanPage() {
     }
   };
 
-  // Verify and redeem coupon code using API
+  // Verify and redeem coupon code using the same flow as manual code entry
   const verifyCoupon = async (code: string) => {
     setState("verifying");
     setErrorMessage("");
 
     try {
-      // Use the scan/redeem endpoint which combines verify and redeem
-      const response = await api.scanAndRedeem(code);
+      // 1) Verify coupon
+      const verifyRes = await api.verifyCoupon(code.toUpperCase());
 
-      if (response.success && response.data) {
-        const { reward, redemption } = response.data;
-        
-        setWonPrize({
-          name: reward.name,
-          name_hi: reward.name_hi,
-          type: reward.type,
-          value: reward.value,
-          image_url: reward.image_url,
-        });
-        setRedemptionId(redemption.id);
-        
-        // Add to rewards in store
-        addReward({
-          id: redemption.id,
-          couponCode: redemption.coupon_code,
-          prize: {
-            id: redemption.id,
-            name: reward.name,
-            nameHi: reward.name_hi,
-            description: "",
-            descriptionHi: "",
-            value: reward.value,
-            image: reward.image_url || "",
-            type: reward.type.toLowerCase() as any,
-          },
-          productName: "",
-          status: "pending",
-          wonAt: redemption.scanned_at,
-        });
-        
-        setState("scratch");
-      } else {
+      if (!verifyRes.success || !verifyRes.data || !verifyRes.data.is_valid) {
         setState("error");
         setErrorMessage(
-          response.error?.message || 
-          (language === "en" ? "Invalid coupon code. Please try again." : "अमान्य कूपन कोड। कृपया पुनः प्रयास करें।")
+          verifyRes.error?.message ||
+            (language === "en"
+              ? "Invalid coupon code. Please try again."
+              : "अमान्य कूपन कोड। कृपया पुनः प्रयास करें।")
         );
+        return;
       }
+
+      const { coupon, campaign } = verifyRes.data;
+
+      // 2) Redeem coupon
+      const redeemRes = await api.redeemCoupon(coupon.id, campaign.tier.id);
+
+      if (!redeemRes.success || !redeemRes.data) {
+        setState("error");
+        setErrorMessage(
+          redeemRes.error?.message ||
+            (language === "en"
+              ? "Failed to redeem coupon. Please try again."
+              : "कूपन रिडीम करने में समस्या हुई, कृपया पुनः प्रयास करें।")
+        );
+        return;
+      }
+
+      const { redemption } = redeemRes.data;
+      const prize = redemption.prize;
+
+      setWonPrize({
+        name: prize.name,
+        name_hi: prize.name_hi,
+        type: prize.type,
+        value: prize.value,
+        image_url: prize.image_url,
+      });
+      setRedemptionId(redemption.id);
+
+      // Map backend status to frontend reward status
+      const mappedStatus: "pending" | "redeemed" =
+        redemption.status === "CLAIMED" ? "redeemed" : "pending";
+
+      // Add to rewards in store (used by My Rewards page)
+      addReward({
+        id: redemption.id,
+        couponCode: redemption.coupon_code,
+        prize: {
+          id: redemption.id,
+          name: prize.name,
+          nameHi: prize.name_hi,
+          description: prize.description || "",
+          descriptionHi: "",
+          value: prize.value,
+          image: prize.image_url || "",
+          type: prize.type.toLowerCase() as any,
+        },
+        productName: coupon.product?.name || "",
+          status: mappedStatus,
+        wonAt: redemption.redeemed_at,
+      });
+
+      setState("scratch");
     } catch (error) {
       setState("error");
       setErrorMessage(
-        language === "en" ? "Something went wrong. Please try again." : "कुछ गलत हो गया। कृपया पुनः प्रयास करें।"
+        language === "en"
+          ? "Something went wrong. Please try again."
+          : "कुछ गलत हो गया। कृपया पुनः प्रयास करें।"
       );
     }
   };

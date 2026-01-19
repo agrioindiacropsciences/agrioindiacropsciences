@@ -270,8 +270,8 @@ export default function DistributorsPage() {
                           <div className="text-sm text-muted-foreground">{dist.owner_name}</div>
                         )}
                       </TableCell>
-                      <TableCell>{dist.phone}</TableCell>
-                      <TableCell>{dist.city} / {dist.pincode}</TableCell>
+                      <TableCell>{dist.phone || "-"}</TableCell>
+                      <TableCell>{(dist.city || "-") + " / " + (dist.pincode || "-")}</TableCell>
                       <TableCell>
                         <Badge
                           variant={dist.is_active ? "success" : "secondary"}
@@ -281,7 +281,25 @@ export default function DistributorsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              setFormData({
+                                name: dist.name || "",
+                                owner_name: dist.owner_name || "",
+                                phone: dist.phone || "",
+                                email: dist.email || "",
+                                address: dist.address || "",
+                                city: dist.city || "",
+                                state: dist.state || "",
+                                pincode: dist.pincode || "",
+                                latitude: dist.latitude?.toString() || "",
+                                longitude: dist.longitude?.toString() || "",
+                              });
+                              setAddDialogOpen(true);
+                            }}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button 

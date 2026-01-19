@@ -19,6 +19,8 @@ import {
   ScanLine,
   Gift,
   Loader2,
+  Upload,
+  Camera,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +68,9 @@ export default function ProfilePage() {
   const [crops, setCrops] = useState<Crop[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [userCrops, setUserCrops] = useState<string[]>([]);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -87,11 +92,18 @@ export default function ProfilePage() {
       setIsLoading(true);
       
       try {
-        const [cropsRes, statsRes, userCropsRes] = await Promise.all([
+        const [profileRes, cropsRes, statsRes, userCropsRes] = await Promise.all([
+          api.getProfile(),
           api.getCrops(),
           api.getUserStats(),
           api.getCropPreferences(),
         ]);
+
+        if (profileRes.success && profileRes.data) {
+          if (profileRes.data.profile_image_url) {
+            setProfileImageUrl(profileRes.data.profile_image_url);
+          }
+        }
 
         if (cropsRes.success && cropsRes.data) {
           setCrops(cropsRes.data);
@@ -115,6 +127,62 @@ export default function ProfilePage() {
 
     fetchData();
   }, []);
+
+  // Handle avatar upload
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: language === "en" ? "Invalid File" : "अमान्य फ़ाइल",
+        description: language === "en" ? "Please select an image file" : "कृपया एक छवि फ़ाइल चुनें",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: language === "en" ? "File Too Large" : "फ़ाइल बहुत बड़ी",
+        description: language === "en" ? "Image must be less than 5MB" : "छवि 5MB से कम होनी चाहिए",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const response = await api.updateAvatar(file);
+      if (response.success && response.data) {
+        setProfileImageUrl(response.data.profile_image_url);
+        toast({
+          title: language === "en" ? "Avatar Updated!" : "अवतार अपडेट हो गया!",
+          description: response.data.message || (language === "en" ? "Your profile picture has been updated" : "आपकी प्रोफ़ाइल तस्वीर अपडेट हो गई है"),
+          variant: "success",
+        });
+      } else {
+        toast({
+          title: language === "en" ? "Error" : "त्रुटि",
+          description: response.error?.message || (language === "en" ? "Failed to update avatar" : "अवतार अपडेट करने में विफल"),
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: language === "en" ? "Error" : "त्रुटि",
+        description: language === "en" ? "Something went wrong" : "कुछ गलत हो गया",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   const onSubmit = async (data: ProfileFormData) => {
     setIsSaving(true);
@@ -274,11 +342,42 @@ export default function ProfilePage() {
         <CardContent>
           <div className="flex items-start gap-6">
             {/* Avatar */}
-            <Avatar className="h-20 w-20">
-              <AvatarFallback className="bg-primary text-white text-2xl">
-                {user.name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-20 w-20">
+                {profileImageUrl ? (
+                  <div className="h-full w-full relative">
+                    <img src={profileImageUrl} alt={user.name} className="h-full w-full object-cover rounded-full" />
+                  </div>
+                ) : (
+                  <AvatarFallback className="bg-primary text-white text-2xl">
+                    {user.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                className="hidden"
+                id="avatar-upload"
+                disabled={isUploadingAvatar}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="absolute -bottom-2 -right-2 rounded-full h-8 w-8 p-0"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingAvatar}
+              >
+                {isUploadingAvatar ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
 
             {/* Form / Display */}
             <div className="flex-1">

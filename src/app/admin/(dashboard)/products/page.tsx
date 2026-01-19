@@ -128,6 +128,7 @@ export default function ProductsPage() {
 
     setIsSubmitting(true);
     try {
+      const images = (window as any).productImages || [];
       const response = await api.createProduct({
         name: formData.name,
         name_hi: formData.name_hi,
@@ -141,7 +142,7 @@ export default function ProductsPage() {
         pack_sizes: [],
         is_active: true,
         is_best_seller: false,
-      });
+      }, images);
 
       if (response.success) {
         toast({
@@ -158,6 +159,7 @@ export default function ProductsPage() {
           category_id: "",
           suitable_crops: [],
         });
+        (window as any).productImages = [];
         fetchData();
       } else {
         toast({
@@ -186,6 +188,9 @@ export default function ProductsPage() {
           title: "Success",
           description: "Product deleted successfully",
         });
+        // Remove from local state immediately
+        setProducts(prev => prev.filter(p => p.id !== id));
+        // Refresh data
         fetchData();
       } else {
         toast({
@@ -329,7 +334,20 @@ export default function ProductsPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setFormData({
+                                  name: product.name,
+                                  name_hi: product.name_hi || "",
+                                  description: product.description || "",
+                                  description_hi: product.description_hi || "",
+                                  composition: product.composition || "",
+                                  category_id: product.category?.id || "",
+                                  suitable_crops: product.suitable_crops || [],
+                                });
+                                setCreateDialogOpen(true);
+                              }}
+                            >
                               <Edit className="h-4 w-4 mr-2" />
                               Edit Product
                             </DropdownMenuItem>
@@ -404,7 +422,28 @@ export default function ProductsPage() {
             {/* Image Upload */}
             <div>
               <Label className="mb-2 block">Product Image</Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                id="product-image-upload"
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (files.length > 0) {
+                    // Store files for later use in form submission
+                    (window as any).productImages = files;
+                    toast({
+                      title: "Images Selected",
+                      description: `${files.length} image(s) selected. They will be uploaded when you save the product.`,
+                    });
+                  }
+                }}
+              />
+              <div 
+                className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-primary transition-colors"
+                onClick={() => document.getElementById('product-image-upload')?.click()}
+              >
                 <Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
                 <p className="text-sm font-medium">Click to upload</p>
                 <p className="text-xs text-muted-foreground">or drag and drop</p>

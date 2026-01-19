@@ -104,16 +104,43 @@ export default function UsersPage() {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const response = await api.exportUsers();
-      if (response.success) {
+      const token = api.getAccessToken();
+      if (!token) {
         toast({
-          title: "Export Started",
-          description: "User data export has been initiated.",
+          title: "Error",
+          description: "Not authenticated",
+          variant: "destructive",
+        });
+        setIsExporting(false);
+        return;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'}/admin/users/export`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `users-export-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        toast({
+          title: "Export Successful",
+          description: "User data has been downloaded.",
         });
       } else {
+        const errorData = await response.json();
         toast({
           title: "Export Failed",
-          description: "Unable to export users.",
+          description: errorData.error?.message || "Unable to export users.",
           variant: "destructive",
         });
       }

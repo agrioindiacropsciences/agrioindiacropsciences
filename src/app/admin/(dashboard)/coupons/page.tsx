@@ -362,7 +362,17 @@ export default function CouponsPage() {
                       </TableCell>
                       <TableCell>{coupon.redeemed_by?.name || "-"}</TableCell>
                       <TableCell>
-                        <Button variant="link" size="sm" className="text-primary">
+                        <Button 
+                          variant="link" 
+                          size="sm" 
+                          className="text-primary"
+                          onClick={() => {
+                            toast({
+                              title: "Coupon Details",
+                              description: `Code: ${coupon.code}\nProduct: ${coupon.product?.name || "N/A"}\nReward: ${coupon.reward_type} - ${coupon.reward_value}\nStatus: ${coupon.is_used ? "Used" : "Unused"}\nRedeemed by: ${coupon.redeemed_by?.name || "N/A"}`,
+                            });
+                          }}
+                        >
                           View
                         </Button>
                       </TableCell>

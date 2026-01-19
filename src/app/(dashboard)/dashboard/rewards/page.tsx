@@ -188,7 +188,7 @@ export default function RewardsPage() {
                               </span>
                             </div>
                             <h3 className="font-semibold text-lg">
-                              ₹{reward.amount}
+                              ₹{reward.amount || 0}
                             </h3>
                             <p className="text-sm text-muted-foreground">
                               {reward.product_name} • {formatDate(reward.won_at)}

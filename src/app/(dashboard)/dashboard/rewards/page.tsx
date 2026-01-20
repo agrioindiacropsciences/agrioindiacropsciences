@@ -103,6 +103,54 @@ export default function RewardsPage() {
           window.open(response.data.download_url, "_blank");
         } else if (response.data.certificate_url) {
           window.open(response.data.certificate_url, "_blank");
+        } else if (response.data.certificate_data) {
+          // Backend provided certificate_data -> render a printable certificate on frontend
+          const d = response.data.certificate_data;
+          const w = window.open("", "_blank");
+          if (!w) return;
+          const html = `
+            <html>
+              <head>
+                <title>Reward Certificate</title>
+                <style>
+                  body { font-family: Arial, sans-serif; padding: 24px; }
+                  .card { border: 3px solid #16a34a; border-radius: 16px; padding: 24px; max-width: 760px; margin: 0 auto; }
+                  .brand { font-size: 18px; font-weight: 700; color: #16a34a; }
+                  .title { font-size: 28px; font-weight: 800; margin: 12px 0 4px; }
+                  .sub { color: #555; margin-bottom: 18px; }
+                  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+                  .row { padding: 10px 12px; border: 1px solid #eee; border-radius: 10px; }
+                  .label { font-size: 12px; color: #666; }
+                  .value { font-size: 14px; font-weight: 600; margin-top: 4px; word-break: break-word; }
+                  .footer { margin-top: 18px; font-size: 12px; color: #666; text-align: center; }
+                  @media print { body { padding: 0; } .card { border-radius: 0; } }
+                </style>
+              </head>
+              <body>
+                <div class="card">
+                  <div class="brand">AGRIO INDIA</div>
+                  <div class="title">Reward Certificate</div>
+                  <div class="sub">This certificate acknowledges the reward won via Agrio Scan & Win.</div>
+                  <div class="grid">
+                    <div class="row"><div class="label">Winner Name</div><div class="value">${d.winner_name}</div></div>
+                    <div class="row"><div class="label">Phone</div><div class="value">${d.phone_number}</div></div>
+                    <div class="row"><div class="label">Coupon Code</div><div class="value">${d.coupon_code}</div></div>
+                    <div class="row"><div class="label">Prize</div><div class="value">${d.prize_name}</div></div>
+                    <div class="row"><div class="label">Prize Value</div><div class="value">₹${d.prize_value}</div></div>
+                    <div class="row"><div class="label">Prize Type</div><div class="value">${d.prize_type}</div></div>
+                    <div class="row"><div class="label">Rank</div><div class="value">${d.rank}</div></div>
+                    <div class="row"><div class="label">Won Date</div><div class="value">${new Date(d.won_date).toLocaleString()}</div></div>
+                    <div class="row"><div class="label">Status</div><div class="value">${d.status}</div></div>
+                  </div>
+                  <div class="footer">Tip: Use browser Print → “Save as PDF” to download.</div>
+                </div>
+                <script>window.onload = () => { setTimeout(() => window.print(), 300); };</script>
+              </body>
+            </html>
+          `;
+          w.document.open();
+          w.document.write(html);
+          w.document.close();
         } else {
           toast({
             title: language === "en" ? "Coming Soon" : "जल्द आ रहा है",

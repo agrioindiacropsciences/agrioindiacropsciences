@@ -328,7 +328,7 @@ export interface Notification {
 
 export interface NotificationsResponse {
   notifications?: Notification[];
-  data?: Notification[];
+  unread_count?: number;
   pagination?: Pagination;
 }
 
@@ -357,6 +357,17 @@ export interface AdminNotification extends Notification {
 export interface AdminNotificationsResponse {
   notifications: AdminNotification[];
   pagination?: Pagination;
+}
+
+// ==================== Admin FCM Send (backend: POST /fcm/send) ====================
+export interface AdminFcmSendRequest {
+  title: string;
+  body: string;
+  imageUrl?: string;
+  topic?: string; // default: all_users
+  type: 'REWARD' | 'PROMO' | 'ORDER' | 'SYSTEM';
+  slug?: string;
+  productId?: string;
 }
 
 // ==================== Support ====================

@@ -341,8 +341,16 @@ export async function getCmsPage(slug: string): Promise<ApiResponse<T.CmsPage>> 
 /**
  * Get user notifications
  */
-export async function getNotifications(): Promise<ApiResponse<T.Notification[]>> {
-  return get<T.Notification[]>('/notifications', true);
+export async function getNotifications(
+  params?: { page?: number; limit?: number; unread_only?: boolean; type?: T.Notification["type"] }
+): Promise<ApiResponse<T.NotificationsResponse>> {
+  const searchParams = new URLSearchParams();
+  if (params?.page) searchParams.append("page", String(params.page));
+  if (params?.limit) searchParams.append("limit", String(params.limit));
+  if (params?.unread_only !== undefined) searchParams.append("unread_only", String(params.unread_only));
+  if (params?.type) searchParams.append("type", params.type);
+  const qs = searchParams.toString();
+  return get<T.NotificationsResponse>(`/notifications${qs ? `?${qs}` : ""}`, true);
 }
 
 /**
@@ -386,6 +394,37 @@ export async function adminSendNotification(
   payload: T.AdminCreateNotificationRequest
 ): Promise<ApiResponse<T.AdminNotification>> {
   return adminPost<T.AdminNotification>('/admin/notifications', payload);
+}
+
+/**
+ * Admin sends push notification via FCM and creates DB notifications for all users
+ * Backend: POST /api/v1/fcm/send
+ */
+export async function adminSendFcmNotification(
+  payload: T.AdminFcmSendRequest
+): Promise<ApiResponse<unknown>> {
+  const token = getAdminToken();
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+  const apiBase = API_BASE_URL;
+  try {
+    const res = await fetch(`${apiBase}/fcm/send`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  } catch (error) {
+    return {
+      success: false,
+      error: {
+        code: "NETWORK_ERROR",
+        message: error instanceof Error ? error.message : "Network error",
+      },
+    };
+  }
 }
 
 // ==================== Config APIs ====================

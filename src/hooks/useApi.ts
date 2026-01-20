@@ -212,7 +212,22 @@ export function useDistributor(id: string | null) {
 // ==================== Notifications Hooks ====================
 
 export function useNotifications() {
-  return useApiCall<Notification[]>(() => api.getNotifications(), []);
+  return useApiCall<{ notifications: Notification[]; unread_count: number }>(
+    async () => {
+      const res = await api.getNotifications();
+      if (res.success && res.data) {
+        return {
+          success: true,
+          data: {
+            notifications: res.data.notifications || [],
+            unread_count: res.data.unread_count || 0,
+          },
+        };
+      }
+      return { success: true, data: { notifications: [], unread_count: 0 } };
+    },
+    []
+  );
 }
 
 // ==================== Config Hooks ====================

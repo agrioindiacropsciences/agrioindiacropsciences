@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import QRCode from "qrcode";
+// QR images are generated using QuickChart URL (backend helper logic)
 import {
   Search,
   Plus,
@@ -54,7 +54,7 @@ export default function CouponsPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCreatingCampaign, setIsCreatingCampaign] = useState(false);
   const [generateQRCodes, setGenerateQRCodes] = useState(true);
-  const [qrCodesPreview, setQrCodesPreview] = useState<Array<{ code: string; dataUrl: string }>>([]);
+  const [qrCodesPreview, setQrCodesPreview] = useState<Array<{ code: string; qrUrl: string }>>([]);
   const [qrBatchInfo, setQrBatchInfo] = useState<{ batchId?: string; generatedCount?: number } | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -151,6 +151,16 @@ export default function CouponsPage() {
     });
   }, [coupons, searchQuery]);
 
+  const getQrUrl = (code: string) => {
+    const logoUrl =
+      "https://res.cloudinary.com/dyumjsohc/image/upload/v1768456817/assets/agrio_logo.png";
+    return `https://quickchart.io/qr?text=${encodeURIComponent(
+      code
+    )}&centerImageUrl=${encodeURIComponent(
+      logoUrl
+    )}&centerImageSize=0.15&size=300&ecLevel=H`;
+  };
+
   const handleGenerateCoupons = async () => {
     if (!generateForm.campaign_id || !generateForm.count) {
       toast({
@@ -177,33 +187,24 @@ export default function CouponsPage() {
           description: `${generateForm.count} coupons generated successfully`,
         });
 
-        // If enabled, generate QR codes from backend-provided preview codes
-        if (generateQRCodes && response.data?.codes_preview?.length) {
-          const codes = response.data.codes_preview;
-          const qrItems = await Promise.all(
-            codes.map(async (code) => {
-              // QR payload is the coupon code itself so the user scanner can redeem it
-              const dataUrl = await QRCode.toDataURL(code, {
-                errorCorrectionLevel: "M",
-                margin: 2,
-                width: 320,
-              });
-              return { code, dataUrl };
-            })
-          );
-          setQrCodesPreview(qrItems);
-          setQrBatchInfo({
-            batchId: response.data?.batch_id,
-            generatedCount: response.data?.generated_count,
-          });
-          setQrDialogOpen(true);
-        } else if (generateQRCodes) {
-          toast({
-            title: "QR Preview Unavailable",
-            description:
-              "Backend did not return codes_preview. QR preview can only be generated when codes_preview is provided.",
-            variant: "destructive",
-          });
+        // QR flow as per backend: generate returns batch_id (codes are in DB).
+        // We fetch UNUSED coupons and filter by batch_number == batch_id, then build QR URLs using QuickChart helper.
+        if (generateQRCodes && response.data?.batch_id) {
+          const batchId = response.data.batch_id;
+          try {
+            const listRes = await api.getAdminCoupons({ page: 1, limit: 1000, status: "unused" });
+            const list = listRes.success ? listRes.data?.coupons || [] : [];
+            const batchCoupons = list.filter((c) => c.batch_number === batchId);
+            const qrItems = batchCoupons.map((c) => ({ code: c.code, qrUrl: getQrUrl(c.code) }));
+            setQrCodesPreview(qrItems);
+            setQrBatchInfo({
+              batchId,
+              generatedCount: response.data?.generated_count,
+            });
+            setQrDialogOpen(true);
+          } catch {
+            // ignore
+          }
         }
 
         setGenerateDialogOpen(false);
@@ -232,9 +233,50 @@ export default function CouponsPage() {
     setIsGenerating(false);
   };
 
-  const downloadQrPng = (code: string, dataUrl: string) => {
+  const openPrintableQrSheet = () => {
+    if (qrCodesPreview.length === 0) return;
+    const w = window.open("", "_blank");
+    if (!w) return;
+    const html = `
+      <html>
+        <head>
+          <title>QR Sheet</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 16px; }
+            .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+            .item { border: 1px solid #ddd; padding: 8px; }
+            .code { font-family: monospace; font-size: 10px; margin-top: 6px; word-break: break-all; }
+            img { width: 100%; height: auto; }
+            @media print { body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          <h2>Coupon QR Sheet</h2>
+          ${qrBatchInfo?.batchId ? `<div>Batch: <span style="font-family: monospace">${qrBatchInfo.batchId}</span></div>` : ""}
+          <div class="grid">
+            ${qrCodesPreview
+              .map(
+                (q) => `
+              <div class="item">
+                <img src="${q.qrUrl}" />
+                <div class="code">${q.code}</div>
+              </div>
+            `
+              )
+              .join("")}
+          </div>
+          <script>window.onload = () => { setTimeout(() => window.print(), 300); };</script>
+        </body>
+      </html>
+    `;
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  };
+
+  const downloadQrPng = (code: string, qrUrl: string) => {
     const a = document.createElement("a");
-    a.href = dataUrl;
+    a.href = qrUrl;
     a.download = `QR-${code}.png`;
     document.body.appendChild(a);
     a.click();
@@ -244,7 +286,7 @@ export default function CouponsPage() {
   const downloadAllQrPngs = async () => {
     // Browsers may block many downloads; we trigger sequentially with small delay.
     for (const item of qrCodesPreview) {
-      downloadQrPng(item.code, item.dataUrl);
+      downloadQrPng(item.code, item.qrUrl);
       // eslint-disable-next-line no-await-in-loop
       await new Promise((r) => setTimeout(r, 250));
     }
@@ -549,7 +591,7 @@ export default function CouponsPage() {
                 onChange={(e) => setGenerateForm({ ...generateForm, count: e.target.value })}
               />
             </div>
-            <div className="flex items-center gap-2 pt-2">
+          <div className="flex items-center gap-2 pt-2">
               <input
                 id="generate-qr"
                 type="checkbox"
@@ -562,9 +604,8 @@ export default function CouponsPage() {
               </Label>
             </div>
             <p className="text-xs text-muted-foreground">
-              QR codes are generated from the coupon <span className="font-mono">code</span>. The coupon codes themselves are created by the backend (random + unique).
-              {` `}
-              Note: QR preview depends on backend returning <span className="font-mono">codes_preview</span>.
+              QR codes are generated from the coupon <span className="font-mono">code</span>. Coupon codes are created by the backend (random + unique).
+              We build QR image URLs using QuickChart (with Agrio logo in center) and provide a printable sheet.
             </p>
             <div>
               <Label>Linked Product (Optional)</Label>
@@ -746,8 +787,11 @@ export default function CouponsPage() {
               </p>
             )}
             <div className="flex gap-2">
-              <Button onClick={downloadAllQrPngs} disabled={qrCodesPreview.length === 0}>
-                Download All PNGs
+              <Button onClick={openPrintableQrSheet} disabled={qrCodesPreview.length === 0}>
+                Print QR Sheet
+              </Button>
+              <Button variant="outline" onClick={downloadAllQrPngs} disabled={qrCodesPreview.length === 0}>
+                Download PNGs
               </Button>
               <Button
                 variant="outline"
@@ -767,13 +811,13 @@ export default function CouponsPage() {
                 {qrCodesPreview.map((item) => (
                   <div key={item.code} className="border rounded-lg p-3">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={item.dataUrl} alt={`QR ${item.code}`} className="w-full h-auto" />
+                    <img src={item.qrUrl} alt={`QR ${item.code}`} className="w-full h-auto" />
                     <div className="mt-2 flex items-center justify-between gap-2">
                       <span className="font-mono text-xs break-all">{item.code}</span>
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => downloadQrPng(item.code, item.dataUrl)}
+                        onClick={() => downloadQrPng(item.code, item.qrUrl)}
                       >
                         Download
                       </Button>
@@ -784,7 +828,7 @@ export default function CouponsPage() {
             )}
             {qrBatchInfo?.generatedCount && qrCodesPreview.length > 0 && qrBatchInfo.generatedCount > qrCodesPreview.length ? (
               <p className="text-xs text-amber-600">
-                Showing preview for {qrCodesPreview.length} codes. Backend generated {qrBatchInfo.generatedCount}. To get QR for all codes, we need an export/list endpoint that returns all generated codes for this batch.
+                Showing {qrCodesPreview.length} codes from batch preview. If you generated more than this and they are not visible, add backend support for filtering coupons by batch_id or increase listing limit.
               </p>
             ) : null}
           </div>

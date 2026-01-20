@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Bell,
   Send,
   Loader2,
   Users,
   User,
-  RefreshCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,22 +23,22 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import * as api from "@/lib/api";
-import type { AdminNotification, AdminCreateNotificationRequest } from "@/lib/api";
+import type { AdminFcmSendRequest } from "@/lib/api";
 
 export default function AdminNotificationsPage() {
   const { toast } = useToast();
 
   const [isSending, setIsSending] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
-
-  const [type, setType] = useState<AdminCreateNotificationRequest["type"]>("SYSTEM");
-  const [target, setTarget] = useState<AdminCreateNotificationRequest["target"]>("ALL");
+  const [type, setType] = useState<AdminFcmSendRequest["type"]>("SYSTEM");
+  const [topic, setTopic] = useState("all_users");
   const [title, setTitle] = useState("");
   const [titleHi, setTitleHi] = useState("");
   const [message, setMessage] = useState("");
   const [messageHi, setMessageHi] = useState("");
-  const [userIds, setUserIds] = useState(""); // comma separated
+  const [imageUrl, setImageUrl] = useState("");
+  const [slug, setSlug] = useState("");
+  const [productId, setProductId] = useState("");
+  const [userIds, setUserIds] = useState(""); // optional targeting hint (backend currently sends to topic)
 
   const parsedUserIds = useMemo(() => {
     const ids = userIds
@@ -48,27 +47,6 @@ export default function AdminNotificationsPage() {
       .filter(Boolean);
     return Array.from(new Set(ids));
   }, [userIds]);
-
-  const fetchNotifications = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await api.adminListNotifications(1, 20);
-      if (res.success && res.data?.notifications) {
-        setNotifications(res.data.notifications);
-      } else {
-        // If backend doesn't support this endpoint yet, show a helpful message
-        setNotifications([]);
-      }
-    } catch (e) {
-      setNotifications([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
 
   const handleSend = async () => {
     if (!title.trim() || !message.trim()) {
@@ -80,36 +58,25 @@ export default function AdminNotificationsPage() {
       return;
     }
 
-    if (target === "USER_IDS" && parsedUserIds.length === 0) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter at least one user_id (comma separated).",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsSending(true);
     try {
-      const payload: AdminCreateNotificationRequest = {
-        type,
+      // Backend admin manual send endpoint: POST /api/v1/fcm/send
+      const payload: AdminFcmSendRequest = {
         title: title.trim(),
-        title_hi: titleHi.trim() || undefined,
-        message: message.trim(),
-        message_hi: messageHi.trim() || undefined,
-        target,
-        user_ids: target === "USER_IDS" ? parsedUserIds : undefined,
+        body: message.trim(),
+        imageUrl: imageUrl.trim() || undefined,
+        topic: topic || "all_users",
+        type,
+        slug: slug.trim() || undefined,
+        productId: productId.trim() || undefined,
       };
 
-      const res = await api.adminSendNotification(payload);
+      const res = await api.adminSendFcmNotification(payload);
 
       if (res.success) {
         toast({
           title: "Notification Sent",
-          description:
-            target === "ALL"
-              ? "Sent to all users."
-              : `Sent to ${parsedUserIds.length} users.`,
+          description: `Sent via topic: ${topic || "all_users"}`,
           variant: "success",
         });
 
@@ -118,24 +85,22 @@ export default function AdminNotificationsPage() {
         setTitleHi("");
         setMessage("");
         setMessageHi("");
+        setImageUrl("");
+        setSlug("");
+        setProductId("");
         setUserIds("");
-
-        // Refresh history
-        fetchNotifications();
       } else {
         toast({
           title: "Failed to Send",
           description:
-            res.error?.message ||
-            "Backend endpoint /admin/notifications is not available yet.",
+            res.error?.message || "Failed to send via /fcm/send",
           variant: "destructive",
         });
       }
     } catch (e) {
       toast({
         title: "Failed to Send",
-        description:
-          "Backend endpoint /admin/notifications is not available yet.",
+        description: "Failed to send via /fcm/send",
         variant: "destructive",
       });
     } finally {
@@ -155,10 +120,6 @@ export default function AdminNotificationsPage() {
             Send notifications to users (website + app).
           </p>
         </div>
-        <Button variant="outline" onClick={fetchNotifications} disabled={isLoading}>
-          <RefreshCcw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
       </div>
 
       <Card>
@@ -183,20 +144,25 @@ export default function AdminNotificationsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Target</Label>
-              <Select value={target} onValueChange={(v) => setTarget(v as any)}>
+              <Label>Topic</Label>
+              <Select value={topic} onValueChange={(v) => setTopic(v)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">
+                  <SelectItem value="all_users">
                     <span className="flex items-center gap-2">
                       <Users className="h-4 w-4" /> All Users
                     </span>
                   </SelectItem>
-                  <SelectItem value="USER_IDS">
+                  <SelectItem value="farmers">
                     <span className="flex items-center gap-2">
-                      <User className="h-4 w-4" /> Specific Users (IDs)
+                      <Users className="h-4 w-4" /> Farmers (topic)
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="dealers">
+                    <span className="flex items-center gap-2">
+                      <Users className="h-4 w-4" /> Dealers (topic)
                     </span>
                   </SelectItem>
                 </SelectContent>
@@ -204,19 +170,18 @@ export default function AdminNotificationsPage() {
             </div>
           </div>
 
-          {target === "USER_IDS" && (
-            <div className="space-y-2">
-              <Label>User IDs (comma separated)</Label>
-              <Input
-                placeholder="e.g. 9f3a..., 12ab..., 77cd..."
-                value={userIds}
-                onChange={(e) => setUserIds(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Tip: You can copy user IDs from the Users page.
-              </p>
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label>Optional User IDs (comma separated)</Label>
+            <Input
+              placeholder="(Optional) For future targeting support"
+              value={userIds}
+              onChange={(e) => setUserIds(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Current backend endpoint sends to a topic. If you want user-id targeting, backend needs to support it.
+              Parsed IDs: {parsedUserIds.length}
+            </p>
+          </div>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -240,6 +205,22 @@ export default function AdminNotificationsPage() {
             </div>
           </div>
 
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Image URL (optional)</Label>
+              <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Slug / Screen (optional)</Label>
+              <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="some-slug-or-screen" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Product ID (optional)</Label>
+            <Input value={productId} onChange={(e) => setProductId(e.target.value)} placeholder="product-uuid" />
+          </div>
+
           <Button onClick={handleSend} disabled={isSending}>
             {isSending ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -250,42 +231,8 @@ export default function AdminNotificationsPage() {
           </Button>
 
           <p className="text-xs text-amber-600">
-            Note: This requires backend endpoints <span className="font-mono">POST /admin/notifications</span> and{" "}
-            <span className="font-mono">GET /admin/notifications</span>. If your backend doesn’t have these yet, the send will fail with 404.
+            Backend flow: <span className="font-mono">POST /fcm/send</span> sends FCM push + creates DB notifications for all active users.
           </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Notifications</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : notifications.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No notifications found (or backend endpoint not available).
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {notifications.map((n) => (
-                <div key={n.id} className="border rounded-lg p-4 flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{n.title}</span>
-                      <Badge variant="secondary">{n.type}</Badge>
-                      {n.is_read === false && <Badge variant="warning">Unread</Badge>}
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">{n.message}</p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {new Date(n.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

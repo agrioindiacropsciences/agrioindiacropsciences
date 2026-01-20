@@ -328,6 +328,33 @@ export interface NotificationsResponse {
   pagination?: Pagination;
 }
 
+// ==================== Admin Notifications (requires backend support) ====================
+export type NotificationTarget = 'ALL' | 'USER_IDS';
+
+export interface AdminCreateNotificationRequest {
+  type: 'REWARD' | 'PROMO' | 'ORDER' | 'SYSTEM';
+  title: string;
+  title_hi?: string;
+  message: string;
+  message_hi?: string;
+  target: NotificationTarget;
+  user_ids?: string[]; // required when target = USER_IDS
+  data?: Record<string, unknown>;
+}
+
+export interface AdminNotification extends Notification {
+  title_hi?: string;
+  message_hi?: string;
+  target?: NotificationTarget;
+  created_by?: { id: string; name?: string; email?: string };
+  data?: Record<string, unknown>;
+}
+
+export interface AdminNotificationsResponse {
+  notifications: AdminNotification[];
+  pagination?: Pagination;
+}
+
 // ==================== Support ====================
 export interface ContactFormRequest {
   name: string;

@@ -40,6 +40,7 @@ const navItems = [
   { href: "/admin/products", icon: Package, label: "Products" },
   { href: "/admin/coupons", icon: Ticket, label: "Coupons" },
   { href: "/admin/distributors", icon: MapPin, label: "Distributors" },
+  { href: "/admin/notifications", icon: Bell, label: "Notifications" },
   { href: "/admin/reports", icon: BarChart3, label: "Reports" },
 ];
 

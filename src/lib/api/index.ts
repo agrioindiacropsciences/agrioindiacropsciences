@@ -373,6 +373,21 @@ export async function deleteAllNotifications(): Promise<ApiResponse<null>> {
   return del<null>('/notifications', true);
 }
 
+// ==================== Admin Notifications APIs (requires backend support) ====================
+export async function adminListNotifications(
+  page = 1,
+  limit = 20
+): Promise<ApiResponse<T.AdminNotificationsResponse>> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  return adminGet<T.AdminNotificationsResponse>(`/admin/notifications?${params.toString()}`);
+}
+
+export async function adminSendNotification(
+  payload: T.AdminCreateNotificationRequest
+): Promise<ApiResponse<T.AdminNotification>> {
+  return adminPost<T.AdminNotification>('/admin/notifications', payload);
+}
+
 // ==================== Config APIs ====================
 
 /**

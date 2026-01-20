@@ -315,9 +315,13 @@ export interface CertificateResponse {
 // ==================== Notifications ====================
 export interface Notification {
   id: string;
+  user_id?: string;
   title: string;
+  title_hi?: string;
   message: string;
+  message_hi?: string;
   type: 'REWARD' | 'PROMO' | 'ORDER' | 'SYSTEM';
+  data?: Record<string, unknown>;
   is_read: boolean;
   created_at: string;
 }

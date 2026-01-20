@@ -133,8 +133,8 @@ export default function ScanPage() {
     }
   };
 
-  // Verify and redeem coupon code using the same flow as manual code entry
-  const verifyCoupon = async (code: string) => {
+  // Verify + redeem for manual code entry (Step 1: /coupons/verify, Step 2: /coupons/redeem)
+  const verifyAndRedeemManual = async (code: string) => {
     setState("verifying");
     setErrorMessage("");
 
@@ -227,7 +227,68 @@ export default function ScanPage() {
       });
       return;
     }
-    verifyCoupon(manualCode);
+    verifyAndRedeemManual(manualCode);
+  };
+
+  // Redeem directly from QR code using /scan/redeem as per backend spec
+  const redeemFromQr = async (code: string) => {
+    setState("verifying");
+    setErrorMessage("");
+
+    try {
+      const res = await api.scanAndRedeem(code);
+      if (!res.success || !res.data) {
+        setState("error");
+        setErrorMessage(
+          res.error?.message ||
+            (language === "en"
+              ? "Invalid or already used QR code."
+              : "अमान्य या पहले से उपयोग किया हुआ QR कोड।")
+        );
+        return;
+      }
+
+      const { redemption, reward } = res.data;
+
+      setWonPrize({
+        name: reward.name,
+        name_hi: reward.name_hi,
+        type: reward.type,
+        value: reward.value,
+        image_url: reward.image_url || "",
+      });
+      setRedemptionId(redemption.id);
+
+      const mappedStatus: "pending" | "redeemed" =
+        redemption.status === "CLAIMED" ? "redeemed" : "pending";
+
+      addReward({
+        id: redemption.id,
+        couponCode: redemption.coupon_code,
+        prize: {
+          id: redemption.id,
+          name: reward.name,
+          nameHi: reward.name_hi,
+          description: "",
+          descriptionHi: "",
+          value: reward.value,
+          image: reward.image_url || "",
+          type: reward.type.toLowerCase() as any,
+        },
+        productName: "",
+        status: mappedStatus,
+        wonAt: redemption.scanned_at,
+      });
+
+      setState("scratch");
+    } catch (error) {
+      setState("error");
+      setErrorMessage(
+        language === "en"
+          ? "Something went wrong. Please try again."
+          : "कुछ गलत हो गया। कृपया पुनः प्रयास करें।"
+      );
+    }
   };
 
   // Start QR Scanner
@@ -285,7 +346,7 @@ export default function ScanPage() {
   // Handle QR scan success
   const handleQRScanSuccess = async (code: string) => {
     await stopQRScanner();
-    verifyCoupon(code);
+    await redeemFromQr(code);
   };
 
   // Toggle camera

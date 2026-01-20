@@ -59,11 +59,7 @@ export default function RewardsPage() {
       try {
         const response = await api.getUserRewards();
         if (response.success && response.data) {
-          // API returns data as object with rewards property, or directly as array
-          const rewardsData = Array.isArray(response.data) 
-            ? response.data 
-            : (response.data as any)?.rewards || [];
-          setRewards(rewardsData);
+          setRewards(response.data);
         } else {
           setRewards([]);
         }
@@ -80,7 +76,7 @@ export default function RewardsPage() {
   const filteredRewards = rewards.filter((reward) => {
     if (activeTab === "all") return true;
     if (activeTab === "claimed") return reward.status === "CLAIMED";
-    if (activeTab === "pending") return reward.status === "PENDING" || reward.status === "PENDING_VERIFICATION";
+    if (activeTab === "pending") return reward.status !== "CLAIMED";
     return true;
   });
 

@@ -149,9 +149,54 @@ export async function getCouponHistory(): Promise<ApiResponse<T.CouponHistory[]>
 
 /**
  * Get user rewards
+ * Backend shape (simplified):
+ * {
+ *   success: true,
+ *   data: {
+ *     rewards: [
+ *       {
+ *         id, coupon_code, prize: { type, value, ... },
+ *         product_name, status, won_at, redeemed_at, ...
+ *       }
+ *     ],
+ *     summary, pagination...
+ *   }
+ * }
+ *
+ * We map this into a flat T.Reward[] view model used by the dashboard & My Rewards page.
  */
 export async function getUserRewards(): Promise<ApiResponse<T.Reward[]>> {
-  return get<T.Reward[]>('/user/rewards', true);
+  const res = await get<any>('/user/rewards', true);
+  if (!res.success || !res.data) {
+    return { success: res.success, error: res.error, data: [] };
+  }
+
+  const container = Array.isArray(res.data)
+    ? res.data
+    : (res.data.rewards || res.data.data || []);
+
+  const mapped: T.Reward[] = (container || []).map((r: any) => {
+    const prize = r.prize || {};
+    const rawStatus: string = r.status || "";
+    const mappedStatus: T.Reward["status"] =
+      rawStatus === "CLAIMED" || rawStatus === "REDEEMED" || rawStatus === "VERIFIED"
+        ? "CLAIMED"
+        : "PENDING";
+
+    return {
+      id: r.id,
+      type: prize.type || "UNKNOWN",
+      amount: typeof prize.value === "number" ? prize.value : 0,
+      status: mappedStatus,
+      won_at: r.won_at || r.scanned_at || r.redeemed_at || "",
+      product_name: r.product_name || "",
+    };
+  });
+
+  return {
+    success: true,
+    data: mapped,
+  };
 }
 
 // ==================== Crops APIs ====================

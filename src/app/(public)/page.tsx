@@ -167,10 +167,11 @@ export default function HomePage() {
               <Badge className="bg-accent/20 text-accent border-accent/30 px-4 py-1.5 text-sm">
                 {language === "en" ? "Premium Agrochemicals" : "प्रीमियम कृषि रसायन"}
               </Badge>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-                <span className="text-primary italic">Agrio Sampan Kisan</span>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-normal">
+                <span className="text-primary italic block">Agrio Sampan</span>
+                <span className="text-primary italic block">Kisan</span>
               </h1>
-              <p className="text-2xl md:text-3xl text-gray-600 font-hindi">
+              <p className="text-2xl md:text-3xl text-gray-600 font-hindi mt-2">
                 भारतीय किसान की पहली पसंद
               </p>
               <p className="text-lg text-gray-600 max-w-lg">

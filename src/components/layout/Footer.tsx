@@ -183,6 +183,21 @@ export function Footer() {
           </div>
         </div>
       </div>
+
+      {/* Developer Credit */}
+      <div className="border-t border-gray-800">
+        <div className="container mx-auto px-4 lg:px-8 py-3">
+          <p className="text-center text-xs text-gray-500">
+            Designed and developed by{" "}
+            <a
+              href="mailto:fourrquarks@gmail.com"
+              className="text-primary hover:text-primary/80 transition-colors font-medium"
+            >
+              fourQuarks
+            </a>
+          </p>
+        </div>
+      </div>
     </footer>
   );
 }

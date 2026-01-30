@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Image from "next/image";
+import { motion } from "framer-motion";
 import {
   Search,
   Plus,
@@ -12,6 +13,8 @@ import {
   Upload,
   X,
   Loader2,
+  Filter,
+  LayoutGrid,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,7 +71,6 @@ export default function ProductsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  // Form state
   const [formData, setFormData] = useState({
     name: "",
     name_hi: "",
@@ -126,6 +128,9 @@ export default function ProductsPage() {
       return matchesSearch && matchesCategory;
     });
   }, [products, searchQuery, categoryFilter]);
+
+  const activeCount = products.filter(p => p.is_active).length;
+  const bestSellerCount = products.filter(p => p.is_best_seller).length;
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -192,7 +197,6 @@ export default function ProductsPage() {
 
     setIsSubmitting(true);
     try {
-      // Create FormData for file upload
       const formDataToSend = new FormData();
       formDataToSend.append('name', formData.name);
       if (formData.name_hi) formDataToSend.append('name_hi', formData.name_hi);
@@ -218,7 +222,6 @@ export default function ProductsPage() {
         formDataToSend.append('pack_sizes', JSON.stringify(formData.pack_sizes));
       }
 
-      // Add images
       selectedImages.forEach(image => {
         formDataToSend.append('images', image);
       });
@@ -262,7 +265,6 @@ export default function ProductsPage() {
 
     setIsSubmitting(true);
     try {
-      // Create FormData for file upload
       const formDataToSend = new FormData();
       formDataToSend.append('name', formData.name);
       if (formData.name_hi) formDataToSend.append('name_hi', formData.name_hi);
@@ -288,7 +290,6 @@ export default function ProductsPage() {
         formDataToSend.append('pack_sizes', JSON.stringify(formData.pack_sizes));
       }
 
-      // Add images
       selectedImages.forEach(image => {
         formDataToSend.append('images', image);
       });
@@ -330,9 +331,7 @@ export default function ProductsPage() {
           title: "Success",
           description: "Product deleted successfully",
         });
-        // Remove from local state immediately
         setProducts(products.filter(p => p.id !== id));
-        // Refresh data from server
         fetchData();
       } else {
         toast({
@@ -351,163 +350,234 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Products Management</h1>
-          <p className="text-muted-foreground">Manage and view all company products.</p>
+    <div className="space-y-6 pb-8">
+      {/* Hero Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 via-pink-600 to-rose-600 p-6 sm:p-8 text-white"
+      >
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+        
+        <div className="relative">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                <Package className="h-7 w-7" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold">Products Management</h1>
+                <p className="text-white/70 text-sm">Manage your product catalog</p>
+              </div>
+            </div>
+            <Button 
+              onClick={() => setCreateDialogOpen(true)}
+              className="bg-white text-purple-600 hover:bg-white/90 shadow-lg"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Product
+            </Button>
+          </div>
+          
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4 mt-6">
+            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+              <p className="text-2xl sm:text-3xl font-bold">{total}</p>
+              <p className="text-xs text-white/70">Total Products</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+              <p className="text-2xl sm:text-3xl font-bold">{activeCount}</p>
+              <p className="text-xs text-white/70">Active</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+              <div className="flex items-center justify-center gap-1">
+                <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
+                <p className="text-2xl sm:text-3xl font-bold">{bestSellerCount}</p>
+              </div>
+              <p className="text-xs text-white/70">Best Sellers</p>
+            </div>
+          </div>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Product
-        </Button>
-      </div>
+      </motion.div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search by product name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <Card className="border-0 shadow-md">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search by product name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-11 h-11 bg-gray-50 border-gray-200"
+                />
+              </div>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-48 h-11">
+                  <LayoutGrid className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select defaultValue="all">
+                <SelectTrigger className="w-32 h-11">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select defaultValue="all">
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Products Table */}
-      <Card>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="p-6 space-y-4">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} className="flex items-center gap-4">
-                  <Skeleton className="h-10 w-10 rounded-lg" />
-                  <div className="flex-1">
-                    <Skeleton className="h-4 w-48 mb-1" />
-                    <Skeleton className="h-3 w-32" />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <Card className="border-0 shadow-md overflow-hidden">
+          <CardContent className="p-0">
+            {isLoading ? (
+              <div className="p-6 space-y-4">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="flex items-center gap-4">
+                    <Skeleton className="h-12 w-12 rounded-xl" />
+                    <div className="flex-1">
+                      <Skeleton className="h-4 w-48 mb-1" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                    <Skeleton className="h-6 w-20" />
+                    <Skeleton className="h-8 w-16" />
                   </div>
-                  <Skeleton className="h-6 w-20" />
-                  <Skeleton className="h-8 w-16" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>PRODUCT NAME</TableHead>
-                  <TableHead>CATEGORY</TableHead>
-                  <TableHead>IMAGE</TableHead>
-                  <TableHead>BEST SELLING</TableHead>
-                  <TableHead>STATUS</TableHead>
-                  <TableHead className="w-10">ACTIONS</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProducts.length > 0 ? (
-                  filteredProducts.map((product) => (
-                    <TableRow key={product.id}>
-                      <TableCell>
-                        <div className="font-medium">{product.name}</div>
-                        <div className="text-sm text-muted-foreground">{product.name_hi}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="capitalize">
-                          {product.category?.name || "Uncategorized"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="relative h-10 w-10 rounded-lg bg-secondary flex items-center justify-center overflow-hidden">
-                          {product.images && product.images.length > 0 ? (
-                            <Image src={product.images[0]} alt={product.name} fill className="object-cover" sizes="40px" />
+                ))}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/50">
+                    <TableHead className="font-semibold">Product</TableHead>
+                    <TableHead className="font-semibold">Category</TableHead>
+                    <TableHead className="font-semibold">Image</TableHead>
+                    <TableHead className="font-semibold">Best Seller</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProducts.length > 0 ? (
+                    filteredProducts.map((product, index) => (
+                      <motion.tr
+                        key={product.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        className="hover:bg-gray-50/50 transition-colors"
+                      >
+                        <TableCell>
+                          <div>
+                            <p className="font-medium text-gray-900">{product.name}</p>
+                            <p className="text-sm text-gray-500">{product.name_hi}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="capitalize">
+                            {product.category?.name || "Uncategorized"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="relative h-12 w-12 rounded-xl bg-gray-100 flex items-center justify-center overflow-hidden">
+                            {product.images && product.images.length > 0 ? (
+                              <Image src={product.images[0]} alt={product.name} fill className="object-cover" sizes="48px" />
+                            ) : (
+                              <Package className="h-5 w-5 text-gray-400" />
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {product.is_best_seller ? (
+                            <div className="flex items-center gap-1">
+                              <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
+                              <span className="text-sm font-medium text-amber-600">Yes</span>
+                            </div>
                           ) : (
-                            <Package className="h-5 w-5 text-muted-foreground" />
+                            <span className="text-gray-400 text-sm">No</span>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={product.is_active ? "success" : "secondary"}>
+                            {product.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditProduct(product)}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit Product
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-red-600"
+                                onClick={() => handleDeleteProduct(product.id)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </motion.tr>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-12">
+                        <div className="h-16 w-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                          <Package className="h-8 w-8 text-gray-400" />
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {product.is_best_seller ? (
-                          <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
-                        ) : (
-                          <span className="text-muted-foreground">No</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={product.is_active ? "success" : "secondary"}>
-                          {product.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditProduct(product)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit Product
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-red-600"
-                              onClick={() => handleDeleteProduct(product.id)}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <p className="text-gray-500">No products found</p>
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      No products found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="flex items-center justify-between"
+      >
+        <p className="text-sm text-gray-500">
           Showing {filteredProducts.length} of {total}
         </p>
         <div className="flex gap-2">
@@ -517,14 +587,13 @@ export default function ProductsPage() {
             disabled={page <= 1}
             onClick={() => setPage(p => Math.max(1, p - 1))}
           >
-            &lt;
+            Previous
           </Button>
           {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((p) => (
             <Button 
               key={p}
-              variant="outline" 
+              variant={page === p ? "default" : "outline"}
               size="sm" 
-              className={page === p ? "bg-primary text-white" : ""}
               onClick={() => setPage(p)}
             >
               {p}
@@ -536,16 +605,19 @@ export default function ProductsPage() {
             disabled={page >= totalPages}
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
           >
-            &gt;
+            Next
           </Button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Create Product Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Create New Product</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" />
+              Create New Product
+            </DialogTitle>
           </DialogHeader>
           <div className="grid md:grid-cols-2 gap-6">
             {/* Image Upload */}
@@ -561,14 +633,11 @@ export default function ProductsPage() {
               />
               <label
                 htmlFor="product-images"
-                className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-primary transition-colors block"
+                className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-primary transition-colors block bg-gray-50"
               >
                 <Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
                 <p className="text-sm font-medium">Click to upload</p>
-                <p className="text-xs text-muted-foreground">or drag and drop</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  PNG, JPG or GIF (Multiple images allowed)
-                </p>
+                <p className="text-xs text-gray-500 mt-1">PNG, JPG or GIF</p>
               </label>
               {imagePreviews.length > 0 && (
                 <div className="mt-4 grid grid-cols-3 gap-2">
@@ -578,13 +647,7 @@ export default function ProductsPage() {
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
                       ) : (
-                        <Image 
-                          src={preview} 
-                          alt={`Preview ${index + 1}`} 
-                          width={100}
-                          height={100}
-                          className="w-full h-full object-cover"
-                        />
+                        <Image src={preview} alt={`Preview ${index + 1}`} width={100} height={100} className="w-full h-full object-cover" />
                       )}
                       <button
                         type="button"
@@ -640,7 +703,7 @@ export default function ProductsPage() {
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
-                  placeholder="Describe the product's primary uses..."
+                  placeholder="Describe the product..."
                   className="mt-1"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -682,7 +745,10 @@ export default function ProductsPage() {
       <Dialog open={editDialogOpen} onOpenChange={(open) => { setEditDialogOpen(open); if (!open) resetForm(); }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Product</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5 text-primary" />
+              Edit Product
+            </DialogTitle>
           </DialogHeader>
           <div className="grid md:grid-cols-2 gap-6">
             {/* Image Upload */}
@@ -698,11 +764,10 @@ export default function ProductsPage() {
               />
               <label
                 htmlFor="edit-product-images"
-                className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-primary transition-colors block"
+                className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-primary transition-colors block bg-gray-50"
               >
                 <Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
                 <p className="text-sm font-medium">Click to upload new images</p>
-                <p className="text-xs text-muted-foreground">or drag and drop</p>
               </label>
               {imagePreviews.length > 0 && (
                 <div className="mt-4 grid grid-cols-3 gap-2">
@@ -712,13 +777,7 @@ export default function ProductsPage() {
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
                       ) : (
-                        <Image 
-                          src={preview} 
-                          alt={`Preview ${index + 1}`} 
-                          width={100}
-                          height={100}
-                          className="w-full h-full object-cover"
-                        />
+                        <Image src={preview} alt={`Preview ${index + 1}`} width={100} height={100} className="w-full h-full object-cover" />
                       )}
                       <button
                         type="button"
@@ -774,7 +833,7 @@ export default function ProductsPage() {
                 <Label htmlFor="edit-description">Description</Label>
                 <Textarea
                   id="edit-description"
-                  placeholder="Describe the product's primary uses..."
+                  placeholder="Describe the product..."
                   className="mt-1"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}

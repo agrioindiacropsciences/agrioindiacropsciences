@@ -1,16 +1,20 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-// QR images are generated using QuickChart URL (backend helper logic)
+import { motion } from "framer-motion";
 import {
   Search,
   Plus,
   Ticket,
   Loader2,
+  Filter,
+  QrCode,
+  Gift,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -60,16 +64,14 @@ export default function CouponsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  // Generate form state - matches backend API
   const [generateForm, setGenerateForm] = useState({
-    campaign_id: "",      // REQUIRED
-    count: "100",         // Number of coupons
-    product_id: "",       // Optional
-    prefix: "",           // Optional
-    expiry_date: "",      // Optional
+    campaign_id: "",
+    count: "100",
+    product_id: "",
+    prefix: "",
+    expiry_date: "",
   });
 
-  // Campaign form state
   const [campaignForm, setCampaignForm] = useState<{
     name: string;
     name_hi: string;
@@ -89,7 +91,6 @@ export default function CouponsPage() {
     end_date: "",
     distribution_type: "RANDOM",
     is_active: true,
-    // Single tier for simplicity
     tier_name: "Default Tier",
     reward_name: "",
     reward_type: "CASHBACK",
@@ -129,7 +130,6 @@ export default function CouponsPage() {
     try {
       const response = await api.getAdminCampaigns({ limit: 100 });
       if (response.success && response.data) {
-        // Handle different response structures
         const campaignsData = response.data.campaigns || response.data.data || (Array.isArray(response.data) ? response.data : []);
         setCampaigns(campaignsData);
       }
@@ -151,14 +151,12 @@ export default function CouponsPage() {
     });
   }, [coupons, searchQuery]);
 
+  const usedCount = coupons.filter(c => c.is_used).length;
+  const unusedCount = coupons.filter(c => !c.is_used).length;
+
   const getQrUrl = (code: string) => {
-    const logoUrl =
-      "https://res.cloudinary.com/dyumjsohc/image/upload/v1768456817/assets/agrio_logo.png";
-    return `https://quickchart.io/qr?text=${encodeURIComponent(
-      code
-    )}&centerImageUrl=${encodeURIComponent(
-      logoUrl
-    )}&centerImageSize=0.15&size=300&ecLevel=H`;
+    const logoUrl = "https://res.cloudinary.com/dyumjsohc/image/upload/v1768456817/assets/agrio_logo.png";
+    return `https://quickchart.io/qr?text=${encodeURIComponent(code)}&centerImageUrl=${encodeURIComponent(logoUrl)}&centerImageSize=0.15&size=300&ecLevel=H`;
   };
 
   const handleGenerateCoupons = async () => {
@@ -187,8 +185,6 @@ export default function CouponsPage() {
           description: `${generateForm.count} coupons generated successfully`,
         });
 
-        // QR flow as per backend: generate returns batch_id (codes are in DB).
-        // We fetch UNUSED coupons and filter by batch_number == batch_id, then build QR URLs using QuickChart helper.
         if (generateQRCodes && response.data?.batch_id) {
           const batchId = response.data.batch_id;
           try {
@@ -197,10 +193,7 @@ export default function CouponsPage() {
             const batchCoupons = list.filter((c) => c.batch_number === batchId);
             const qrItems = batchCoupons.map((c) => ({ code: c.code, qrUrl: getQrUrl(c.code) }));
             setQrCodesPreview(qrItems);
-            setQrBatchInfo({
-              batchId,
-              generatedCount: response.data?.generated_count,
-            });
+            setQrBatchInfo({ batchId, generatedCount: response.data?.generated_count });
             setQrDialogOpen(true);
           } catch {
             // ignore
@@ -208,13 +201,7 @@ export default function CouponsPage() {
         }
 
         setGenerateDialogOpen(false);
-        setGenerateForm({
-          campaign_id: "",
-          count: "100",
-          product_id: "",
-          prefix: "",
-          expiry_date: "",
-        });
+        setGenerateForm({ campaign_id: "", count: "100", product_id: "", prefix: "", expiry_date: "" });
         fetchCoupons();
       } else {
         toast({
@@ -244,7 +231,7 @@ export default function CouponsPage() {
           <style>
             body { font-family: Arial, sans-serif; padding: 16px; }
             .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-            .item { border: 1px solid #ddd; padding: 8px; }
+            .item { border: 1px solid #ddd; padding: 8px; border-radius: 8px; }
             .code { font-family: monospace; font-size: 10px; margin-top: 6px; word-break: break-all; }
             img { width: 100%; height: auto; }
             @media print { body { padding: 0; } }
@@ -254,16 +241,7 @@ export default function CouponsPage() {
           <h2>Coupon QR Sheet</h2>
           ${qrBatchInfo?.batchId ? `<div>Batch: <span style="font-family: monospace">${qrBatchInfo.batchId}</span></div>` : ""}
           <div class="grid">
-            ${qrCodesPreview
-              .map(
-                (q) => `
-              <div class="item">
-                <img src="${q.qrUrl}" />
-                <div class="code">${q.code}</div>
-              </div>
-            `
-              )
-              .join("")}
+            ${qrCodesPreview.map((q) => `<div class="item"><img src="${q.qrUrl}" /><div class="code">${q.code}</div></div>`).join("")}
           </div>
           <script>window.onload = () => { setTimeout(() => window.print(), 300); };</script>
         </body>
@@ -284,10 +262,8 @@ export default function CouponsPage() {
   };
 
   const downloadAllQrPngs = async () => {
-    // Browsers may block many downloads; we trigger sequentially with small delay.
     for (const item of qrCodesPreview) {
       downloadQrPng(item.code, item.qrUrl);
-      // eslint-disable-next-line no-await-in-loop
       await new Promise((r) => setTimeout(r, 250));
     }
   };
@@ -311,36 +287,26 @@ export default function CouponsPage() {
         end_date: campaignForm.end_date || undefined,
         distribution_type: campaignForm.distribution_type,
         is_active: campaignForm.is_active,
-        tiers: [
-          {
-            tier_name: campaignForm.tier_name || "Default Tier",
-            reward_name: campaignForm.reward_name || `₹${campaignForm.reward_value} ${campaignForm.reward_type}`,
-            reward_type: campaignForm.reward_type,
-            reward_value: parseInt(campaignForm.reward_value),
-            probability: parseFloat(campaignForm.probability) || 1,
-            priority: 1,
-          }
-        ],
+        tiers: [{
+          tier_name: campaignForm.tier_name || "Default Tier",
+          reward_name: campaignForm.reward_name || `₹${campaignForm.reward_value} ${campaignForm.reward_type}`,
+          reward_type: campaignForm.reward_type,
+          reward_value: parseInt(campaignForm.reward_value),
+          probability: parseFloat(campaignForm.probability) || 1,
+          priority: 1,
+        }],
       });
 
       if (response.success) {
         toast({
           title: "Success",
-          description: "Campaign created successfully! You can now generate coupons.",
+          description: "Campaign created successfully!",
         });
         setCreateCampaignDialogOpen(false);
         setCampaignForm({
-          name: "",
-          name_hi: "",
-          start_date: "",
-          end_date: "",
-          distribution_type: "RANDOM",
-          is_active: true,
-          tier_name: "Default Tier",
-          reward_name: "",
-          reward_type: "CASHBACK",
-          reward_value: "100",
-          probability: "1",
+          name: "", name_hi: "", start_date: "", end_date: "",
+          distribution_type: "RANDOM", is_active: true, tier_name: "Default Tier",
+          reward_name: "", reward_type: "CASHBACK", reward_value: "100", probability: "1",
         });
         fetchCampaigns();
       } else {
@@ -361,183 +327,243 @@ export default function CouponsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Coupons Management</h1>
-          <p className="text-muted-foreground">Manage, generate, and track all promotional coupons.</p>
+    <div className="space-y-6 pb-8">
+      {/* Hero Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 p-6 sm:p-8 text-white"
+      >
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+        
+        <div className="relative">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                <Ticket className="h-7 w-7" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold">Coupons Management</h1>
+                <p className="text-white/70 text-sm">Generate and manage promotional coupons</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => setCreateCampaignDialogOpen(true)}
+                className="bg-white/20 border-white/30 hover:bg-white/30 text-white"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Campaign
+              </Button>
+              <Button 
+                onClick={() => setGenerateDialogOpen(true)}
+                className="bg-white text-orange-600 hover:bg-white/90 shadow-lg"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Generate Coupons
+              </Button>
+            </div>
+          </div>
+          
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4 mt-6">
+            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+              <p className="text-2xl sm:text-3xl font-bold">{total}</p>
+              <p className="text-xs text-white/70">Total Coupons</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+              <p className="text-2xl sm:text-3xl font-bold">{unusedCount}</p>
+              <p className="text-xs text-white/70">Unused</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+              <p className="text-2xl sm:text-3xl font-bold">{usedCount}</p>
+              <p className="text-xs text-white/70">Used</p>
+            </div>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setCreateCampaignDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Campaign
-          </Button>
-          <Button onClick={() => setGenerateDialogOpen(true)}>
-            <Ticket className="h-4 w-4 mr-2" />
-            Generate Coupons
-          </Button>
-        </div>
-      </div>
+      </motion.div>
 
       {/* Search and Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search coupons..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <Card className="border-0 shadow-md">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search coupons..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-11 h-11 bg-gray-50 border-gray-200"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPage(1); }}>
+                <SelectTrigger className="w-32 h-11">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="unused">Unused</SelectItem>
+                  <SelectItem value="used">Used</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button onClick={() => fetchCoupons()} variant="secondary" className="h-11">
+                Apply
+              </Button>
             </div>
-            <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPage(1); }}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="unused">Unused</SelectItem>
-                <SelectItem value="used">Used</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={() => fetchCoupons()} variant="secondary">
-              Apply Filters
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </motion.div>
 
-      {/* All Coupons Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Coupons</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="p-6 space-y-4">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} className="flex items-center gap-4">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-6 w-16" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>COUPON CODE</TableHead>
-                  <TableHead>PRODUCT</TableHead>
-                  <TableHead>REWARD</TableHead>
-                  <TableHead>STATUS</TableHead>
-                  <TableHead>USER</TableHead>
-                  <TableHead>ACTIONS</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCoupons.length > 0 ? (
-                  filteredCoupons.map((coupon) => (
-                    <TableRow key={coupon.id}>
-                      <TableCell className="font-mono font-medium">{coupon.code}</TableCell>
-                      <TableCell>{coupon.product?.name || "-"}</TableCell>
-                      <TableCell>
-                        {coupon.reward_type === "CASHBACK" && `₹${coupon.reward_value} Cashback`}
-                        {coupon.reward_type === "DISCOUNT" && `${coupon.reward_value}% Off`}
-                        {coupon.reward_type === "GIFT" && "Free Gift"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={coupon.is_used ? "secondary" : "success"}>
-                          {coupon.is_used ? "Used" : "Unused"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{coupon.redeemed_by?.name || "-"}</TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="link" 
-                          size="sm" 
-                          className="text-primary"
-                          onClick={async () => {
-                            try {
-                              const response = await api.getAdminCoupon(coupon.id);
-                              if (response.success && response.data) {
+      {/* Coupons Table */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <Card className="border-0 shadow-md overflow-hidden">
+          <CardContent className="p-0">
+            {isLoading ? (
+              <div className="p-6 space-y-4">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="flex items-center gap-4">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-6 w-16" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/50">
+                    <TableHead className="font-semibold">Coupon Code</TableHead>
+                    <TableHead className="font-semibold">Product</TableHead>
+                    <TableHead className="font-semibold">Reward</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold">User</TableHead>
+                    <TableHead className="font-semibold">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCoupons.length > 0 ? (
+                    filteredCoupons.map((coupon, index) => (
+                      <motion.tr
+                        key={coupon.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        className="hover:bg-gray-50/50 transition-colors"
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <QrCode className="h-4 w-4 text-gray-400" />
+                            <span className="font-mono font-semibold text-gray-900">{coupon.code}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-gray-600">{coupon.product?.name || "-"}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Gift className="h-4 w-4 text-amber-500" />
+                            <span className="text-sm font-medium">
+                              {coupon.reward_type === "CASHBACK" && `₹${coupon.reward_value}`}
+                              {coupon.reward_type === "DISCOUNT" && `${coupon.reward_value}%`}
+                              {coupon.reward_type === "GIFT" && "Gift"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={coupon.is_used ? "secondary" : "success"}>
+                            {coupon.is_used ? "Used" : "Unused"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-gray-600">{coupon.redeemed_by?.name || "-"}</TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="link" 
+                            size="sm" 
+                            className="text-primary p-0"
+                            onClick={async () => {
+                              try {
+                                const response = await api.getAdminCoupon(coupon.id);
+                                if (response.success && response.data) {
+                                  toast({
+                                    title: "Coupon Details",
+                                    description: `Code: ${response.data.code}, Status: ${response.data.is_used ? 'Used' : 'Unused'}`,
+                                  });
+                                }
+                              } catch (error) {
                                 toast({
-                                  title: "Coupon Details",
-                                  description: `Code: ${response.data.code}, Status: ${response.data.is_used ? 'Used' : 'Unused'}`,
+                                  title: "Error",
+                                  description: "Failed to load coupon details",
+                                  variant: "destructive",
                                 });
                               }
-                            } catch (error) {
-                              toast({
-                                title: "Error",
-                                description: "Failed to load coupon details",
-                                variant: "destructive",
-                              });
-                            }
-                          }}
-                        >
-                          View
-                        </Button>
+                            }}
+                          >
+                            View
+                          </Button>
+                        </TableCell>
+                      </motion.tr>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-12">
+                        <div className="h-16 w-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                          <Ticket className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <p className="text-gray-500">No coupons found</p>
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      No coupons found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="flex items-center justify-between"
+      >
+        <p className="text-sm text-gray-500">
           Showing {filteredCoupons.length} of {total} results
         </p>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            disabled={page <= 1}
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-          >
-            &lt;
+          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
+            Previous
           </Button>
           {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((p) => (
-            <Button 
-              key={p}
-              variant="outline" 
-              size="sm" 
-              className={page === p ? "bg-primary text-white" : ""}
-              onClick={() => setPage(p)}
-            >
+            <Button key={p} variant={page === p ? "default" : "outline"} size="sm" onClick={() => setPage(p)}>
               {p}
             </Button>
           ))}
-          <Button 
-            variant="outline" 
-            size="sm"
-            disabled={page >= totalPages}
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-          >
-            &gt;
+          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
+            Next
           </Button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Generate Coupon Dialog */}
       <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Generate New Coupons</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Generate New Coupons
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -552,34 +578,16 @@ export default function CouponsPage() {
                 <SelectContent>
                   <SelectItem value="none">Select a campaign</SelectItem>
                   {campaigns.length > 0 ? (
-                    campaigns.map((campaign) => {
-                      // Get reward summary from tiers
-                      const tiersSummary = campaign.tiers?.length 
-                        ? campaign.tiers.map(t => `${t.reward_type}: ₹${t.reward_value}`).join(', ')
-                        : 'No tiers';
-                      return (
-                        <SelectItem key={campaign.id} value={campaign.id}>
-                          {campaign.name} {campaign.is_active ? '' : '(Inactive)'}
-                        </SelectItem>
-                      );
-                    })
+                    campaigns.map((campaign) => (
+                      <SelectItem key={campaign.id} value={campaign.id}>
+                        {campaign.name} {campaign.is_active ? '' : '(Inactive)'}
+                      </SelectItem>
+                    ))
                   ) : (
-                    <SelectItem value="no-campaigns" disabled>
-                      No campaigns available - Create one first
-                    </SelectItem>
+                    <SelectItem value="no-campaigns" disabled>No campaigns - Create one first</SelectItem>
                   )}
                 </SelectContent>
               </Select>
-              {campaigns.length === 0 && (
-                <p className="text-xs text-amber-600 mt-1">
-                  No campaigns found. Please create a campaign first before generating coupons.
-                </p>
-              )}
-              {campaigns.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  The reward tiers come from the selected campaign
-                </p>
-              )}
             </div>
             <div>
               <Label>Number of Coupons *</Label>
@@ -591,22 +599,16 @@ export default function CouponsPage() {
                 onChange={(e) => setGenerateForm({ ...generateForm, count: e.target.value })}
               />
             </div>
-          <div className="flex items-center gap-2 pt-2">
+            <div className="flex items-center gap-2 pt-2">
               <input
                 id="generate-qr"
                 type="checkbox"
-                className="h-4 w-4"
+                className="h-4 w-4 rounded border-gray-300"
                 checked={generateQRCodes}
                 onChange={(e) => setGenerateQRCodes(e.target.checked)}
               />
-              <Label htmlFor="generate-qr" className="cursor-pointer">
-                Generate QR codes (unique, scannable)
-              </Label>
+              <Label htmlFor="generate-qr" className="cursor-pointer text-sm">Generate QR codes</Label>
             </div>
-            <p className="text-xs text-muted-foreground">
-              QR codes are generated from the coupon <span className="font-mono">code</span>. Coupon codes are created by the backend (random + unique).
-              We build QR image URLs using QuickChart (with Agrio logo in center) and provide a printable sheet.
-            </p>
             <div>
               <Label>Linked Product (Optional)</Label>
               <Select 
@@ -619,9 +621,7 @@ export default function CouponsPage() {
                 <SelectContent>
                   <SelectItem value="none">No specific product</SelectItem>
                   {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name}
-                    </SelectItem>
+                    <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -629,33 +629,18 @@ export default function CouponsPage() {
             <div>
               <Label>Code Prefix (Optional)</Label>
               <Input 
-                placeholder="e.g., AGRI, SUMMER" 
+                placeholder="e.g., AGRI" 
                 className="mt-1"
                 value={generateForm.prefix}
                 onChange={(e) => setGenerateForm({ ...generateForm, prefix: e.target.value.toUpperCase() })}
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Optional prefix for coupon codes (e.g., AGRI-XXXX)
-              </p>
-            </div>
-            <div>
-              <Label>Expiry Date (Optional)</Label>
-              <Input 
-                type="date" 
-                className="mt-1"
-                value={generateForm.expiry_date}
-                onChange={(e) => setGenerateForm({ ...generateForm, expiry_date: e.target.value })}
-              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleGenerateCoupons} disabled={isGenerating || !generateForm.campaign_id}>
               {isGenerating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              <Ticket className="h-4 w-4 mr-2" />
-              Generate Coupons
+              Generate
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -665,7 +650,10 @@ export default function CouponsPage() {
       <Dialog open={createCampaignDialogOpen} onOpenChange={setCreateCampaignDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Create New Campaign</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5 text-primary" />
+              Create New Campaign
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto">
             <div>
@@ -680,7 +668,7 @@ export default function CouponsPage() {
             <div>
               <Label>Campaign Name (Hindi)</Label>
               <Input 
-                placeholder="e.g., गर्मी की बिक्री 2026" 
+                placeholder="e.g., गर्मी की बिक्री" 
                 className="mt-1"
                 value={campaignForm.name_hi}
                 onChange={(e) => setCampaignForm({ ...campaignForm, name_hi: e.target.value })}
@@ -689,21 +677,11 @@ export default function CouponsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Start Date</Label>
-                <Input 
-                  type="date" 
-                  className="mt-1"
-                  value={campaignForm.start_date}
-                  onChange={(e) => setCampaignForm({ ...campaignForm, start_date: e.target.value })}
-                />
+                <Input type="date" className="mt-1" value={campaignForm.start_date} onChange={(e) => setCampaignForm({ ...campaignForm, start_date: e.target.value })} />
               </div>
               <div>
                 <Label>End Date</Label>
-                <Input 
-                  type="date" 
-                  className="mt-1"
-                  value={campaignForm.end_date}
-                  onChange={(e) => setCampaignForm({ ...campaignForm, end_date: e.target.value })}
-                />
+                <Input type="date" className="mt-1" value={campaignForm.end_date} onChange={(e) => setCampaignForm({ ...campaignForm, end_date: e.target.value })} />
               </div>
             </div>
             
@@ -711,23 +689,9 @@ export default function CouponsPage() {
               <h4 className="font-medium mb-3">Reward Tier</h4>
               <div className="space-y-3">
                 <div>
-                  <Label>Tier Name</Label>
-                  <Input 
-                    placeholder="e.g., Gold Tier, Silver Tier" 
-                    className="mt-1"
-                    value={campaignForm.tier_name}
-                    onChange={(e) => setCampaignForm({ ...campaignForm, tier_name: e.target.value })}
-                  />
-                </div>
-                <div>
                   <Label>Reward Type *</Label>
-                  <Select 
-                    value={campaignForm.reward_type}
-                    onValueChange={(value: "CASHBACK" | "DISCOUNT" | "GIFT") => setCampaignForm({ ...campaignForm, reward_type: value })}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={campaignForm.reward_type} onValueChange={(value: "CASHBACK" | "DISCOUNT" | "GIFT") => setCampaignForm({ ...campaignForm, reward_type: value })}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="CASHBACK">Cashback</SelectItem>
                       <SelectItem value="DISCOUNT">Discount</SelectItem>
@@ -737,33 +701,16 @@ export default function CouponsPage() {
                 </div>
                 <div>
                   <Label>Reward Value (₹) *</Label>
-                  <Input 
-                    type="number"
-                    placeholder="e.g., 100" 
-                    className="mt-1"
-                    value={campaignForm.reward_value}
-                    onChange={(e) => setCampaignForm({ ...campaignForm, reward_value: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Reward Name</Label>
-                  <Input 
-                    placeholder="e.g., ₹100 Cashback (auto-generated if empty)" 
-                    className="mt-1"
-                    value={campaignForm.reward_name}
-                    onChange={(e) => setCampaignForm({ ...campaignForm, reward_name: e.target.value })}
-                  />
+                  <Input type="number" placeholder="e.g., 100" className="mt-1" value={campaignForm.reward_value} onChange={(e) => setCampaignForm({ ...campaignForm, reward_value: e.target.value })} />
                 </div>
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateCampaignDialogOpen(false)}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setCreateCampaignDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleCreateCampaign} disabled={isCreatingCampaign || !campaignForm.name}>
               {isCreatingCampaign && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Create Campaign
+              Create
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -773,52 +720,33 @@ export default function CouponsPage() {
       <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Generated QR Codes (Preview)</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5 text-primary" />
+              Generated QR Codes
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             {qrBatchInfo?.generatedCount && (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-500">
                 Generated: <span className="font-medium">{qrBatchInfo.generatedCount}</span>
-                {qrBatchInfo.batchId ? (
-                  <>
-                    {" "}• Batch: <span className="font-mono">{qrBatchInfo.batchId}</span>
-                  </>
-                ) : null}
               </p>
             )}
             <div className="flex gap-2">
-              <Button onClick={openPrintableQrSheet} disabled={qrCodesPreview.length === 0}>
-                Print QR Sheet
-              </Button>
-              <Button variant="outline" onClick={downloadAllQrPngs} disabled={qrCodesPreview.length === 0}>
-                Download PNGs
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setQrCodesPreview([]);
-                  setQrBatchInfo(null);
-                  setQrDialogOpen(false);
-                }}
-              >
-                Close
-              </Button>
+              <Button onClick={openPrintableQrSheet} disabled={qrCodesPreview.length === 0}>Print Sheet</Button>
+              <Button variant="outline" onClick={downloadAllQrPngs} disabled={qrCodesPreview.length === 0}>Download PNGs</Button>
+              <Button variant="outline" onClick={() => { setQrCodesPreview([]); setQrBatchInfo(null); setQrDialogOpen(false); }}>Close</Button>
             </div>
             {qrCodesPreview.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No QR preview available.</p>
+              <p className="text-sm text-gray-500">No QR preview available.</p>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-2">
                 {qrCodesPreview.map((item) => (
-                  <div key={item.code} className="border rounded-lg p-3">
+                  <div key={item.code} className="border rounded-xl p-3 bg-gray-50">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={item.qrUrl} alt={`QR ${item.code}`} className="w-full h-auto" />
+                    <img src={item.qrUrl} alt={`QR ${item.code}`} className="w-full h-auto rounded-lg" />
                     <div className="mt-2 flex items-center justify-between gap-2">
                       <span className="font-mono text-xs break-all">{item.code}</span>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => downloadQrPng(item.code, item.qrUrl)}
-                      >
+                      <Button size="sm" variant="secondary" onClick={() => downloadQrPng(item.code, item.qrUrl)}>
                         Download
                       </Button>
                     </div>
@@ -826,11 +754,6 @@ export default function CouponsPage() {
                 ))}
               </div>
             )}
-            {qrBatchInfo?.generatedCount && qrCodesPreview.length > 0 && qrBatchInfo.generatedCount > qrCodesPreview.length ? (
-              <p className="text-xs text-amber-600">
-                Showing {qrCodesPreview.length} codes from batch preview. If you generated more than this and they are not visible, add backend support for filtering coupons by batch_id or increase listing limit.
-              </p>
-            ) : null}
           </div>
         </DialogContent>
       </Dialog>

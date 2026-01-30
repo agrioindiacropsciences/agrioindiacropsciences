@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { motion } from "framer-motion";
 import {
   QrCode,
   Gift,
@@ -12,10 +13,12 @@ import {
   Calendar,
   ArrowRight,
   Trophy,
-  Loader2,
+  Sparkles,
+  TrendingUp,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStore } from "@/store/useStore";
@@ -26,38 +29,42 @@ const quickActions = [
   {
     href: "/dashboard/rewards",
     icon: Gift,
-    title: "My Rewards / Coupons",
-    titleHi: "मेरे पुरस्कार / कूपन",
-    description: "View your earned points and coupons.",
-    descriptionHi: "अपने अर्जित अंक और कूपन देखें।",
-    color: "bg-amber-500",
+    title: "My Rewards",
+    titleHi: "मेरे पुरस्कार",
+    description: "View earned rewards",
+    descriptionHi: "अर्जित पुरस्कार देखें",
+    gradient: "from-amber-500 to-orange-600",
+    bgLight: "bg-amber-50",
   },
   {
     href: "/dashboard/products",
     icon: Package,
-    title: "Recommended Products",
-    titleHi: "अनुशंसित उत्पाद",
-    description: "Products suited for your crops.",
-    descriptionHi: "आपकी फसलों के लिए उपयुक्त उत्पाद।",
-    color: "bg-blue-500",
+    title: "Products",
+    titleHi: "उत्पाद",
+    description: "Recommended for you",
+    descriptionHi: "आपके लिए अनुशंसित",
+    gradient: "from-blue-500 to-indigo-600",
+    bgLight: "bg-blue-50",
   },
   {
     href: "/dashboard/distributors",
     icon: MapPin,
-    title: "Nearby Distributors",
-    titleHi: "नजदीकी वितरक",
-    description: "Find the closest official dealers.",
-    descriptionHi: "निकटतम आधिकारिक डीलरों को खोजें।",
-    color: "bg-purple-500",
+    title: "Distributors",
+    titleHi: "वितरक",
+    description: "Find nearby dealers",
+    descriptionHi: "नजदीकी डीलर खोजें",
+    gradient: "from-purple-500 to-pink-600",
+    bgLight: "bg-purple-50",
   },
   {
-    href: "/products",
-    icon: Package,
-    title: "Products Catalog",
-    titleHi: "उत्पाद सूची",
-    description: "Browse our full range of products.",
-    descriptionHi: "हमारे उत्पादों की पूरी श्रृंखला देखें।",
-    color: "bg-teal-500",
+    href: "/dashboard/support",
+    icon: Zap,
+    title: "Support",
+    titleHi: "सहायता",
+    description: "Get help anytime",
+    descriptionHi: "कभी भी मदद लें",
+    gradient: "from-teal-500 to-emerald-600",
+    bgLight: "bg-teal-50",
   },
 ];
 
@@ -113,223 +120,235 @@ export default function DashboardPage() {
       title: language === "en" ? "Total Scans" : "कुल स्कैन",
       value: userStats?.total_scans?.toString() || "0",
       icon: ScanLine,
-      color: "text-blue-600",
-      bg: "bg-blue-100",
+      gradient: "from-blue-500 to-indigo-600",
+      bgLight: "bg-blue-50",
     },
     {
-      title: language === "en" ? "Coupons Won" : "जीते हुए कूपन",
+      title: language === "en" ? "Coupons Won" : "जीते कूपन",
       value: userStats?.coupons_won?.toString() || "0",
       icon: Trophy,
-      color: "text-amber-600",
-      bg: "bg-amber-100",
+      gradient: "from-amber-500 to-orange-600",
+      bgLight: "bg-amber-50",
     },
     {
-      title: language === "en" ? "Rewards Claimed" : "प्राप्त पुरस्कार",
+      title: language === "en" ? "Claimed" : "प्राप्त",
       value: userStats?.rewards_claimed?.toString() || "0",
       icon: Gift,
-      color: "text-green-600",
-      bg: "bg-green-100",
+      gradient: "from-green-500 to-emerald-600",
+      bgLight: "bg-green-50",
     },
     {
       title: language === "en" ? "Last Scan" : "अंतिम स्कैन",
       value: formatLastScan(userStats?.last_scan_date || null),
       icon: Calendar,
-      color: "text-purple-600",
-      bg: "bg-purple-100",
+      gradient: "from-purple-500 to-pink-600",
+      bgLight: "bg-purple-50",
     },
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Section - Mobile */}
-      <div className="lg:hidden">
-        <h1 className="text-2xl font-bold">
-          {language === "en" ? `Namaste, ${user?.name?.split(" ")[0] || ""}!` : `नमस्ते, ${user?.name?.split(" ")[0] || ""}!`}
-        </h1>
-        <p className="text-muted-foreground">
-          {language === "en" ? "Welcome to your Agrio India dashboard." : "आपके एग्रियो इंडिया डैशबोर्ड में आपका स्वागत है।"}
-        </p>
-      </div>
-
-      {/* Scan & Win CTA */}
-      <div
-        
-        
+    <div className="space-y-6 pb-8">
+      {/* Hero Welcome Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-emerald-500 to-teal-500 p-6 sm:p-8 text-white"
       >
-        <Card className="bg-gradient-to-r from-primary to-primary-dark text-white overflow-hidden">
-          <CardContent className="p-6 flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <div className="h-20 w-20 rounded-2xl bg-white/20 flex items-center justify-center">
-                <QrCode className="h-10 w-10" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold mb-1">
-                  {language === "en" ? "Scan & Win" : "स्कैन और जीतें"}
-                </h3>
-                <p className="text-white/80 text-sm">
-                  {language === "en"
-                    ? "Scan a product QR code to earn instant rewards and points."
-                    : "तुरंत पुरस्कार और अंक अर्जित करने के लिए उत्पाद QR कोड स्कैन करें।"}
-                </p>
-              </div>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+        
+        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="h-5 w-5 text-amber-300" />
+              <span className="text-sm text-white/80 font-medium">
+                {language === "en" ? "Welcome back" : "वापसी पर स्वागत है"}
+              </span>
             </div>
-            <Button asChild variant="secondary" size="lg" className="hidden md:flex text-primary">
-              <Link href="/dashboard/scan">
-                {language === "en" ? "Scan QR Code" : "QR कोड स्कैन करें"}
-              </Link>
-            </Button>
-          </CardContent>
-          {/* Mobile Button */}
-          <div className="md:hidden px-6 pb-6">
-            <Button asChild variant="secondary" className="w-full text-primary">
-              <Link href="/dashboard/scan">
-                {language === "en" ? "Scan QR Code" : "QR कोड स्कैन करें"}
-              </Link>
-            </Button>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">
+              {language === "en" ? `Namaste, ${user?.name?.split(" ")[0] || ""}!` : `नमस्ते, ${user?.name?.split(" ")[0] || ""}!`}
+            </h1>
+            <p className="text-white/70 text-sm sm:text-base max-w-md">
+              {language === "en" 
+                ? "Scan product codes to win exciting rewards and track your progress."
+                : "रोमांचक पुरस्कार जीतने के लिए उत्पाद कोड स्कैन करें।"}
+            </p>
           </div>
-        </Card>
-      </div>
+          
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button 
+              asChild 
+              size="lg" 
+              className="bg-white text-primary hover:bg-white/90 shadow-xl h-14 px-8 rounded-xl font-semibold"
+            >
+              <Link href="/dashboard/scan" className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <QrCode className="h-5 w-5 text-primary" />
+                </div>
+                <div className="text-left">
+                  <span className="block text-xs text-gray-500">{language === "en" ? "Start Scanning" : "स्कैन शुरू करें"}</span>
+                  <span className="block">{language === "en" ? "Scan & Win" : "स्कैन और जीतें"}</span>
+                </div>
+              </Link>
+            </Button>
+          </motion.div>
+        </div>
+      </motion.div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, index) => (
-          <div
-            key={index}
-            
-            
-            
-          >
-            <Card>
-              <CardContent className="p-4">
-                {isLoading ? (
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-10 w-10 rounded-lg" />
-                    <div>
-                      <Skeleton className="h-6 w-12 mb-1" />
-                      <Skeleton className="h-3 w-16" />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <div className={`h-10 w-10 rounded-lg ${stat.bg} flex items-center justify-center`}>
-                      <stat.icon className={`h-5 w-5 ${stat.color}`} />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{stat.value}</p>
-                      <p className="text-xs text-muted-foreground">{stat.title}</p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        ))}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {quickActions.map((action, index) => (
-          <div
-            key={index}
-            
-            
-            
-          >
-            <Link href={action.href}>
-              <Card className="h-full card-hover cursor-pointer group">
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className={`h-10 w-10 rounded-lg ${action.color} flex items-center justify-center shrink-0`}>
-                      <action.icon className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-medium text-sm mb-1 group-hover:text-primary transition-colors">
-                        {language === "en" ? action.title : action.titleHi}
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        {language === "en" ? action.description : action.descriptionHi}
-                      </p>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-primary transition-colors" />
+      <div>
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-primary" />
+          {language === "en" ? "Your Stats" : "आपके आंकड़े"}
+        </h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.map((stat, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <Card className="border-0 shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden">
+                <CardContent className="p-0">
+                  <div className={`h-1 bg-gradient-to-r ${stat.gradient}`} />
+                  <div className="p-4">
+                    {isLoading ? (
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-12 w-12 rounded-xl" />
+                        <div>
+                          <Skeleton className="h-6 w-12 mb-1" />
+                          <Skeleton className="h-3 w-16" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className={`h-12 w-12 rounded-xl ${stat.bgLight} flex items-center justify-center`}>
+                          <stat.icon className={`h-6 w-6 bg-gradient-to-r ${stat.gradient} bg-clip-text`} style={{ color: stat.gradient.includes('blue') ? '#3b82f6' : stat.gradient.includes('amber') ? '#f59e0b' : stat.gradient.includes('green') ? '#22c55e' : '#a855f7' }} />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                          <p className="text-xs text-gray-500">{stat.title}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
-            </Link>
-          </div>
-        ))}
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div>
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Zap className="h-5 w-5 text-primary" />
+          {language === "en" ? "Quick Actions" : "त्वरित कार्य"}
+        </h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {quickActions.map((action, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 + index * 0.1 }}
+            >
+              <Link href={action.href} className="block group">
+                <Card className="h-full border-0 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className={`h-1 bg-gradient-to-r ${action.gradient}`} />
+                    <div className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className={`h-10 w-10 rounded-xl ${action.bgLight} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                          <action.icon className="h-5 w-5" style={{ color: action.gradient.includes('amber') ? '#f59e0b' : action.gradient.includes('blue') ? '#3b82f6' : action.gradient.includes('purple') ? '#a855f7' : '#14b8a6' }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 group-hover:text-primary transition-colors">
+                            {language === "en" ? action.title : action.titleHi}
+                          </h3>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {language === "en" ? action.description : action.descriptionHi}
+                          </p>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
       </div>
 
       {/* Crop Recommendations */}
       {crops.length > 0 && (
-        <div
-          
-          
-          
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
         >
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">
-                {language === "en" ? "Explore Solutions for Your Crops" : "अपनी फसलों के लिए समाधान खोजें"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4">
-                {crops.slice(0, 3).map((crop, index) => (
-                  <Link
-                    key={crop.id}
-                    href={`/products?crop=${crop.id}`}
-                    className="group"
-                  >
-                    <div className="relative h-32 rounded-xl overflow-hidden bg-gradient-to-br from-green-100 to-green-200">
-                      {crop.image_url ? (
-                        <Image
-                          src={crop.image_url}
-                          alt={crop.name}
-                          fill
-                          className="object-cover group-hover:scale-110 transition-transform duration-300"
-                          sizes="(max-width: 640px) 33vw, 200px"
-                        />
-                      ) : null}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                      <div className="absolute bottom-3 left-3 right-3">
-                        <p className="text-white font-medium text-sm">
-                          {language === "en" ? `Explore ${crop.name}` : `${crop.name_hi} समाधान खोजें`}
-                        </p>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+          <h2 className="text-lg font-semibold mb-4">
+            {language === "en" ? "Solutions for Your Crops" : "आपकी फसलों के लिए समाधान"}
+          </h2>
+          <div className="grid grid-cols-3 gap-4">
+            {crops.slice(0, 3).map((crop, index) => (
+              <Link
+                key={crop.id}
+                href={`/products?crop=${crop.id}`}
+                className="group"
+              >
+                <div className="relative h-28 sm:h-36 rounded-xl overflow-hidden bg-gradient-to-br from-green-100 to-emerald-200 shadow-md hover:shadow-xl transition-all">
+                  {crop.image_url ? (
+                    <Image
+                      src={crop.image_url}
+                      alt={crop.name}
+                      fill
+                      className="object-cover group-hover:scale-110 transition-transform duration-300"
+                      sizes="(max-width: 640px) 33vw, 200px"
+                    />
+                  ) : null}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  <div className="absolute bottom-3 left-3 right-3">
+                    <p className="text-white font-medium text-sm truncate">
+                      {language === "en" ? crop.name : crop.name_hi}
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </motion.div>
       )}
 
       {/* Recent Rewards */}
-      <div
-        
-        
-        
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
       >
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-4">
-            <CardTitle className="text-lg">
-              {language === "en" ? "Recent Rewards" : "हाल के पुरस्कार"}
-            </CardTitle>
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/dashboard/rewards">
-                {language === "en" ? "View All" : "सभी देखें"}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Gift className="h-5 w-5 text-primary" />
+            {language === "en" ? "Recent Rewards" : "हाल के पुरस्कार"}
+          </h2>
+          <Button asChild variant="ghost" size="sm" className="text-primary">
+            <Link href="/dashboard/rewards">
+              {language === "en" ? "View All" : "सभी देखें"}
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+
+        <Card className="border-0 shadow-md overflow-hidden">
+          <CardContent className="p-0">
             {isLoading ? (
-              <div className="space-y-3">
+              <div className="divide-y">
                 {Array.from({ length: 3 }).map((_, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                  <div key={index} className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-3">
-                      <Skeleton className="h-10 w-10 rounded-lg" />
+                      <Skeleton className="h-12 w-12 rounded-xl" />
                       <div>
                         <Skeleton className="h-4 w-24 mb-1" />
                         <Skeleton className="h-3 w-16" />
@@ -340,51 +359,59 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : rewards.length > 0 ? (
-              <div className="space-y-3">
-                {rewards.slice(0, 3).map((reward) => (
-                  <div
+              <div className="divide-y">
+                {rewards.slice(0, 3).map((reward, index) => (
+                  <motion.div
                     key={reward.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-secondary/50"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Gift className="h-5 w-5 text-primary" />
+                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
+                        <Gift className="h-6 w-6 text-amber-600" />
                       </div>
                       <div>
-                        <p className="font-medium text-sm">
+                        <p className="font-semibold text-gray-900">
                           {reward.type} - ₹{reward.amount}
                         </p>
-                        <p className="text-xs text-muted-foreground">{reward.product_name}</p>
+                        <p className="text-xs text-gray-500">{reward.product_name}</p>
                       </div>
                     </div>
-                    <Badge variant={reward.status === "CLAIMED" ? "success" : "warning"}>
+                    <Badge
+                      variant={reward.status === "CLAIMED" ? "success" : "warning"}
+                      className="shrink-0"
+                    >
                       {reward.status === "CLAIMED"
-                        ? language === "en"
-                          ? "Claimed"
-                          : "दावा किया"
-                        : language === "en"
-                        ? "Pending"
-                        : "लंबित"}
+                        ? language === "en" ? "Claimed" : "प्राप्त"
+                        : language === "en" ? "Pending" : "लंबित"}
                     </Badge>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <Gift className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-muted-foreground">
+              <div className="text-center py-12">
+                <div className="h-16 w-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <Gift className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-1">
                   {language === "en" ? "No rewards yet" : "अभी तक कोई पुरस्कार नहीं"}
+                </h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  {language === "en" ? "Start scanning to win rewards!" : "पुरस्कार जीतने के लिए स्कैन करें!"}
                 </p>
-                <Button asChild variant="link" className="mt-2">
+                <Button asChild size="sm">
                   <Link href="/dashboard/scan">
-                    {language === "en" ? "Scan to win rewards" : "पुरस्कार जीतने के लिए स्कैन करें"}
+                    <QrCode className="h-4 w-4 mr-2" />
+                    {language === "en" ? "Scan Now" : "अभी स्कैन करें"}
                   </Link>
                 </Button>
               </div>
             )}
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
     </div>
   );
 }

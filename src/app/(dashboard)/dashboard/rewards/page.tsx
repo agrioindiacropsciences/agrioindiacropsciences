@@ -2,14 +2,16 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import {
   Gift,
   Download,
-  Copy,
   CheckCircle,
   Clock,
   QrCode,
-  Loader2,
+  Trophy,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,20 +26,19 @@ import { formatDate } from "@/lib/utils";
 
 function RewardSkeleton() {
   return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start gap-4">
+    <Card className="border-0 shadow-md">
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
             <Skeleton className="h-14 w-14 rounded-xl" />
             <div>
-              <Skeleton className="h-4 w-32 mb-2" />
-              <Skeleton className="h-6 w-48 mb-1" />
-              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-5 w-32 mb-2" />
+              <Skeleton className="h-4 w-48" />
             </div>
           </div>
           <div className="flex items-center gap-3">
             <Skeleton className="h-6 w-20" />
-            <Skeleton className="h-9 w-32" />
+            <Skeleton className="h-9 w-28" />
           </div>
         </div>
       </CardContent>
@@ -49,7 +50,6 @@ export default function RewardsPage() {
   const { language } = useStore();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("all");
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -80,15 +80,9 @@ export default function RewardsPage() {
     return true;
   });
 
-  const copyToClipboard = (code: string, id: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedId(id);
-    toast({
-      title: language === "en" ? "Copied!" : "कॉपी हो गया!",
-      description: code,
-    });
-    setTimeout(() => setCopiedId(null), 2000);
-  };
+  const totalEarnings = rewards.reduce((sum, r) => sum + (r.amount || 0), 0);
+  const claimedCount = rewards.filter(r => r.status === "CLAIMED").length;
+  const pendingCount = rewards.filter(r => r.status !== "CLAIMED").length;
 
   const downloadCertificate = async (id: string) => {
     try {
@@ -100,7 +94,6 @@ export default function RewardsPage() {
         } else if (response.data.certificate_url) {
           window.open(response.data.certificate_url, "_blank");
         } else if (response.data.certificate_data) {
-          // Backend provided certificate_data -> render a printable certificate on frontend
           const d = response.data.certificate_data;
           const w = window.open("", "_blank");
           if (!w) return;
@@ -138,7 +131,7 @@ export default function RewardsPage() {
                     <div class="row"><div class="label">Won Date</div><div class="value">${new Date(d.won_date).toLocaleString()}</div></div>
                     <div class="row"><div class="label">Status</div><div class="value">${d.status}</div></div>
                   </div>
-                  <div class="footer">Tip: Use browser Print → “Save as PDF” to download.</div>
+                  <div class="footer">Tip: Use browser Print → "Save as PDF" to download.</div>
                 </div>
                 <script>window.onload = () => { setTimeout(() => window.print(), 300); };</script>
               </body>
@@ -174,142 +167,208 @@ export default function RewardsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold mb-2">
-          {language === "en" ? "My Rewards" : "मेरे पुरस्कार"}
-        </h1>
-        <p className="text-muted-foreground">
-          {language === "en"
-            ? "Track your earned rewards and download your reward letters."
-            : "अपने अर्जित पुरस्कारों को ट्रैक करें और अपने पुरस्कार पत्र डाउनलोड करें।"}
-        </p>
-      </div>
+    <div className="space-y-6 pb-8">
+      {/* Hero Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 p-6 sm:p-8 text-white"
+      >
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+        
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <Trophy className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold">
+                {language === "en" ? "My Rewards" : "मेरे पुरस्कार"}
+              </h1>
+              <p className="text-white/70 text-sm">
+                {language === "en" ? "Track and download your rewards" : "अपने पुरस्कारों को ट्रैक करें"}
+              </p>
+            </div>
+          </div>
+          
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4 mt-6">
+            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+              <p className="text-2xl sm:text-3xl font-bold">₹{totalEarnings}</p>
+              <p className="text-xs text-white/70">{language === "en" ? "Total Earned" : "कुल कमाई"}</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+              <p className="text-2xl sm:text-3xl font-bold">{claimedCount}</p>
+              <p className="text-xs text-white/70">{language === "en" ? "Claimed" : "प्राप्त"}</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+              <p className="text-2xl sm:text-3xl font-bold">{pendingCount}</p>
+              <p className="text-xs text-white/70">{language === "en" ? "Pending" : "लंबित"}</p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Filter Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="all">
-            {language === "en" ? "All" : "सभी"}
-          </TabsTrigger>
-          <TabsTrigger value="claimed">
-            {language === "en" ? "Claimed" : "दावा किया"}
-          </TabsTrigger>
-          <TabsTrigger value="pending">
-            {language === "en" ? "Pending" : "लंबित"}
-          </TabsTrigger>
-        </TabsList>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="bg-gray-100 p-1 rounded-xl">
+            <TabsTrigger value="all" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              {language === "en" ? "All" : "सभी"} ({rewards.length})
+            </TabsTrigger>
+            <TabsTrigger value="claimed" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <CheckCircle className="h-4 w-4 mr-1" />
+              {language === "en" ? "Claimed" : "प्राप्त"} ({claimedCount})
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              <Clock className="h-4 w-4 mr-1" />
+              {language === "en" ? "Pending" : "लंबित"} ({pendingCount})
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value={activeTab} className="mt-6">
-          {isLoading ? (
-            <div className="space-y-4">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <RewardSkeleton key={index} />
-              ))}
-            </div>
-          ) : filteredRewards.length > 0 ? (
-            <div className="space-y-4">
-              {filteredRewards.map((reward, index) => (
-                <div
-                  key={reward.id}
-                  
-                  
-                  
-                >
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        {/* Reward Info */}
-                        <div className="flex items-start gap-4">
-                          <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                            <Gift className="h-7 w-7 text-primary" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-sm text-muted-foreground">
-                                {reward.type}
-                              </span>
+          <TabsContent value={activeTab} className="mt-6">
+            {isLoading ? (
+              <div className="space-y-4">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <RewardSkeleton key={index} />
+                ))}
+              </div>
+            ) : filteredRewards.length > 0 ? (
+              <div className="space-y-4">
+                {filteredRewards.map((reward, index) => (
+                  <motion.div
+                    key={reward.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <Card className="border-0 shadow-md hover:shadow-lg transition-all overflow-hidden">
+                      <CardContent className="p-0">
+                        <div className={`h-1 ${reward.status === "CLAIMED" ? "bg-gradient-to-r from-green-500 to-emerald-600" : "bg-gradient-to-r from-amber-500 to-orange-600"}`} />
+                        <div className="p-5">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            {/* Reward Info */}
+                            <div className="flex items-center gap-4">
+                              <div className={`h-14 w-14 rounded-xl flex items-center justify-center shrink-0 ${reward.status === "CLAIMED" ? "bg-green-50" : "bg-amber-50"}`}>
+                                <Gift className={`h-7 w-7 ${reward.status === "CLAIMED" ? "text-green-600" : "text-amber-600"}`} />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-bold text-xl text-gray-900">
+                                    ₹{reward.amount || 0}
+                                  </h3>
+                                  <Badge variant="outline" className="text-xs">
+                                    {reward.type}
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-gray-500">
+                                  {reward.product_name} • {formatDate(reward.won_at)}
+                                </p>
+                              </div>
                             </div>
-                            <h3 className="font-semibold text-lg">
-                              ₹{reward.amount || 0}
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                              {reward.product_name} • {formatDate(reward.won_at)}
-                            </p>
+
+                            {/* Status & Actions */}
+                            <div className="flex items-center gap-3">
+                              <Badge
+                                variant={reward.status === "CLAIMED" ? "success" : "warning"}
+                                className="shrink-0"
+                              >
+                                {reward.status === "CLAIMED" ? (
+                                  <>
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    {language === "en" ? "Claimed" : "प्राप्त"}
+                                  </>
+                                ) : (
+                                  <>
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    {language === "en" ? "Pending" : "लंबित"}
+                                  </>
+                                )}
+                              </Badge>
+                              <Button
+                                variant={reward.status === "CLAIMED" ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => downloadCertificate(reward.id)}
+                                disabled={!reward.id}
+                                className="shrink-0"
+                              >
+                                <Download className="h-4 w-4 mr-1" />
+                                {language === "en" ? "Download" : "डाउनलोड"}
+                              </Button>
+                            </div>
                           </div>
                         </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <Card className="border-0 shadow-md">
+                <CardContent className="p-12 text-center">
+                  <div className="h-20 w-20 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                    <Gift className="h-10 w-10 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    {language === "en" ? "No rewards yet" : "अभी तक कोई पुरस्कार नहीं"}
+                  </h3>
+                  <p className="text-gray-500 mb-6 max-w-sm mx-auto">
+                    {language === "en"
+                      ? "Start scanning product coupons to win exciting prizes!"
+                      : "रोमांचक पुरस्कार जीतने के लिए उत्पाद कूपन स्कैन करें!"}
+                  </p>
+                  <Button asChild size="lg" className="shadow-lg">
+                    <Link href="/dashboard/scan">
+                      <QrCode className="h-5 w-5 mr-2" />
+                      {language === "en" ? "Scan Now" : "अभी स्कैन करें"}
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+      </motion.div>
 
-                        {/* Status & Actions */}
-                        <div className="flex items-center gap-3 ml-auto">
-                          <Badge
-                            variant={reward.status === "CLAIMED" ? "success" : "warning"}
-                            className="shrink-0"
-                          >
-                            {reward.status === "CLAIMED" ? (
-                              <>
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                {language === "en" ? "Claimed" : "दावा किया"}
-                              </>
-                            ) : (
-                              <>
-                                <Clock className="h-3 w-3 mr-1" />
-                                {language === "en" ? "Pending" : "लंबित"}
-                              </>
-                            )}
-                          </Badge>
-                          <Button
-                            variant={reward.status === "CLAIMED" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => downloadCertificate(reward.id)}
-                            disabled={!reward.id}
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            {language === "en" ? "Download Letter" : "पत्र डाउनलोड करें"}
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+      {/* Scan More CTA */}
+      {rewards.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card className="border-0 shadow-md bg-gradient-to-r from-gray-50 to-gray-100">
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-white shadow-md flex items-center justify-center shrink-0">
+                  <Sparkles className="h-7 w-7 text-primary" />
                 </div>
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <Gift className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">
-                  {language === "en" ? "No rewards yet" : "अभी तक कोई पुरस्कार नहीं"}
-                </h3>
-                <p className="text-muted-foreground mb-6">
-                  {language === "en"
-                    ? "Start scanning coupons to win exciting prizes!"
-                    : "रोमांचक पुरस्कार जीतने के लिए कूपन स्कैन करना शुरू करें!"}
-                </p>
-                <Button asChild>
+                <div className="flex-1 text-center sm:text-left">
+                  <h3 className="font-semibold text-gray-900">
+                    {language === "en" ? "Want more rewards?" : "और पुरस्कार चाहिए?"}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {language === "en"
+                      ? "Scan more product codes to win exciting prizes!"
+                      : "और पुरस्कार जीतने के लिए उत्पाद कोड स्कैन करें!"}
+                  </p>
+                </div>
+                <Button asChild className="shadow-lg shrink-0">
                   <Link href="/dashboard/scan">
-                    <QrCode className="h-4 w-4 mr-2" />
-                    {language === "en" ? "Scan Now" : "अभी स्कैन करें"}
+                    {language === "en" ? "Scan Now" : "स्कैन करें"}
+                    <ArrowRight className="h-4 w-4 ml-2" />
                   </Link>
                 </Button>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
-
-      {/* Footer Links */}
-      <div className="flex flex-wrap justify-center gap-4 pt-8 border-t">
-        <Link href="/privacy-policy" className="text-sm text-primary hover:underline">
-          {language === "en" ? "Privacy Policy" : "गोपनीयता नीति"}
-        </Link>
-        <Link href="/terms" className="text-sm text-primary hover:underline">
-          {language === "en" ? "Terms of Service" : "सेवा की शर्तें"}
-        </Link>
-        <Link href="/contact" className="text-sm text-primary hover:underline">
-          {language === "en" ? "Contact Us" : "संपर्क करें"}
-        </Link>
-      </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
     </div>
   );
 }

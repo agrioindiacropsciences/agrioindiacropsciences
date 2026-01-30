@@ -173,7 +173,7 @@ export default function AdminDashboardPage() {
               {admin?.name || "Admin"}
             </h1>
             <p className="text-slate-400 text-sm max-w-md">
-              Here's what's happening with your platform today.
+              Here&apos;s what&apos;s happening with your platform today.
             </p>
           </div>
           

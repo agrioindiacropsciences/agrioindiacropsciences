@@ -85,9 +85,9 @@ const quickLinks = [
 ];
 
 const socialLinks = [
-  { href: "https://www.instagram.com/agrioindiacropscience/?hl=en", icon: Instagram, label: "Instagram", bgColor: "bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400" },
-  { href: "https://www.facebook.com/p/Agrio-india-crop-science-100063648744127/", icon: Facebook, label: "Facebook", bgColor: "bg-[#1877F2]" },
-  { href: "https://www.youtube.com/channel/UChwyRYIHzm4tgpTldwesocA/videos", icon: Youtube, label: "YouTube", bgColor: "bg-[#FF0000]" },
+  { href: "https://www.instagram.com/kheticare___?igsh=b2h1Ymlud2o1dXhm&utm_source=qr", icon: Instagram, label: "Instagram", bgColor: "bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400" },
+  { href: "https://www.facebook.com/kheticare", icon: Facebook, label: "Facebook", bgColor: "bg-[#1877F2]" },
+  { href: "https://youtube.com/@kheticare?si=Ovl1zcnOIhaw1MND", icon: Youtube, label: "YouTube", bgColor: "bg-[#FF0000]" },
 ];
 
 export function Footer() {

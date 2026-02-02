@@ -140,7 +140,7 @@ const steps = [
 
 const stats = [
   { value: 200000, suffix: "+", label: "Happy Farmers", labelHi: "खुश किसान", icon: Users },
-  { value: 50, suffix: "+", label: "Products", labelHi: "उत्पाद", icon: Package },
+  { value: 100, suffix: "+", label: "Products", labelHi: "उत्पाद", icon: Package },
   { value: 15, suffix: "+", label: "States", labelHi: "राज्य", icon: MapPin },
   { value: 500, suffix: "+", label: "Distributors", labelHi: "वितरक", icon: Users },
 ];

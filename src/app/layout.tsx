@@ -5,6 +5,70 @@ import { getLocale, getMessages } from "next-intl/server";
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 
+// JSON-LD Structured Data for Organization (helps show logo in Google search)
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://www.agrioindiacropsciences.com/#organization",
+      name: "Agrio India Crop Science",
+      alternateName: ["Agrio Sampan Kisan", "एग्रियो इंडिया क्रॉप साइंस"],
+      url: "https://www.agrioindiacropsciences.com",
+      logo: {
+        "@type": "ImageObject",
+        "@id": "https://www.agrioindiacropsciences.com/#logo",
+        url: "https://www.agrioindiacropsciences.com/logo.svg",
+        contentUrl: "https://www.agrioindiacropsciences.com/logo.svg",
+        caption: "Agrio India Crop Science Logo",
+      },
+      image: "https://www.agrioindiacropsciences.com/logo.svg",
+      description: "Agrio India Crop Science - भारतीय किसान की पहली पसंद। Premium agrochemicals for higher yield.",
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: "E-31, Industrial Area, Gopalpur",
+        addressLocality: "Sikandrabad",
+        addressRegion: "Uttar Pradesh",
+        postalCode: "201314",
+        addressCountry: "IN",
+      },
+      contactPoint: {
+        "@type": "ContactPoint",
+        contactType: "customer service",
+        availableLanguage: ["English", "Hindi"],
+      },
+      sameAs: [
+        "https://www.instagram.com/kheticare___",
+        "https://www.facebook.com/kheticare",
+        "https://youtube.com/@kheticare",
+      ],
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://www.agrioindiacropsciences.com/#website",
+      url: "https://www.agrioindiacropsciences.com",
+      name: "Agrio India Crop Science",
+      publisher: {
+        "@id": "https://www.agrioindiacropsciences.com/#organization",
+      },
+      inLanguage: ["en-IN", "hi-IN"],
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://www.agrioindiacropsciences.com/#webpage",
+      url: "https://www.agrioindiacropsciences.com",
+      name: "Agrio India Crop Science | Agrio Sampan Kisan | भारतीय किसान की पहली पसंद",
+      isPartOf: {
+        "@id": "https://www.agrioindiacropsciences.com/#website",
+      },
+      about: {
+        "@id": "https://www.agrioindiacropsciences.com/#organization",
+      },
+      description: "Premium agrochemicals for Indian farmers. Quality insecticides, fungicides, herbicides for higher yield.",
+    },
+  ],
+};
+
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
@@ -112,6 +176,12 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} className={`${poppins.variable} ${notoSansDevanagari.variable}`}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className="font-sans antialiased">
         <NextIntlClientProvider messages={messages}>
           {children}

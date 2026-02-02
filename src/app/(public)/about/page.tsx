@@ -64,7 +64,7 @@ const values = [
 const stats = [
   { value: 25, suffix: "+", label: "Years of Experience", labelHi: "वर्षों का अनुभव", icon: Award },
   { value: 200000, suffix: "+", label: "Happy Farmers", labelHi: "खुश किसान", icon: Users },
-  { value: 150, suffix: "+", label: "Products", labelHi: "उत्पाद", icon: Leaf },
+  { value: 100, suffix: "+", label: "Products", labelHi: "उत्पाद", icon: Leaf },
   { value: 500, suffix: "+", label: "Distributors", labelHi: "वितरक", icon: MapPin },
 ];
 

@@ -105,7 +105,7 @@ const whyChooseUs = [
     titleHi: "उत्पादों की विस्तृत श्रृंखला",
     description: "A comprehensive portfolio of agrochemicals for various crops and needs.",
     descriptionHi: "विभिन्न फसलों और जरूरतों के लिए कृषि रसायनों का व्यापक पोर्टफोलियो।",
-    stat: "50+",
+    stat: "100+",
     statLabel: "Products",
     statLabelHi: "उत्पाद",
   },

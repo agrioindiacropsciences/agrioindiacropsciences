@@ -18,12 +18,18 @@ const notoSansDevanagari = Noto_Sans_Devanagari({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://agrioindia.com"),
-  title: "Agrio India Crop Science | Agrio Sampan kisan | भारतीय किसान की पहली पसंद",
+  metadataBase: new URL("https://www.agrioindiacropsciences.com"),
+  title: {
+    default: "Agrio India Crop Science | Agrio Sampan Kisan | भारतीय किसान की पहली पसंद",
+    template: "%s | Agrio India Crop Science",
+  },
   description:
-    "Agrio Sampan kisan - Premium agrochemicals for higher yield. Empowering Indian farmers with high-quality crop solutions for a prosperous future.",
+    "Agrio India Crop Science - Agrio Sampan Kisan, भारतीय किसान की पहली पसंद। Premium agrochemicals for higher yield. Quality insecticides, fungicides, herbicides for Indian farmers.",
   keywords: [
     "agrio india",
+    "agrio india crop science",
+    "agrioindiacropsciences",
+    "agrio sampan kisan",
     "crop science",
     "agriculture",
     "farming",
@@ -32,10 +38,31 @@ export const metadata: Metadata = {
     "fungicides",
     "herbicides",
     "indian farmers",
+    "agrochemicals",
     "कृषि",
     "खेती",
+    "किसान",
+    "agrio formula",
+    "agrio chakravyuh",
+    "agrio rocket",
+    "agrio hercules",
+    "agrio topis",
+    "agrio unicorn",
   ],
   authors: [{ name: "Agrio India Crop Science" }],
+  creator: "Agrio India Crop Science",
+  publisher: "Agrio India Crop Science",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   icons: {
     icon: [
       { url: "/logo.svg", type: "image/svg+xml" },
@@ -45,17 +72,33 @@ export const metadata: Metadata = {
     apple: "/logo.svg",
   },
   openGraph: {
-    title: "Agrio India Crop Science",
-    description: "Agrio Sampan kisan - भारतीय किसान की पहली पसंद - Premium Agrochemicals for Higher Yield",
+    title: "Agrio India Crop Science | Agrio Sampan Kisan",
+    description: "Agrio Sampan Kisan - भारतीय किसान की पहली पसंद - Premium Agrochemicals for Higher Yield. Quality crop solutions for Indian farmers.",
     type: "website",
     locale: "en_IN",
-    images: ["/og-image.png"],
+    url: "https://www.agrioindiacropsciences.com",
+    siteName: "Agrio India Crop Science",
+    images: [
+      {
+        url: "/home.png",
+        width: 1200,
+        height: 630,
+        alt: "Agrio India Crop Science - Premium Agrochemicals",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Agrio India Crop Science",
-    description: "Agrio Sampan kisan - भारतीय किसान की पहली पसंद - Premium Agrochemicals for Higher Yield",
-    images: ["/og-image.png"],
+    title: "Agrio India Crop Science | Agrio Sampan Kisan",
+    description: "Agrio Sampan Kisan - भारतीय किसान की पहली पसंद - Premium Agrochemicals for Higher Yield",
+    images: ["/home.png"],
+    creator: "@agrioindiacrop",
+  },
+  verification: {
+    google: "your-google-verification-code", // Add your Google Search Console verification code here
+  },
+  alternates: {
+    canonical: "https://www.agrioindiacropsciences.com",
   },
 };
 

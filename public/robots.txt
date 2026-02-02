@@ -1,0 +1,14 @@
+# Robots.txt for Agrio India Crop Science
+# https://www.agrioindiacropsciences.com
+
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Disallow admin and dashboard areas
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://www.agrioindiacropsciences.com/sitemap.xml

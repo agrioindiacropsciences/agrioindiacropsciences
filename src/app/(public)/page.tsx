@@ -361,7 +361,7 @@ export default function HomePage() {
                 </motion.h1>
                 
                 <motion.p 
-                  className="text-lg sm:text-xl lg:text-2xl text-gray-600 font-hindi font-semibold"
+                  className="text-lg sm:text-xl lg:text-2xl text-gray-800 font-hindi font-semibold"
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.7, delay: 0.5 }}
@@ -375,7 +375,7 @@ export default function HomePage() {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.6 }}
-                className="text-base lg:text-lg text-gray-700 max-w-lg leading-relaxed"
+                className="text-base lg:text-lg text-gray-800 max-w-lg leading-relaxed"
               >
                 {language === "en"
                   ? "Empowering Indian farmers with high-quality crop solutions for sustainable and prosperous farming."
@@ -495,7 +495,7 @@ export default function HomePage() {
                         <p className="text-2xl lg:text-3xl font-bold text-gray-900">
                           <CountUp end={stat.value} suffix={stat.suffix} />
                         </p>
-                        <p className="text-xs lg:text-sm text-gray-500 font-medium">
+                        <p className="text-xs lg:text-sm text-gray-700 font-medium">
                           {language === "en" ? stat.label : stat.labelHi}
                         </p>
                       </div>
@@ -573,7 +573,7 @@ export default function HomePage() {
                             </div>
                             <div>
                               <p className="text-sm font-bold text-gray-900">2,00,000+</p>
-                              <p className="text-xs text-gray-500">{language === "en" ? "Happy Farmers" : "खुश किसान"}</p>
+                              <p className="text-xs text-gray-700">{language === "en" ? "Happy Farmers" : "खुश किसान"}</p>
                             </div>
                           </div>
                           <div className="h-8 w-[1px] bg-gray-200" />
@@ -583,7 +583,7 @@ export default function HomePage() {
                             </div>
                             <div>
                               <p className="text-sm font-bold text-gray-900">15+</p>
-                              <p className="text-xs text-gray-500">{language === "en" ? "States" : "राज्य"}</p>
+                              <p className="text-xs text-gray-700">{language === "en" ? "States" : "राज्य"}</p>
                             </div>
                           </div>
                         </div>
@@ -657,7 +657,7 @@ export default function HomePage() {
                       <h3 className="font-bold text-xl mb-3 relative z-10">
                         {language === "en" ? feature.title : feature.titleHi}
                       </h3>
-                      <p className="text-gray-700 leading-relaxed relative z-10">
+                      <p className="text-gray-800 leading-relaxed relative z-10">
                         {language === "en" ? feature.description : feature.descriptionHi}
                       </p>
                     </CardContent>
@@ -680,7 +680,7 @@ export default function HomePage() {
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
               {language === "en" ? "Best Selling Products" : "बेस्ट सेलिंग उत्पाद"}
             </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto text-lg">
+            <p className="text-gray-800 max-w-2xl mx-auto text-lg">
               {language === "en"
                 ? "Trusted solutions for a bountiful harvest, chosen by farmers across India."
                 : "भारत भर के किसानों द्वारा चुने गए, भरपूर फसल के लिए विश्वसनीय समाधान।"}
@@ -743,7 +743,7 @@ export default function HomePage() {
                         <div className={`h-6 w-6 rounded-md bg-gradient-to-br ${product.gradient} flex items-center justify-center shrink-0`}>
                           <Beaker className="h-3 w-3 text-white" />
                         </div>
-                        <p className="text-xs text-gray-600 leading-relaxed line-clamp-2">
+                        <p className="text-xs text-gray-700 leading-relaxed line-clamp-2">
                           {language === "en" ? product.technical : product.technicalHi}
                         </p>
                       </div>
@@ -753,7 +753,7 @@ export default function HomePage() {
                         <div>
                           <p className={`text-lg font-bold bg-gradient-to-r ${product.gradient} bg-clip-text text-transparent`}>₹{product.price}</p>
                           {product.packSize && (
-                            <p className="text-[10px] text-gray-500">per {product.packSize}</p>
+                            <p className="text-[10px] text-gray-700">per {product.packSize}</p>
                           )}
                         </div>
                         <Button asChild size="sm" className={`shadow-md bg-gradient-to-r ${product.gradient} hover:opacity-90 border-0 h-8 text-xs`}>
@@ -876,7 +876,7 @@ export default function HomePage() {
                 {language === "en" ? "Rewards" : "सरल कदम"}
               </span>
             </h2>
-            <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+            <p className="text-gray-600 max-w-2xl mx-auto text-lg">
               {language === "en"
                 ? "Follow these three easy steps to start winning. It's simple, quick, and rewarding."
                 : "जीतना शुरू करने के लिए इन तीन आसान चरणों का पालन करें। यह सरल, त्वरित और फायदेमंद है।"}
@@ -933,7 +933,7 @@ export default function HomePage() {
                     <h3 className="font-bold text-2xl mb-3 text-white">
                       {language === "en" ? step.title : step.titleHi}
                     </h3>
-                    <p className="text-gray-400 leading-relaxed max-w-xs mx-auto">
+                    <p className="text-gray-600 leading-relaxed max-w-xs mx-auto">
                       {language === "en" ? step.description : step.descriptionHi}
                     </p>
                   </motion.div>
@@ -1015,13 +1015,13 @@ export default function HomePage() {
                       </motion.div>
                       
                       <p className="text-4xl font-bold text-primary mb-1 relative z-10">{item.stat}</p>
-                      <p className="text-sm text-gray-500 mb-4 relative z-10">
+                      <p className="text-sm text-gray-700 mb-4 relative z-10">
                         {language === "en" ? item.statLabel : item.statLabelHi}
                       </p>
                       <h3 className="font-bold text-xl mb-3 text-gray-900 relative z-10">
                         {language === "en" ? item.title : item.titleHi}
                       </h3>
-                      <p className="text-gray-700 text-sm leading-relaxed relative z-10">
+                      <p className="text-gray-800 text-sm leading-relaxed relative z-10">
                         {language === "en" ? item.description : item.descriptionHi}
                       </p>
                     </CardContent>

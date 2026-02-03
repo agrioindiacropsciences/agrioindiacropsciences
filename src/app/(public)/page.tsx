@@ -71,7 +71,7 @@ const features = [
     description: "Access all information and support in Hindi.",
     descriptionHi: "हिंदी में सभी जानकारी और सहायता प्राप्त करें।",
     gradient: "from-orange-500 to-amber-600",
-    image: "/hindisupport.PNG",
+    image: "/hindisupport.png",
     href: "/contact",
   },
 ];

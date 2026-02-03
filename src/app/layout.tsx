@@ -172,7 +172,7 @@ const jsonLd = {
             "@type": "Product",
             name: "Agrio Rocket",
             description: "Triacontanol 0.05% GR - High-quality plant growth regulator. Dosage: 4kg/Acre",
-            image: "https://www.agrioindiacropsciences.com/product2.JPG",
+            image: "https://www.agrioindiacropsciences.com/product2.jpeg",
             brand: {
               "@type": "Brand",
               name: "Agrio India",
@@ -195,7 +195,7 @@ const jsonLd = {
             "@type": "Product",
             name: "Agrio Topis",
             description: "Topramezone 33.6% SC - Effective herbicide for weed control. Dosage: 30ml/Acre",
-            image: "https://www.agrioindiacropsciences.com/product3.JPG",
+            image: "https://www.agrioindiacropsciences.com/product3.PNG",
             brand: {
               "@type": "Brand",
               name: "Agrio India",
@@ -241,7 +241,7 @@ const jsonLd = {
             "@type": "Product",
             name: "Agrio Chakravyuh",
             description: "Azoxystrobin 2.5% + Thiophanate Methyl 11.25% + Thiamethoxam 25% FS - Advanced seed treatment solution",
-            image: "https://www.agrioindiacropsciences.com/product5.JPG",
+            image: "https://www.agrioindiacropsciences.com/product5.PNG",
             brand: {
               "@type": "Brand",
               name: "Agrio India",
@@ -264,7 +264,7 @@ const jsonLd = {
             "@type": "Product",
             name: "Agrio Formula",
             description: "Chlorantraniliprole 18.5% SC - Premium insecticide for effective pest control",
-            image: "https://www.agrioindiacropsciences.com/product6.JPG",
+            image: "https://www.agrioindiacropsciences.com/product6.PNG",
             brand: {
               "@type": "Brand",
               name: "Agrio India",

@@ -164,11 +164,16 @@ export function Footer() {
                 <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
                   <MapPin className="h-5 w-5 text-primary" />
                 </div>
-                <span className="text-gray-400">
+                <a
+                  href="https://www.google.com/maps?q=28.490681,77.6550442"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-primary transition-colors"
+                >
                   E-31 Industrial Area,<br />
                   Sikandrabad, Bulandshahr<br />
                   Uttar Pradesh - 203205
-                </span>
+                </a>
               </li>
               <li className="flex items-center gap-4">
                 <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">

@@ -282,15 +282,19 @@ export default function HomePage() {
           />
           
           {/* Mobile background image */}
-          <div className="absolute inset-0 lg:hidden">
+          <div className="absolute inset-0 lg:hidden overflow-hidden">
             <Image
               src="/home.png"
               alt="Agrio India"
               fill
-              className="object-cover opacity-50"
+              className="object-cover opacity-75"
+              style={{ 
+                filter: 'blur(2px)',
+                objectPosition: 'right center'
+              }}
               priority
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/30 to-white/50" />
+            <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-white/15 to-white/25" />
           </div>
         </div>
 

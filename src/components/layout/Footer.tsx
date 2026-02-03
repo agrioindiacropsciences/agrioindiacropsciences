@@ -154,8 +154,8 @@ export function Footer() {
                 className="h-14 w-14 object-contain"
               />
               <div>
-                <h3 className="text-white font-bold text-xl">Agrio India</h3>
-                <p className="text-primary text-sm font-medium">Crop Science Pvt. Ltd.</p>
+                <h3 className="text-white font-bold text-xl">Agrio</h3>
+                <p className="text-primary text-sm font-medium">India Crop Science Pvt. Ltd.</p>
               </div>
             </div>
 
@@ -204,7 +204,7 @@ export function Footer() {
             {/* Company Name */}
             <div className="text-center md:text-left">
               <h3 className="text-white font-bold">
-                AGRIO INDIA CROP SCIENCE PRIVATE LIMITED
+                AGRIO INDIA CROP SCIENCE PVT. LTD.
               </h3>
               <p className="text-sm text-gray-500 mt-1">
                 © {currentYear} {language === "en" ? "All Rights Reserved." : "सर्वाधिकार सुरक्षित।"}

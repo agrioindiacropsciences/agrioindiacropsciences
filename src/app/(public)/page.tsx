@@ -375,7 +375,7 @@ export default function HomePage() {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.6 }}
-                className="text-base lg:text-lg text-gray-500 max-w-lg leading-relaxed"
+                className="text-base lg:text-lg text-gray-700 max-w-lg leading-relaxed"
               >
                 {language === "en"
                   ? "Empowering Indian farmers with high-quality crop solutions for sustainable and prosperous farming."
@@ -631,13 +631,13 @@ export default function HomePage() {
                   <Card className="h-full min-h-[300px] border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group relative flex flex-col">
                     {/* Background Image with Blur */}
                     {feature.image && (
-                      <div className="absolute inset-0">
+                      <div className="absolute inset-0 bg-white">
                         <Image
                           src={feature.image}
                           alt={language === "en" ? feature.title : feature.titleHi}
                           fill
-                          className="object-cover opacity-75"
-                          style={{ filter: 'blur(1px)' }}
+                          className="object-contain opacity-75"
+                          style={{ filter: 'blur(1px)', objectPosition: 'center' }}
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                         />
                         <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-white/15 to-white/25" />
@@ -657,7 +657,7 @@ export default function HomePage() {
                       <h3 className="font-bold text-xl mb-3 relative z-10">
                         {language === "en" ? feature.title : feature.titleHi}
                       </h3>
-                      <p className="text-gray-600 leading-relaxed relative z-10">
+                      <p className="text-gray-700 leading-relaxed relative z-10">
                         {language === "en" ? feature.description : feature.descriptionHi}
                       </p>
                     </CardContent>
@@ -993,13 +993,13 @@ export default function HomePage() {
                   <Card className="h-full min-h-[300px] border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden relative flex flex-col">
                     {/* Background Image with Blur */}
                     {item.image && (
-                      <div className="absolute inset-0">
+                      <div className="absolute inset-0 bg-white">
                         <Image
                           src={item.image}
                           alt={language === "en" ? item.title : item.titleHi}
                           fill
-                          className="object-cover opacity-75"
-                          style={{ filter: 'blur(1px)' }}
+                          className="object-contain opacity-75"
+                          style={{ filter: 'blur(1px)', objectPosition: 'center' }}
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                         />
                         <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-white/15 to-white/25" />
@@ -1021,7 +1021,7 @@ export default function HomePage() {
                       <h3 className="font-bold text-xl mb-3 text-gray-900 relative z-10">
                         {language === "en" ? item.title : item.titleHi}
                       </h3>
-                      <p className="text-gray-600 text-sm leading-relaxed relative z-10">
+                      <p className="text-gray-700 text-sm leading-relaxed relative z-10">
                         {language === "en" ? item.description : item.descriptionHi}
                       </p>
                     </CardContent>

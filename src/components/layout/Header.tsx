@@ -113,9 +113,9 @@ export function Header() {
                   animate={{ backgroundPosition: ["0%", "200%"] }}
                   transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                 >
-                  Agrio India
+                  Agrio
                 </motion.h1>
-                <p className="text-[10px] text-gray-500 font-medium tracking-wider uppercase">Crop Science</p>
+                <p className="text-[10px] text-gray-500 font-medium tracking-wider uppercase">India Crop Science Pvt. Ltd.</p>
               </div>
             </Link>
 
@@ -325,8 +325,8 @@ export function Header() {
                       className="h-10 w-10 object-contain"
                     />
                     <div>
-                      <span className="font-bold text-primary text-lg">Agrio India</span>
-                      <p className="text-[10px] text-gray-400 tracking-wider uppercase">Crop Science</p>
+                      <span className="font-bold text-primary text-lg">Agrio</span>
+                      <p className="text-[10px] text-gray-400 tracking-wider uppercase">India Crop Science Pvt. Ltd.</p>
                     </div>
                   </div>
                   <motion.button

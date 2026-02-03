@@ -41,6 +41,7 @@ const features = [
     description: "Scan product QR codes to earn exciting rewards directly.",
     descriptionHi: "उत्पाद QR कोड स्कैन करके सीधे रोमांचक पुरस्कार अर्जित करें।",
     gradient: "from-purple-500 to-indigo-600",
+    image: "/scanandrewards.PNG",
   },
   {
     icon: MapPin,
@@ -49,6 +50,7 @@ const features = [
     description: "Easily locate our trusted distributors in your area.",
     descriptionHi: "अपने क्षेत्र में हमारे विश्वसनीय वितरकों को आसानी से खोजें।",
     gradient: "from-blue-500 to-cyan-600",
+    image: "/nearbydistributor.PNG",
   },
   {
     icon: Leaf,
@@ -57,6 +59,7 @@ const features = [
     description: "High-quality products designed for the modern Indian farmer.",
     descriptionHi: "आधुनिक भारतीय किसान के लिए डिज़ाइन किए गए उच्च गुणवत्ता वाले उत्पाद।",
     gradient: "from-green-500 to-emerald-600",
+    image: "/farmerfriendly.PNG",
   },
   {
     icon: Languages,
@@ -65,6 +68,7 @@ const features = [
     description: "Access all information and support in Hindi.",
     descriptionHi: "हिंदी में सभी जानकारी और सहायता प्राप्त करें।",
     gradient: "from-orange-500 to-amber-600",
+    image: "/hindisupport.PNG",
   },
 ];
 
@@ -78,6 +82,7 @@ const whyChooseUs = [
     stat: "100%",
     statLabel: "Quality Tested",
     statLabelHi: "गुणवत्ता परीक्षित",
+    image: "/assuredQuality.PNG",
   },
   {
     icon: TrendingUp,
@@ -88,6 +93,7 @@ const whyChooseUs = [
     stat: "40%",
     statLabel: "Yield Increase",
     statLabelHi: "उपज में वृद्धि",
+    image: "/bettercrop.PNG",
   },
   {
     icon: Users,
@@ -98,6 +104,7 @@ const whyChooseUs = [
     stat: "2L+",
     statLabel: "Happy Farmers",
     statLabelHi: "खुश किसान",
+    image: "/trustedbyfarmer.PNG",
   },
   {
     icon: Award,
@@ -108,6 +115,7 @@ const whyChooseUs = [
     stat: "100+",
     statLabel: "Products",
     statLabelHi: "उत्पाद",
+    image: "/widerangeproducts.PNG",
   },
 ];
 
@@ -620,21 +628,36 @@ export default function HomePage() {
                   whileHover={{ y: -10 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group">
-                    <CardContent className="p-8 text-center relative">
+                  <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group relative">
+                    {/* Background Image with Blur */}
+                    {feature.image && (
+                      <div className="absolute inset-0">
+                        <Image
+                          src={feature.image}
+                          alt={language === "en" ? feature.title : feature.titleHi}
+                          fill
+                          className="object-cover"
+                          style={{ filter: 'blur(8px)' }}
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        />
+                        <div className="absolute inset-0 bg-white/85" />
+                      </div>
+                    )}
+                    
+                    <CardContent className="p-8 text-center relative z-10">
                       {/* Gradient background on hover */}
                       <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
                       
                       <motion.div
                         whileHover={{ scale: 1.1, rotate: 5 }}
-                        className={`mx-auto h-16 w-16 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 shadow-lg`}
+                        className={`mx-auto h-16 w-16 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 shadow-lg relative z-10`}
                       >
                         <feature.icon className="h-8 w-8 text-white" />
                       </motion.div>
-                      <h3 className="font-bold text-xl mb-3">
+                      <h3 className="font-bold text-xl mb-3 relative z-10">
                         {language === "en" ? feature.title : feature.titleHi}
                       </h3>
-                      <p className="text-gray-600 leading-relaxed">
+                      <p className="text-gray-600 leading-relaxed relative z-10">
                         {language === "en" ? feature.description : feature.descriptionHi}
                       </p>
                     </CardContent>
@@ -967,23 +990,38 @@ export default function HomePage() {
                   whileHover={{ y: -8 }}
                   className="text-center group"
                 >
-                  <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
-                    <CardContent className="p-8">
+                  <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+                    {/* Background Image with Blur */}
+                    {item.image && (
+                      <div className="absolute inset-0">
+                        <Image
+                          src={item.image}
+                          alt={language === "en" ? item.title : item.titleHi}
+                          fill
+                          className="object-cover"
+                          style={{ filter: 'blur(8px)' }}
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        />
+                        <div className="absolute inset-0 bg-white/85" />
+                      </div>
+                    )}
+                    
+                    <CardContent className="p-8 relative z-10">
                       <motion.div
                         whileHover={{ scale: 1.1 }}
-                        className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-primary to-emerald-500 shadow-lg mb-6"
+                        className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-primary to-emerald-500 shadow-lg mb-6 relative z-10"
                       >
                         <item.icon className="h-8 w-8 text-white" />
                       </motion.div>
                       
-                      <p className="text-4xl font-bold text-primary mb-1">{item.stat}</p>
-                      <p className="text-sm text-gray-500 mb-4">
+                      <p className="text-4xl font-bold text-primary mb-1 relative z-10">{item.stat}</p>
+                      <p className="text-sm text-gray-500 mb-4 relative z-10">
                         {language === "en" ? item.statLabel : item.statLabelHi}
                       </p>
-                      <h3 className="font-bold text-xl mb-3 text-gray-900">
+                      <h3 className="font-bold text-xl mb-3 text-gray-900 relative z-10">
                         {language === "en" ? item.title : item.titleHi}
                       </h3>
-                      <p className="text-gray-600 text-sm leading-relaxed">
+                      <p className="text-gray-600 text-sm leading-relaxed relative z-10">
                         {language === "en" ? item.description : item.descriptionHi}
                       </p>
                     </CardContent>

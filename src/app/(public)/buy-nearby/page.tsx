@@ -29,6 +29,7 @@ import {
   AnimatedItem,
   FloatingElement,
 } from "@/components/ui/animated-section";
+import { TractorLoader } from "@/components/ui/tractor-loader";
 
 function DistributorSkeleton() {
   return (
@@ -366,11 +367,9 @@ export default function BuyNearbyPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+                className="py-16 flex justify-center"
               >
-                {Array.from({ length: 6 }).map((_, index) => (
-                  <DistributorSkeleton key={index} />
-                ))}
+                <TractorLoader size="lg" />
               </motion.div>
             ) : distributors.length > 0 ? (
               <motion.div

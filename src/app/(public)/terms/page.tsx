@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { FileText, Loader2 } from "lucide-react";
+import { FileText } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TractorLoader } from "@/components/ui/tractor-loader";
 import { useStore } from "@/store/useStore";
 import * as api from "@/lib/api";
 import type { CmsPage } from "@/lib/api";
@@ -61,14 +61,8 @@ export default function TermsPage() {
           <Card>
             <CardContent className="p-8">
               {isLoading ? (
-                <div className="space-y-4">
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                  <Skeleton className="h-6 w-1/2 mt-6" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
+                <div className="py-16 flex justify-center">
+                  <TractorLoader size="md" />
                 </div>
               ) : pageData ? (
                 <div className="prose prose-green max-w-none">

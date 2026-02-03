@@ -32,6 +32,7 @@ import {
   AnimatedItem,
   CountUp,
 } from "@/components/ui/animated-section";
+import { TractorLoader } from "@/components/ui/tractor-loader";
 
 const features = [
   {
@@ -655,6 +656,11 @@ export default function HomePage() {
           </AnimatedSection>
 
           {/* Products Grid */}
+          {loadingProducts ? (
+            <div className="py-16 flex justify-center">
+              <TractorLoader size="lg" />
+            </div>
+          ) : (
           <AnimatedContainer className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6" staggerDelay={0.1}>
             {bestSellingProducts.map((product, index) => {
               const technicalDetails = (product.technical_details as any) || {};
@@ -744,6 +750,7 @@ export default function HomePage() {
               );
             })}
           </AnimatedContainer>
+          )}
 
           <AnimatedSection delay={0.4} className="text-center mt-12">
             <Button asChild size="lg" variant="outline" className="border-2 hover:bg-primary hover:text-white transition-all">

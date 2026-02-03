@@ -13,33 +13,14 @@ import {
   Shield,
   Leaf,
   ChevronRight,
-  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TractorLoader } from "@/components/ui/tractor-loader";
 import { useStore } from "@/store/useStore";
 import * as api from "@/lib/api";
 import type { Product } from "@/lib/api";
-
-function ProductDetailSkeleton() {
-  return (
-    <div className="container mx-auto px-4 lg:px-8 py-8">
-      <Skeleton className="h-10 w-40 mb-6" />
-      <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
-        <Skeleton className="aspect-square rounded-lg" />
-        <div className="space-y-6">
-          <Skeleton className="h-8 w-24" />
-          <Skeleton className="h-12 w-3/4" />
-          <Skeleton className="h-6 w-1/2" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-12 w-48" />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -78,13 +59,8 @@ export default function ProductDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-secondary/20">
-        <div className="bg-white border-b">
-          <div className="container mx-auto px-4 lg:px-8 py-4">
-            <Skeleton className="h-5 w-64" />
-          </div>
-        </div>
-        <ProductDetailSkeleton />
+      <div className="min-h-screen flex items-center justify-center bg-secondary/20">
+        <TractorLoader size="lg" />
       </div>
     );
   }

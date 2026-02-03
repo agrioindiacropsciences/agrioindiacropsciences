@@ -3,6 +3,7 @@ import { Poppins, Noto_Sans_Devanagari } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { Toaster } from "@/components/ui/toaster";
+import { SplashScreen } from "@/components/ui/splash-screen";
 import "./globals.css";
 
 // JSON-LD Structured Data for Organization, Products, and Local Business
@@ -512,6 +513,7 @@ export default async function RootLayout({
       </head>
       <body className="font-sans antialiased">
         <NextIntlClientProvider messages={messages}>
+          <SplashScreen />
           {children}
           <Toaster />
         </NextIntlClientProvider>

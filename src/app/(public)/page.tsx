@@ -637,7 +637,7 @@ export default function HomePage() {
                           alt={language === "en" ? feature.title : feature.titleHi}
                           fill
                           className="object-cover opacity-75"
-                          style={{ filter: 'blur(2px)' }}
+                          style={{ filter: 'blur(1px)' }}
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                         />
                         <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-white/15 to-white/25" />
@@ -999,7 +999,7 @@ export default function HomePage() {
                           alt={language === "en" ? item.title : item.titleHi}
                           fill
                           className="object-cover opacity-75"
-                          style={{ filter: 'blur(2px)' }}
+                          style={{ filter: 'blur(1px)' }}
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                         />
                         <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-white/15 to-white/25" />

@@ -646,39 +646,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 relative overflow-hidden">
-        <div className="absolute inset-0">
-          <Image
-            src="/road-middle-sugar-cane-field-sunny-day-with-mountain-back.jpg"
-            alt="Scenic agricultural field"
-            fill
-            className="object-cover"
-          />
-          <div className="absolute inset-0 bg-primary/90" />
-        </div>
-        
-        <div className="container mx-auto px-4 lg:px-8 relative">
-          <AnimatedContainer className="grid grid-cols-2 lg:grid-cols-4 gap-8" staggerDelay={0.15}>
-            {stats.map((stat, index) => (
-              <AnimatedItem key={index} direction="scale">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className="text-center text-white p-6"
-                >
-                  <p className="text-4xl md:text-5xl lg:text-6xl font-bold mb-2">
-                    <CountUp end={stat.value} suffix={stat.suffix} duration={2} />
-                  </p>
-                  <p className="text-white/80 text-lg">
-                    {language === "en" ? stat.label : stat.labelHi}
-                  </p>
-                </motion.div>
-              </AnimatedItem>
-            ))}
-          </AnimatedContainer>
-        </div>
-      </section>
-
       {/* Best Selling Products */}
       <section className="py-24 bg-gradient-section relative">
         <div className="container mx-auto px-4 lg:px-8">

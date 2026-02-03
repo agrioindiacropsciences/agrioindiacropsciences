@@ -43,7 +43,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.85,
     },
     {
-      url: `${baseUrl}/scan-and-win`,
+      url: `${baseUrl}/scan-win`,
       lastModified: currentDate,
       changeFrequency: "monthly",
       priority: 0.7,
@@ -56,45 +56,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  // Product pages (for better product indexing)
-  const productPages: MetadataRoute.Sitemap = [
-    {
-      url: `${baseUrl}/best-selling#agrio-unicorn`,
-      lastModified: currentDate,
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/best-selling#agrio-rocket`,
-      lastModified: currentDate,
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/best-selling#agrio-topis`,
-      lastModified: currentDate,
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/best-selling#agrio-hercules`,
-      lastModified: currentDate,
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/best-selling#agrio-chakravyuh`,
-      lastModified: currentDate,
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/best-selling#agrio-formula`,
-      lastModified: currentDate,
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-  ];
-
-  return [...mainPages, ...productPages];
+  return mainPages;
 }

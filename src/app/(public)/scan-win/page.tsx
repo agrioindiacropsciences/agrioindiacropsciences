@@ -121,7 +121,7 @@ export default function ScanWinPage() {
                   : "प्रामाणिक एग्रियो इंडिया उत्पाद खरीदें, कोड स्कैन करें और रोमांचक पुरस्कार जीतें। हमारे कार्यक्रम से लाभान्वित हजारों किसानों से जुड़ें।"}
               </p>
               
-              {/* Stats */}
+              {/* Stats - stable layout to prevent flicker during count animation */}
               <div className="flex flex-wrap gap-8 mb-8">
                 {stats.map((stat, index) => (
                   <motion.div
@@ -129,9 +129,9 @@ export default function ScanWinPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 + index * 0.1 }}
-                    className="text-center"
+                    className="text-center shrink-0"
                   >
-                    <p className="text-3xl font-bold text-accent">
+                    <p className="text-3xl font-bold text-accent tabular-nums">
                       {stat.prefix}<CountUp end={stat.value} suffix={stat.suffix} />
                     </p>
                     <p className="text-sm opacity-80">

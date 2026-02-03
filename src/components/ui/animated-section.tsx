@@ -232,6 +232,9 @@ interface CountUpProps {
   className?: string;
 }
 
+// Throttle updates to reduce re-renders and prevent flickering (max ~30 updates/sec)
+const UPDATE_INTERVAL_MS = 40;
+
 export function CountUp({
   end,
   duration = 2,
@@ -239,9 +242,10 @@ export function CountUp({
   prefix = "",
   className = "",
 }: CountUpProps) {
-  const ref = React.useRef(null);
+  const ref = React.useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref, { once: true, amount: 0.5 });
   const [count, setCount] = React.useState(0);
+  const lastUpdateRef = React.useRef(0);
 
   React.useEffect(() => {
     if (!isInView) return;
@@ -255,10 +259,18 @@ export function CountUp({
       
       // Easing function for smooth animation
       const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-      setCount(Math.floor(easeOutQuart * end));
+      const newCount = Math.floor(easeOutQuart * end);
+
+      // Throttle: only update state at most every UPDATE_INTERVAL_MS to prevent flicker
+      if (timestamp - lastUpdateRef.current >= UPDATE_INTERVAL_MS || progress >= 1) {
+        lastUpdateRef.current = timestamp;
+        setCount(newCount);
+      }
 
       if (progress < 1) {
         animationFrame = requestAnimationFrame(animate);
+      } else {
+        setCount(end); // Ensure final value is exact
       }
     };
 
@@ -267,9 +279,20 @@ export function CountUp({
     return () => cancelAnimationFrame(animationFrame);
   }, [isInView, end, duration]);
 
+  const formattedEnd = end.toLocaleString("en-IN");
+  const minWidthCh = Math.max((formattedEnd + suffix).length, 6);
+
   return (
-    <span ref={ref} className={className}>
-      {prefix}{count}{suffix}
+    <span
+      ref={ref}
+      className={className}
+      style={{
+        fontVariantNumeric: "tabular-nums",
+        display: "inline-block",
+        minWidth: `${minWidthCh}ch`,
+      }}
+    >
+      {prefix}{count.toLocaleString("en-IN")}{suffix}
     </span>
   );
 }

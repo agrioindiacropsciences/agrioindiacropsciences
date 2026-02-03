@@ -27,10 +27,8 @@ const jsonLd = {
       logo: {
         "@type": "ImageObject",
         "@id": "https://www.agrioindiacropsciences.com/#logo",
-        url: "https://www.agrioindiacropsciences.com/home.png",
-        contentUrl: "https://www.agrioindiacropsciences.com/home.png",
-        width: 512,
-        height: 512,
+        url: "https://www.agrioindiacropsciences.com/logo.svg",
+        contentUrl: "https://www.agrioindiacropsciences.com/logo.svg",
         caption: "Agrio India Crop Science Logo",
       },
       image: [
@@ -358,6 +356,7 @@ const notoSansDevanagari = Noto_Sans_Devanagari({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.agrioindiacropsciences.com"),
+  manifest: "/site.webmanifest",
   title: {
     default: "Agrio India Crop Science | Agrio Sampan Kisan | भारतीय किसान की पहली पसंद | Best Agrochemicals",
     template: "%s | Agrio India Crop Science - Agrio Sampan Kisan",
@@ -443,11 +442,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/home.png", type: "image/png", sizes: "512x512" },
       { url: "/favicon.ico", sizes: "any" },
+      { url: "/home.png", type: "image/png", sizes: "512x512" },
+      { url: "/logo.svg", type: "image/svg+xml" },
     ],
-    shortcut: "/home.png",
-    apple: "/home.png",
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
   },
   openGraph: {
     title: "Agrio India Crop Science | Agrio Sampan Kisan - भारतीय किसान की पहली पसंद",
@@ -473,9 +473,9 @@ export const metadata: Metadata = {
     images: ["/home.png"],
     creator: "@agrioindiacrop",
   },
-  verification: {
-    google: "your-google-verification-code", // Add your Google Search Console verification code here
-  },
+  verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
+    : undefined,
   alternates: {
     canonical: "https://www.agrioindiacropsciences.com",
     languages: {

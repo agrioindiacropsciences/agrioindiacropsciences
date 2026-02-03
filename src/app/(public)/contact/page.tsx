@@ -274,8 +274,8 @@ export default function ContactPage() {
                 className="relative h-64 rounded-2xl overflow-hidden shadow-xl"
               >
                 <Image
-                  src="/green-rice-fields.jpg"
-                  alt="Agrio India Office"
+                  src="/headquarter.PNG"
+                  alt="Agrio India Headquarters"
                   fill
                   className="object-cover"
                 />

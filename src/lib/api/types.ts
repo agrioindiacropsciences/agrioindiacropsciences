@@ -136,6 +136,7 @@ export interface Product {
   pack_sizes: PackSize[];
   safety_precautions: string[];
   images: string[];
+  image_url: string | null;
   technical_details?: Record<string, unknown>;
   is_best_seller: boolean;
   is_active: boolean;

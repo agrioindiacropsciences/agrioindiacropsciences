@@ -42,6 +42,7 @@ const features = [
     descriptionHi: "उत्पाद QR कोड स्कैन करके सीधे रोमांचक पुरस्कार अर्जित करें।",
     gradient: "from-purple-500 to-indigo-600",
     image: "/scanandrewards.PNG",
+    href: "/scan-win",
   },
   {
     icon: MapPin,
@@ -51,6 +52,7 @@ const features = [
     descriptionHi: "अपने क्षेत्र में हमारे विश्वसनीय वितरकों को आसानी से खोजें।",
     gradient: "from-blue-500 to-cyan-600",
     image: "/nearbydistributor.PNG",
+    href: "/buy-nearby",
   },
   {
     icon: Leaf,
@@ -60,6 +62,7 @@ const features = [
     descriptionHi: "आधुनिक भारतीय किसान के लिए डिज़ाइन किए गए उच्च गुणवत्ता वाले उत्पाद।",
     gradient: "from-green-500 to-emerald-600",
     image: "/farmerfriendly.PNG",
+    href: "/products",
   },
   {
     icon: Languages,
@@ -69,6 +72,7 @@ const features = [
     descriptionHi: "हिंदी में सभी जानकारी और सहायता प्राप्त करें।",
     gradient: "from-orange-500 to-amber-600",
     image: "/hindisupport.PNG",
+    href: "/contact",
   },
 ];
 
@@ -153,71 +157,31 @@ const stats = [
   { value: 500, suffix: "+", label: "Distributors", labelHi: "वितरक", icon: Users },
 ];
 
-// Best Selling Products Data (same as best-selling page)
-const bestSellingProducts = [
-  {
-    id: "1",
-    name: "Agrio Formula",
-    nameHi: "एग्रियो फॉर्मूला",
-    technical: "Chlorantraniliprole 18.5% SC",
-    technicalHi: "क्लोरेंट्रानिलिप्रोल 18.5% SC",
-    price: 1500,
-    image: "/product1.JPG",
-    category: "Insecticide",
-    categoryHi: "कीटनाशक",
-    gradient: "from-red-500 to-orange-500",
-    bgGradient: "from-red-50 to-orange-50",
-  },
-  {
-    id: "2",
-    name: "Agrio Chakravyuh",
-    nameHi: "एग्रियो चक्रव्यूह",
-    technical: "Azoxystrobin 2.5% + Thiophanate Methyl 11.25% + Thiamethoxam 25% FS",
-    technicalHi: "एज़ोक्सीस्ट्रोबिन 2.5% + थायोफैनेट मिथाइल 11.25% + थायमेथोक्साम 25% FS",
-    price: 1500,
-    packSize: "500ml",
-    image: "/product2.jpeg",
-    category: "Fungicide",
-    categoryHi: "फफूंदनाशक",
-    gradient: "from-blue-500 to-cyan-500",
-    bgGradient: "from-blue-50 to-cyan-50",
-  },
-  {
-    id: "3",
-    name: "Agrio Rocket",
-    nameHi: "एग्रियो रॉकेट",
-    technical: "Triacontanol 0.05% GR",
-    technicalHi: "ट्राइकॉन्टानॉल 0.05% GR",
-    dosage: "4kg/Acre",
-    dosageHi: "4kg/एकड़",
-    price: 680,
-    packSize: "4kg",
-    image: "/product3.PNG",
-    category: "Plant Growth Regulator",
-    categoryHi: "पौधा वृद्धि नियामक",
-    gradient: "from-green-500 to-emerald-500",
-    bgGradient: "from-green-50 to-emerald-50",
-  },
-  {
-    id: "4",
-    name: "Agrio Hercules",
-    nameHi: "एग्रियो हरक्यूलिस",
-    technical: "Halosulfuron Methyl 75% WG",
-    technicalHi: "हैलोसल्फ्यूरॉन मिथाइल 75% WG",
-    dosage: "36gm/Acre",
-    dosageHi: "36gm/एकड़",
-    price: 1100,
-    packSize: "36gm",
-    image: "/product4.JPG",
-    category: "Herbicide",
-    categoryHi: "खरपतवारनाशक",
-    gradient: "from-purple-500 to-pink-500",
-    bgGradient: "from-purple-50 to-pink-50",
-  },
-];
+import { getBestSellers } from "@/lib/api";
+import type { Product } from "@/lib/api/types";
 
 export default function HomePage() {
   const { language } = useStore();
+  const [bestSellingProducts, setBestSellingProducts] = React.useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchBestSellers = async () => {
+      try {
+        const response = await getBestSellers(4);
+        if (response.success && response.data) {
+          setBestSellingProducts(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch best sellers on home page:", error);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+
+    fetchBestSellers();
+  }, []);
+
 
   return (
     <div className="overflow-hidden">
@@ -227,7 +191,7 @@ export default function HomePage() {
         <div className="absolute inset-0">
           {/* Base gradient */}
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-green-50" />
-          
+
           {/* Animated gradient orbs */}
           <motion.div
             className="absolute top-0 -left-40 w-96 h-96 bg-gradient-to-r from-primary/30 to-emerald-400/30 rounded-full blur-3xl"
@@ -281,14 +245,14 @@ export default function HomePage() {
           ))}
 
           {/* Grid pattern overlay */}
-          <div 
+          <div
             className="absolute inset-0 opacity-[0.03]"
             style={{
               backgroundImage: `linear-gradient(to right, #22c55e 1px, transparent 1px), linear-gradient(to bottom, #22c55e 1px, transparent 1px)`,
               backgroundSize: '60px 60px',
             }}
           />
-          
+
           {/* Mobile background image */}
           <div className="absolute inset-0 lg:hidden overflow-hidden">
             <Image
@@ -296,7 +260,7 @@ export default function HomePage() {
               alt="Agrio India"
               fill
               className="object-cover opacity-75"
-              style={{ 
+              style={{
                 filter: 'blur(2px)',
                 objectPosition: '70% center'
               }}
@@ -316,7 +280,7 @@ export default function HomePage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
               >
-                <motion.div 
+                <motion.div
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/10 to-emerald-500/10 border border-primary/20"
                   whileHover={{ scale: 1.02 }}
                 >
@@ -334,13 +298,13 @@ export default function HomePage() {
 
               {/* Main Heading with text reveal */}
               <div className="space-y-2 -mt-[12%]">
-                <motion.h1 
+                <motion.h1
                   className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[1.05] tracking-tight"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5 }}
                 >
-                  <motion.span 
+                  <motion.span
                     className="block overflow-hidden"
                     initial={{ opacity: 0, y: 100 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -348,7 +312,7 @@ export default function HomePage() {
                   >
                     <span className="inline-block text-gray-900">Agrio Sampan</span>
                   </motion.span>
-                  <motion.span 
+                  <motion.span
                     className="block overflow-hidden"
                     initial={{ opacity: 0, y: 100 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -359,8 +323,8 @@ export default function HomePage() {
                     </span>
                   </motion.span>
                 </motion.h1>
-                
-                <motion.p 
+
+                <motion.p
                   className="text-lg sm:text-xl lg:text-2xl text-gray-800 font-hindi font-semibold"
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -390,9 +354,9 @@ export default function HomePage() {
                 className="flex flex-wrap gap-4 pt-2"
               >
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button 
-                    asChild 
-                    size="lg" 
+                  <Button
+                    asChild
+                    size="lg"
                     className="text-base px-8 h-14 bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/30 transition-all duration-300 rounded-full border-0 group"
                   >
                     <Link href="/products">
@@ -408,10 +372,10 @@ export default function HomePage() {
                   </Button>
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button 
-                    asChild 
-                    variant="outline" 
-                    size="lg" 
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="lg"
                     className="text-base px-8 h-14 border-2 border-gray-200 hover:border-primary hover:bg-primary/5 transition-all duration-300 rounded-full bg-white/80 backdrop-blur-sm group"
                   >
                     <Link href="/auth">
@@ -434,18 +398,18 @@ export default function HomePage() {
                     <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-[#00C853] via-[#FFEA00] via-[#FF6D00] to-[#D500F9] p-[2px]">
                       <div className="h-full w-full rounded-xl bg-gray-900 flex items-center justify-center">
                         <svg viewBox="0 0 24 24" className="h-7 w-7 text-white" fill="currentColor">
-                          <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.198l2.807 1.626a1 1 0 0 1 0 1.73l-2.808 1.626L15.206 12l2.492-2.491zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z"/>
+                          <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.198l2.807 1.626a1 1 0 0 1 0 1.73l-2.808 1.626L15.206 12l2.492-2.491zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z" />
                         </svg>
                       </div>
                     </div>
                     {/* Live badge */}
-                    <motion.div 
+                    <motion.div
                       className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-green-500 border-2 border-gray-900"
                       animate={{ scale: [1, 1.2, 1] }}
                       transition={{ duration: 1.5, repeat: Infinity }}
                     />
                   </div>
-                  
+
                   <div className="flex flex-col">
                     <span className="text-[10px] text-gray-400 uppercase tracking-wider font-medium flex items-center gap-1">
                       <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></span>
@@ -458,7 +422,7 @@ export default function HomePage() {
                       {language === "en" ? "Download the App" : "ऐप डाउनलोड करें"}
                     </span>
                   </div>
-                  
+
                   <motion.div
                     className="ml-2"
                     animate={{ x: [0, 5, 0] }}
@@ -477,7 +441,7 @@ export default function HomePage() {
                 className="flex flex-wrap gap-6 lg:gap-10 pt-6 lg:pt-8"
               >
                 {stats.slice(0, 3).map((stat, index) => (
-                  <motion.div 
+                  <motion.div
                     key={index}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -485,7 +449,7 @@ export default function HomePage() {
                     className="group"
                   >
                     <div className="flex items-center gap-3">
-                      <motion.div 
+                      <motion.div
                         className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary/10 to-emerald-500/10 flex items-center justify-center group-hover:from-primary/20 group-hover:to-emerald-500/20 transition-all duration-300"
                         whileHover={{ scale: 1.1, rotate: 5 }}
                       >
@@ -514,22 +478,22 @@ export default function HomePage() {
             >
               {/* Decorative ring */}
               <div className="absolute inset-0 flex items-center justify-center">
-                <motion.div 
+                <motion.div
                   className="w-[110%] h-[110%] rounded-full border-2 border-dashed border-primary/20"
                   animate={{ rotate: 360 }}
                   transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
                 />
               </div>
-              
+
               {/* Main Image Container - Creative Shape */}
-              <motion.div 
+              <motion.div
                 className="relative"
                 whileHover={{ scale: 1.02 }}
                 transition={{ duration: 0.4 }}
               >
                 {/* Gradient background blob */}
                 <div className="absolute -inset-4 bg-gradient-to-br from-primary via-emerald-400 to-teal-500 rounded-[3rem] blur-2xl opacity-30" />
-                
+
                 {/* Outer frame with gradient border */}
                 <div className="relative p-[3px] rounded-[2.5rem] bg-gradient-to-br from-primary via-emerald-400 to-teal-400">
                   {/* Inner white frame */}
@@ -544,11 +508,11 @@ export default function HomePage() {
                         sizes="50vw"
                         priority
                       />
-                      
+
                       {/* Premium gradient overlay */}
                       <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 via-transparent to-amber-500/10" />
                       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
-                      
+
                       {/* Decorative corner accents */}
                       <div className="absolute top-0 left-0 w-24 h-24">
                         <div className="absolute top-4 left-4 w-12 h-[2px] bg-white/60" />
@@ -600,7 +564,7 @@ export default function HomePage() {
         {/* Bottom wave decoration */}
         <div className="absolute bottom-0 left-0 right-0">
           <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
-            <path d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0V120Z" fill="white"/>
+            <path d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0V120Z" fill="white" />
           </svg>
         </div>
       </section>
@@ -609,7 +573,7 @@ export default function HomePage() {
       <section className="py-20 bg-gradient-to-b from-white to-secondary/30 relative overflow-hidden">
         {/* Background decoration */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
-        
+
         <div className="container mx-auto px-4 lg:px-8">
           <AnimatedSection className="text-center mb-16">
             <Badge variant="outline" className="mb-4 px-4 py-1">
@@ -624,10 +588,12 @@ export default function HomePage() {
           <AnimatedContainer className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6" staggerDelay={0.1}>
             {features.map((feature, index) => (
               <AnimatedItem key={index}>
-                <motion.div
-                  whileHover={{ y: -10 }}
-                  transition={{ duration: 0.3 }}
-                >
+                <Link href={feature.href}>
+                  <motion.div
+                    whileHover={{ y: -10 }}
+                    transition={{ duration: 0.3 }}
+                    className="block h-full cursor-pointer"
+                  >
                   <Card className="h-full min-h-[300px] border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group relative flex flex-col">
                     {/* Background Image with Blur */}
                     {feature.image && (
@@ -643,11 +609,11 @@ export default function HomePage() {
                         <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-white/15 to-white/25" />
                       </div>
                     )}
-                    
+
                     <CardContent className="p-8 text-center relative z-10 flex flex-col flex-grow">
                       {/* Gradient background on hover */}
                       <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
-                      
+
                       <motion.div
                         whileHover={{ scale: 1.1, rotate: 5 }}
                         className={`mx-auto h-16 w-16 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 shadow-lg relative z-10`}
@@ -663,6 +629,7 @@ export default function HomePage() {
                     </CardContent>
                   </Card>
                 </motion.div>
+                </Link>
               </AnimatedItem>
             ))}
           </AnimatedContainer>
@@ -689,34 +656,45 @@ export default function HomePage() {
 
           {/* Products Grid */}
           <AnimatedContainer className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6" staggerDelay={0.1}>
-            {bestSellingProducts.map((product, index) => (
-              <AnimatedItem key={product.id}>
+            {bestSellingProducts.map((product, index) => {
+              const technicalDetails = (product.technical_details as any) || {};
+              const price = product.pack_sizes && product.pack_sizes.length > 0
+                ? Number(product.pack_sizes[0].selling_price)
+                : 0;
+              const packSize = product.pack_sizes && product.pack_sizes.length > 0
+                ? product.pack_sizes[0].size
+                : "";
+              const gradient = (technicalDetails.gradient as string) || "from-green-500 to-emerald-500";
+              const image = product.image_url || "/logo.svg";
+              const technical = language === "en" ? product.composition : (technicalDetails.technicalHi as string || product.composition);
+
+              return (
+                <AnimatedItem key={product.id}>
                   <Card className="group overflow-hidden h-full border-0 shadow-lg hover:shadow-2xl transition-shadow duration-300 bg-white">
                     {/* Gradient Top Border */}
-                    <div className={`h-1 bg-gradient-to-r ${product.gradient}`} />
-                    
+                    <div className={`h-1 bg-gradient-to-r ${gradient}`} />
+
                     {/* Product Image Section - Box size matches image aspect ratio */}
                     <div className="relative w-full aspect-[3/4] bg-white overflow-hidden border border-gray-100">
                       <Image
-                        src={product.image}
-                        alt={language === "en" ? product.name : product.nameHi}
+                        src={image}
+                        alt={language === "en" ? product.name : product.name_hi}
                         fill
                         className="object-contain p-4"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                       />
-                      
+
                       {/* Rank Badge */}
                       <div
-                        className={`absolute top-3 left-3 h-9 w-9 rounded-lg flex items-center justify-center font-bold text-white shadow-lg bg-gradient-to-br ${
-                          index === 0 ? "from-yellow-400 to-amber-500" :
+                        className={`absolute top-3 left-3 h-9 w-9 rounded-lg flex items-center justify-center font-bold text-white shadow-lg bg-gradient-to-br ${index === 0 ? "from-yellow-400 to-amber-500" :
                           index === 1 ? "from-gray-300 to-gray-500" :
-                          index === 2 ? "from-amber-600 to-amber-700" :
-                          product.gradient
-                        }`}
+                            index === 2 ? "from-amber-600 to-amber-700" :
+                              gradient
+                          }`}
                       >
                         <span className="text-sm">#{index + 1}</span>
                       </div>
-                      
+
                       {/* Best Seller Badge */}
                       <Badge className="absolute top-3 right-3 bg-white/95 text-gray-900 border-0 shadow-md text-xs px-2 py-1">
                         <Star className="h-3 w-3 mr-1 text-amber-500 fill-amber-500" />
@@ -726,34 +704,34 @@ export default function HomePage() {
 
                     <CardContent className="p-4">
                       {/* Category */}
-                      <Badge className={`mb-2 bg-gradient-to-r ${product.gradient} text-white border-0 text-xs`}>
-                        {language === "en" ? product.category : product.categoryHi}
+                      <Badge className={`mb-2 bg-gradient-to-r ${gradient} text-white border-0 text-xs`}>
+                        {language === "en" ? product.category.name : product.category.name_hi}
                       </Badge>
 
                       {/* Product Name */}
                       <h3 className="font-bold text-base mb-2 text-gray-900 group-hover:text-primary transition-colors line-clamp-1">
-                        {language === "en" ? product.name : product.nameHi}
+                        {language === "en" ? product.name : product.name_hi}
                       </h3>
 
                       {/* Technical Composition */}
                       <div className="flex items-start gap-2 mb-3 p-2 bg-gray-50 rounded-lg">
-                        <div className={`h-6 w-6 rounded-md bg-gradient-to-br ${product.gradient} flex items-center justify-center shrink-0`}>
+                        <div className={`h-6 w-6 rounded-md bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0`}>
                           <Beaker className="h-3 w-3 text-white" />
                         </div>
                         <p className="text-xs text-gray-700 leading-relaxed line-clamp-2">
-                          {language === "en" ? product.technical : product.technicalHi}
+                          {technical}
                         </p>
                       </div>
 
                       {/* Price */}
                       <div className="flex items-center justify-between pt-2 border-t">
                         <div>
-                          <p className={`text-lg font-bold bg-gradient-to-r ${product.gradient} bg-clip-text text-transparent`}>₹{product.price}</p>
-                          {product.packSize && (
-                            <p className="text-[10px] text-gray-700">per {product.packSize}</p>
+                          <p className={`text-lg font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>₹{price}</p>
+                          {packSize && (
+                            <p className="text-[10px] text-gray-700">per {packSize}</p>
                           )}
                         </div>
-                        <Button asChild size="sm" className={`shadow-md bg-gradient-to-r ${product.gradient} hover:opacity-90 border-0 h-8 text-xs`}>
+                        <Button asChild size="sm" className={`shadow-md bg-gradient-to-r ${gradient} hover:opacity-90 border-0 h-8 text-xs`}>
                           <Link href="/contact">
                             {language === "en" ? "Enquire" : "पूछताछ"}
                             <ChevronRight className="ml-1 h-3 w-3" />
@@ -762,8 +740,9 @@ export default function HomePage() {
                       </div>
                     </CardContent>
                   </Card>
-              </AnimatedItem>
-            ))}
+                </AnimatedItem>
+              );
+            })}
           </AnimatedContainer>
 
           <AnimatedSection delay={0.4} className="text-center mt-12">
@@ -781,7 +760,7 @@ export default function HomePage() {
       <section className="py-24 relative overflow-hidden">
         {/* Animated gradient background */}
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900" />
-        
+
         {/* Animated mesh gradient overlay */}
         <div className="absolute inset-0 opacity-50">
           <motion.div
@@ -837,17 +816,17 @@ export default function HomePage() {
         </div>
 
         {/* Grid pattern */}
-        <div 
+        <div
           className="absolute inset-0 opacity-[0.03]"
           style={{
             backgroundImage: `linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)`,
             backgroundSize: '50px 50px',
           }}
         />
-        
+
         <div className="container mx-auto px-4 lg:px-8 relative z-10">
           <AnimatedSection className="text-center mb-16">
-            <motion.div 
+            <motion.div
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 mb-6"
               whileHover={{ scale: 1.05 }}
             >
@@ -860,13 +839,13 @@ export default function HomePage() {
               <span className="text-white/90 font-semibold">
                 {language === "en" ? "Scan & Win" : "स्कैन और जीतें"}
               </span>
-              <motion.span 
+              <motion.span
                 className="h-2 w-2 rounded-full bg-green-400"
                 animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
               />
             </motion.div>
-            
+
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-white">
               {language === "en" ? "Simple Steps to Your" : "आपके पुरस्कारों के लिए"}
               <span className="block mt-2 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-400 bg-clip-text text-transparent">
@@ -885,13 +864,13 @@ export default function HomePage() {
             {/* Connection line */}
             <div className="hidden md:block absolute top-16 left-[15%] right-[15%] h-[2px]">
               <div className="w-full h-full bg-gradient-to-r from-primary via-amber-400 to-orange-500 rounded-full" />
-              <motion.div 
+              <motion.div
                 className="absolute top-0 left-0 h-full w-20 bg-gradient-to-r from-white to-transparent"
                 animate={{ x: ["0%", "400%", "0%"] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
               />
             </div>
-            
+
             <AnimatedContainer className="grid md:grid-cols-3 gap-8 relative z-10" staggerDelay={0.2}>
               {steps.map((step, index) => (
                 <AnimatedItem key={step.step} direction="up">
@@ -902,31 +881,30 @@ export default function HomePage() {
                     {/* Step circle */}
                     <motion.div
                       whileHover={{ scale: 1.1 }}
-                      className={`mx-auto h-32 w-32 rounded-full flex items-center justify-center mb-8 relative ${
-                        index === 0 ? "bg-gradient-to-br from-primary to-emerald-500" :
+                      className={`mx-auto h-32 w-32 rounded-full flex items-center justify-center mb-8 relative ${index === 0 ? "bg-gradient-to-br from-primary to-emerald-500" :
                         index === 1 ? "bg-gradient-to-br from-amber-400 to-orange-500" :
-                        "bg-gradient-to-br from-orange-500 to-red-500"
-                      } shadow-2xl`}
+                          "bg-gradient-to-br from-orange-500 to-red-500"
+                        } shadow-2xl`}
                       style={{
                         boxShadow: index === 0 ? "0 20px 50px rgba(34, 197, 94, 0.4)" :
-                                  index === 1 ? "0 20px 50px rgba(251, 191, 36, 0.4)" :
-                                  "0 20px 50px rgba(249, 115, 22, 0.4)"
+                          index === 1 ? "0 20px 50px rgba(251, 191, 36, 0.4)" :
+                            "0 20px 50px rgba(249, 115, 22, 0.4)"
                       }}
                     >
                       {/* Inner glow */}
                       <div className="absolute inset-2 rounded-full bg-white/10 backdrop-blur-sm" />
-                      
+
                       {/* Step number */}
                       <span className="relative text-5xl font-bold text-white">{step.step}</span>
-                      
+
                       {/* Rotating ring */}
-                      <motion.div 
+                      <motion.div
                         className="absolute inset-0 rounded-full border-2 border-dashed border-white/30"
                         animate={{ rotate: 360 }}
                         transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                       />
                     </motion.div>
-                    
+
                     <h3 className="font-bold text-2xl mb-3 text-white">
                       {language === "en" ? step.title : step.titleHi}
                     </h3>
@@ -941,9 +919,9 @@ export default function HomePage() {
 
           <AnimatedSection delay={0.6} className="text-center mt-16">
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-              <Button 
-                asChild 
-                size="lg" 
+              <Button
+                asChild
+                size="lg"
                 className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white shadow-2xl shadow-orange-500/30 px-10 h-14 text-lg rounded-full border-0"
               >
                 <Link href="/scan-win">
@@ -967,7 +945,7 @@ export default function HomePage() {
         {/* Subtle decorative elements */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl" />
-        
+
         <div className="container mx-auto px-4 lg:px-8 relative">
           <AnimatedSection className="text-center mb-16">
             <Badge variant="outline" className="mb-4 px-4 py-1">
@@ -1002,7 +980,7 @@ export default function HomePage() {
                         <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-white/15 to-white/25" />
                       </div>
                     )}
-                    
+
                     <CardContent className="p-8 relative z-10">
                       <motion.div
                         whileHover={{ scale: 1.1 }}
@@ -1010,7 +988,7 @@ export default function HomePage() {
                       >
                         <item.icon className="h-8 w-8 text-white" />
                       </motion.div>
-                      
+
                       <p className="text-4xl font-bold text-primary mb-1 relative z-10">{item.stat}</p>
                       <p className="text-sm text-gray-700 mb-4 relative z-10">
                         {language === "en" ? item.statLabel : item.statLabelHi}
@@ -1040,12 +1018,12 @@ export default function HomePage() {
                 {language === "en" ? "Need Help? Talk to Our Experts" : "मदद चाहिए? हमारे विशेषज्ञ से बात करें"}
               </h2>
               <p className="text-white/80 text-sm md:text-base">
-                {language === "en" 
+                {language === "en"
                   ? "Get expert advice for your farming needs"
                   : "अपनी खेती की जरूरतों के लिए विशेषज्ञ सलाह लें"}
               </p>
             </div>
-            
+
             {/* Buttons */}
             <div className="flex flex-wrap justify-center gap-3">
               <Button variant="secondary" size="default" asChild className="text-primary shadow-lg">

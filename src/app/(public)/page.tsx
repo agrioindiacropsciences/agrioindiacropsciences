@@ -628,7 +628,7 @@ export default function HomePage() {
                   whileHover={{ y: -10 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group relative">
+                  <Card className="h-full min-h-[300px] border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group relative flex flex-col">
                     {/* Background Image with Blur */}
                     {feature.image && (
                       <div className="absolute inset-0">
@@ -644,7 +644,7 @@ export default function HomePage() {
                       </div>
                     )}
                     
-                    <CardContent className="p-8 text-center relative z-10">
+                    <CardContent className="p-8 text-center relative z-10 flex flex-col flex-grow">
                       {/* Gradient background on hover */}
                       <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
                       
@@ -990,7 +990,7 @@ export default function HomePage() {
                   whileHover={{ y: -8 }}
                   className="text-center group"
                 >
-                  <Card className="h-full border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+                  <Card className="h-full min-h-[300px] border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden relative flex flex-col">
                     {/* Background Image with Blur */}
                     {item.image && (
                       <div className="absolute inset-0">

@@ -534,8 +534,8 @@ export default function HomePage() {
                 <div className="relative p-[3px] rounded-[2.5rem] bg-gradient-to-br from-primary via-emerald-400 to-teal-400">
                   {/* Inner white frame */}
                   <div className="p-[6px] rounded-[2.4rem] bg-white">
-                    {/* Image container with unique shape */}
-                    <div className="relative h-[480px] xl:h-[540px] w-full rounded-[2.2rem] overflow-hidden">
+                    {/* Image container - box size matches image aspect ratio */}
+                    <div className="relative w-full aspect-[4/3] rounded-[2.2rem] overflow-hidden">
                       <Image
                         src="/home.png"
                         alt="Agrio India - Premium Agrochemicals"
@@ -695,18 +695,15 @@ export default function HomePage() {
                     {/* Gradient Top Border */}
                     <div className={`h-1 bg-gradient-to-r ${product.gradient}`} />
                     
-                    {/* Product Image Section */}
-                    <div className="relative h-52 bg-white overflow-hidden">
-                      {/* Main Image */}
-                      <div className="relative h-full w-full">
-                        <Image
-                          src={product.image}
-                          alt={language === "en" ? product.name : product.nameHi}
-                          fill
-                          className="object-contain p-4"
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                        />
-                      </div>
+                    {/* Product Image Section - Box size matches image aspect ratio */}
+                    <div className="relative w-full aspect-[3/4] bg-white overflow-hidden border border-gray-100">
+                      <Image
+                        src={product.image}
+                        alt={language === "en" ? product.name : product.nameHi}
+                        fill
+                        className="object-contain p-4"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      />
                       
                       {/* Rank Badge */}
                       <div

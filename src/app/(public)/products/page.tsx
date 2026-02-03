@@ -404,18 +404,15 @@ export default function ProductsPage() {
                     {/* Gradient Top Border */}
                     <div className={`h-1.5 bg-gradient-to-r ${product.gradient}`} />
                     
-                    {/* Product Image Section */}
-                    <div className="relative h-72 bg-white overflow-hidden">
-                      {/* Main Image */}
-                      <div className="relative h-full w-full">
-                        <Image
-                          src={product.image}
-                          alt={language === "en" ? product.name : product.nameHi}
-                          fill
-                          className="object-contain p-6"
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        />
-                      </div>
+                    {/* Product Image Section - Box size matches image aspect ratio */}
+                    <div className="relative w-full aspect-[3/4] bg-white overflow-hidden border border-gray-100">
+                      <Image
+                        src={product.image}
+                        alt={language === "en" ? product.name : product.nameHi}
+                        fill
+                        className="object-contain p-6"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      />
                       
                       {/* Rank Badge */}
                       <div

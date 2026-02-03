@@ -290,7 +290,7 @@ export default function HomePage() {
               className="object-cover opacity-75"
               style={{ 
                 filter: 'blur(2px)',
-                objectPosition: 'right center'
+                objectPosition: '70% center'
               }}
               priority
             />

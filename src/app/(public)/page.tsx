@@ -287,10 +287,10 @@ export default function HomePage() {
               src="/home.png"
               alt="Agrio India"
               fill
-              className="object-cover opacity-20"
+              className="object-cover opacity-50"
               priority
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-white/80 via-white/70 to-white/90" />
+            <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/30 to-white/50" />
           </div>
         </div>
 

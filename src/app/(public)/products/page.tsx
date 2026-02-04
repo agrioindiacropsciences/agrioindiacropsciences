@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,125 +28,110 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useStore } from "@/store/useStore";
+import { getProducts, getCategories } from "@/lib/api";
+import type { Product, Category } from "@/lib/api/types";
+import { TractorLoader } from "@/components/ui/tractor-loader";
 
-// Best Selling Products Data
-const allProducts = [
-  {
-    id: "1",
-    name: "Agrio Formula",
-    nameHi: "एग्रियो फॉर्मूला",
-    technical: "Chlorantraniliprole 18.5% SC",
-    technicalHi: "क्लोरेंट्रानिलिप्रोल 18.5% SC",
-    price: 1500,
-    image: "/product1.JPG",
-    category: "Insecticide",
-    categoryHi: "कीटनाशक",
-    gradient: "from-red-500 to-orange-500",
-    bgGradient: "from-red-50 to-orange-50",
-  },
-  {
-    id: "2",
-    name: "Agrio Chakravyuh",
-    nameHi: "एग्रियो चक्रव्यूह",
-    technical: "Azoxystrobin 2.5% + Thiophanate Methyl 11.25% + Thiamethoxam 25% FS",
-    technicalHi: "एज़ोक्सीस्ट्रोबिन 2.5% + थायोफैनेट मिथाइल 11.25% + थायमेथोक्साम 25% FS",
-    price: 1500,
-    packSize: "500ml",
-    image: "/product2.jpeg",
-    category: "Fungicide",
-    categoryHi: "फफूंदनाशक",
-    gradient: "from-blue-500 to-cyan-500",
-    bgGradient: "from-blue-50 to-cyan-50",
-  },
-  {
-    id: "3",
-    name: "Agrio Rocket",
-    nameHi: "एग्रियो रॉकेट",
-    technical: "Triacontanol 0.05% GR",
-    technicalHi: "ट्राइकॉन्टानॉल 0.05% GR",
-    dosage: "4kg/Acre",
-    dosageHi: "4kg/एकड़",
-    price: 680,
-    packSize: "4kg",
-    image: "/product3.PNG",
-    category: "Plant Growth Regulator",
-    categoryHi: "पौधा वृद्धि नियामक",
-    gradient: "from-green-500 to-emerald-500",
-    bgGradient: "from-green-50 to-emerald-50",
-  },
-  {
-    id: "4",
-    name: "Agrio Hercules",
-    nameHi: "एग्रियो हरक्यूलिस",
-    technical: "Halosulfuron Methyl 75% WG",
-    technicalHi: "हैलोसल्फ्यूरॉन मिथाइल 75% WG",
-    dosage: "36gm/Acre",
-    dosageHi: "36gm/एकड़",
-    price: 1100,
-    packSize: "36gm",
-    image: "/product4.JPG",
-    category: "Herbicide",
-    categoryHi: "खरपतवारनाशक",
-    gradient: "from-purple-500 to-pink-500",
-    bgGradient: "from-purple-50 to-pink-50",
-  },
-  {
-    id: "5",
-    name: "Agrio Topis",
-    nameHi: "एग्रियो टॉपिस",
-    technical: "Topramezone 33.6% SC",
-    technicalHi: "टोप्रामेज़ोन 33.6% SC",
-    dosage: "30ml/Acre",
-    dosageHi: "30ml/एकड़",
-    price: 1200,
-    packSize: "30ml",
-    image: "/product5.PNG",
-    category: "Herbicide",
-    categoryHi: "खरपतवारनाशक",
-    gradient: "from-amber-500 to-yellow-500",
-    bgGradient: "from-amber-50 to-yellow-50",
-  },
-  {
-    id: "6",
-    name: "Agrio Unicorn",
-    nameHi: "एग्रियो यूनिकॉर्न",
-    technical: "Sodium Para-Nitro Phenolate 0.3% SL",
-    technicalHi: "सोडियम पैरा-नाइट्रो फेनोलेट 0.3% SL",
-    dosage: "250ml/Acre",
-    dosageHi: "250ml/एकड़",
-    price: 500,
-    packSize: "250ml",
-    image: "/product6.PNG",
-    category: "Plant Growth Regulator",
-    categoryHi: "पौधा वृद्धि नियामक",
-    gradient: "from-teal-500 to-cyan-500",
-    bgGradient: "from-teal-50 to-cyan-50",
-  },
-];
+// Category gradient mapping
+const getCategoryGradient = (categoryName: string): string => {
+  const categoryMap: Record<string, string> = {
+    "Insecticide": "from-red-500 to-orange-500",
+    "Fungicide": "from-blue-500 to-cyan-500",
+    "Herbicide": "from-purple-500 to-pink-500",
+    "Plant Growth Regulator": "from-green-500 to-emerald-500",
+    "PGR": "from-green-500 to-emerald-500",
+    "Fertilizer": "from-amber-500 to-yellow-500",
+  };
+  return categoryMap[categoryName] || "from-gray-500 to-gray-600";
+};
 
-// Get unique categories with colors
-const categoryData = [
-  { id: "All", name: "All", nameHi: "सभी", color: "from-gray-500 to-gray-600" },
-  { id: "Insecticide", name: "Insecticide", nameHi: "कीटनाशक", color: "from-red-500 to-orange-500" },
-  { id: "Fungicide", name: "Fungicide", nameHi: "फफूंदनाशक", color: "from-blue-500 to-cyan-500" },
-  { id: "Herbicide", name: "Herbicide", nameHi: "खरपतवारनाशक", color: "from-purple-500 to-pink-500" },
-  { id: "Plant Growth Regulator", name: "Plant Growth Regulator", nameHi: "पौधा वृद्धि नियामक", color: "from-green-500 to-emerald-500" },
-];
+// Transform backend Product to frontend format
+const transformProduct = (product: Product) => {
+  const technicalDetails = (product.technical_details as any) || {};
+  const price = product.pack_sizes && product.pack_sizes.length > 0
+    ? Number(product.pack_sizes[0].selling_price)
+    : 0;
+  const packSize = product.pack_sizes && product.pack_sizes.length > 0
+    ? product.pack_sizes[0].size
+    : "";
+  const gradient = technicalDetails.gradient || getCategoryGradient(product.category.name);
+  
+  return {
+    id: product.id,
+    name: product.name,
+    nameHi: product.name_hi,
+    technical: product.composition,
+    technicalHi: technicalDetails.technicalHi || product.composition,
+    price,
+    packSize,
+    image: product.image_url || "/logo.svg",
+    category: product.category.name,
+    categoryHi: product.category.name_hi,
+    gradient,
+    bgGradient: gradient.replace("from-", "from-").replace("to-", "to-").replace("500", "50").replace("600", "50"),
+    dosage: product.dosage || "",
+    dosageHi: technicalDetails.dosageHi || product.dosage || "",
+    isBestSeller: product.is_best_seller || false,
+  };
+};
 
 export default function ProductsPage() {
   const { language } = useStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sortBy, setSortBy] = useState("name");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Filter and sort products
+  // Fetch products and categories from backend
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [productsRes, categoriesRes] = await Promise.all([
+          getProducts({ limit: 100 }),
+          getCategories(),
+        ]);
+
+        if (productsRes.success && productsRes.data) {
+          // Maintain order from backend (products come in display order)
+          setProducts(productsRes.data.products || []);
+        }
+
+        if (categoriesRes.success && categoriesRes.data) {
+          setCategories(categoriesRes.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Get unique categories with colors
+  const categoryData = useMemo(() => {
+    const allCategory = { id: "All", name: "All", nameHi: "सभी", color: "from-gray-500 to-gray-600" };
+    const categoryList = categories.map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      nameHi: cat.name_hi,
+      color: getCategoryGradient(cat.name),
+    }));
+    return [allCategory, ...categoryList];
+  }, [categories]);
+
+  // Transform and filter products
   const filteredProducts = useMemo(() => {
-    let filtered = [...allProducts];
+    let transformed = products.map(transformProduct);
 
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
+      transformed = transformed.filter(
         (p) =>
           p.name.toLowerCase().includes(query) ||
           p.nameHi.includes(query) ||
@@ -157,11 +142,14 @@ export default function ProductsPage() {
 
     // Filter by category
     if (selectedCategory !== "All") {
-      filtered = filtered.filter((p) => p.category === selectedCategory);
+      const selectedCat = categories.find((c) => c.id === selectedCategory);
+      if (selectedCat) {
+        transformed = transformed.filter((p) => p.category === selectedCat.name);
+      }
     }
 
-    // Sort products
-    filtered.sort((a, b) => {
+    // Sort products (maintain backend order by default, then apply user sort)
+    transformed.sort((a, b) => {
       switch (sortBy) {
         case "name":
           return a.name.localeCompare(b.name);
@@ -172,12 +160,12 @@ export default function ProductsPage() {
         case "priceHigh":
           return b.price - a.price;
         default:
-          return 0;
+          return 0; // Maintain backend order
       }
     });
 
-    return filtered;
-  }, [searchQuery, selectedCategory, sortBy]);
+    return transformed;
+  }, [products, categories, searchQuery, selectedCategory, sortBy]);
 
   const clearFilters = () => {
     setSearchQuery("");
@@ -186,6 +174,14 @@ export default function ProductsPage() {
   };
 
   const hasActiveFilters = searchQuery || selectedCategory !== "All";
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center pt-16">
+        <TractorLoader size="lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pt-16">
@@ -367,7 +363,13 @@ export default function ProductsPage() {
               <p className="text-sm text-gray-500">
                 {selectedCategory === "All" 
                   ? (language === "en" ? "Showing all categories" : "सभी श्रेणियां दिखा रहे हैं")
-                  : (language === "en" ? `Category: ${selectedCategory}` : `श्रेणी: ${selectedCategory}`)}
+                  : (() => {
+                      const selectedCat = categories.find((c) => c.id === selectedCategory);
+                      const catName = selectedCat 
+                        ? (language === "en" ? selectedCat.name : selectedCat.name_hi)
+                        : selectedCategory;
+                      return language === "en" ? `Category: ${catName}` : `श्रेणी: ${catName}`;
+                    })()}
               </p>
             </div>
           </div>
@@ -427,12 +429,14 @@ export default function ProductsPage() {
                       </div>
                       
                       {/* Best Seller Badge */}
-                      <div className="absolute top-4 right-4">
-                        <Badge className="bg-white/95 text-gray-900 border-0 shadow-lg px-3 py-1.5">
-                          <Star className="h-3.5 w-3.5 mr-1.5 text-amber-500 fill-amber-500" />
-                          {language === "en" ? "Best Seller" : "बेस्ट सेलर"}
-                        </Badge>
-                      </div>
+                      {product.isBestSeller && (
+                        <div className="absolute top-4 right-4">
+                          <Badge className="bg-white/95 text-gray-900 border-0 shadow-lg px-3 py-1.5">
+                            <Star className="h-3.5 w-3.5 mr-1.5 text-amber-500 fill-amber-500" />
+                            {language === "en" ? "Best Seller" : "बेस्ट सेलर"}
+                          </Badge>
+                        </div>
+                      )}
                     </div>
 
                       <CardContent className="p-6">

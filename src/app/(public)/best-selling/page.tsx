@@ -21,6 +21,19 @@ import { TractorLoader } from "@/components/ui/tractor-loader";
 import { getBestSellers } from "@/lib/api";
 import type { Product } from "@/lib/api/types";
 
+// Category gradient mapping - same as products page
+const getCategoryGradient = (categoryName: string): string => {
+  const categoryMap: Record<string, string> = {
+    "Insecticide": "from-red-500 to-orange-500",
+    "Fungicide": "from-blue-500 to-cyan-500",
+    "Herbicide": "from-purple-500 to-pink-500",
+    "Plant Growth Regulator": "from-green-500 to-emerald-500",
+    "PGR": "from-green-500 to-emerald-500",
+    "Fertilizer": "from-amber-500 to-yellow-500",
+  };
+  return categoryMap[categoryName] || "from-gray-500 to-gray-600";
+};
+
 export default function BestSellingPage() {
   const { language } = useStore();
   const [products, setProducts] = React.useState<Product[]>([]);
@@ -31,6 +44,7 @@ export default function BestSellingPage() {
       try {
         const response = await getBestSellers(10);
         if (response.success && response.data) {
+          // Maintain order from backend (products come in display order)
           setProducts(response.data);
         }
       } catch (error) {
@@ -159,10 +173,15 @@ export default function BestSellingPage() {
               const packSize = product.pack_sizes && product.pack_sizes.length > 0
                 ? product.pack_sizes[0].size
                 : "";
-              const gradient = (technicalDetails.gradient as string) || "from-green-500 to-emerald-500";
+              // Use gradient from technical_details or fallback to category-based gradient
+              const gradient = (technicalDetails.gradient as string) || getCategoryGradient(product.category.name);
               const image = product.image_url || "/logo.svg";
-              const technical = language === "en" ? product.composition : (technicalDetails.technicalHi as string || product.composition);
-              const dosage = language === "en" ? product.dosage : (technicalDetails.dosageHi as string || product.dosage);
+              const technical = language === "en" 
+                ? product.composition 
+                : (technicalDetails.technicalHi as string || product.composition);
+              const dosage = language === "en" 
+                ? product.dosage 
+                : (technicalDetails.dosageHi as string || product.dosage || "");
 
               return (
                 <AnimatedItem key={product.id}>

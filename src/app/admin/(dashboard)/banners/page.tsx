@@ -326,6 +326,7 @@ export default function BannersPage() {
                         <TableCell>
                           <div className="relative h-16 w-24 rounded-lg bg-gray-100 overflow-hidden">
                             {banner.image_url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
                               <img
                                 src={banner.image_url}
                                 alt={banner.title || "Banner"}

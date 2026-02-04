@@ -741,12 +741,15 @@ export default function CouponsPage() {
                     <span>{new Date(selectedCoupon.scanned_at).toLocaleString()}</span>
                   </div>
                 )}
-                {(selectedCoupon.expires_at || selectedCoupon.expiry_date) && (
-                  <div className="flex justify-between py-2 border-b">
-                    <span className="text-gray-500">Expires</span>
-                    <span>{new Date(selectedCoupon.expires_at || selectedCoupon.expiry_date).toLocaleDateString()}</span>
-                  </div>
-                )}
+                {(() => {
+                  const expiry = selectedCoupon.expires_at || selectedCoupon.expiry_date;
+                  return expiry ? (
+                    <div className="flex justify-between py-2 border-b">
+                      <span className="text-gray-500">Expires</span>
+                      <span>{new Date(expiry).toLocaleDateString()}</span>
+                    </div>
+                  ) : null;
+                })()}
                 <div className="flex justify-between py-2">
                   <span className="text-gray-500">Created</span>
                   <span>{new Date(selectedCoupon.created_at).toLocaleDateString()}</span>

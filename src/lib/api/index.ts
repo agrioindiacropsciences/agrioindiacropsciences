@@ -303,8 +303,8 @@ export async function getDistributors(params: T.DistributorsQuery): Promise<ApiR
   if (!res.success || !res.data) return res as ApiResponse<T.Distributor[]>;
   
   const raw = res.data;
-  const list = raw.distributors ?? raw.data ?? [];
-  const mapped: T.Distributor[] = list.map((d: Record<string, unknown>) => {
+  const list = (raw.distributors ?? raw.data ?? []) as unknown as Record<string, unknown>[];
+  const mapped: T.Distributor[] = list.map((d) => {
     const addr = d.address as Record<string, string> | undefined;
     const loc = d.location as { lat?: number; lng?: number } | undefined;
     const addrParts = addr ? [addr.street, addr.area, addr.city].filter(Boolean) : [];
@@ -318,8 +318,8 @@ export async function getDistributors(params: T.DistributorsQuery): Promise<ApiR
       pincode: (addr?.pincode ?? d.pincode ?? '') as string,
       phone: d.phone as string,
       email: d.email as string | undefined,
-      latitude: loc?.lat ?? d.latitude,
-      longitude: loc?.lng ?? d.longitude,
+      latitude: (loc?.lat ?? d.latitude) as number | undefined,
+      longitude: (loc?.lng ?? d.longitude) as number | undefined,
       distance_km: d.distance_km as number | undefined,
       is_active: (d.is_active ?? true) as boolean,
     };
@@ -569,7 +569,7 @@ export async function adminLogout(): Promise<void> {
  */
 export async function getDashboardStats(): Promise<ApiResponse<T.DashboardStats>> {
   const res = await adminGet<Record<string, unknown>>('/admin/dashboard/stats');
-  if (!res.success || !res.data) return res as ApiResponse<T.DashboardStats>;
+  if (!res.success || !res.data) return res as unknown as ApiResponse<T.DashboardStats>;
   const d = res.data;
   return {
     success: true,

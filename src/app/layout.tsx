@@ -443,12 +443,13 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/home.png", type: "image/png", sizes: "512x512" },
-      { url: "/logo.svg", type: "image/svg+xml" },
+      { url: "https://www.agrioindiacropsciences.com/favicon.ico", sizes: "48x48", type: "image/x-icon" },
+      { url: "https://www.agrioindiacropsciences.com/logo.svg", type: "image/svg+xml", sizes: "any" },
     ],
-    shortcut: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
+    shortcut: "https://www.agrioindiacropsciences.com/favicon.ico",
+    apple: [
+      { url: "https://www.agrioindiacropsciences.com/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
   },
   openGraph: {
     title: "Agrio India Crop Science | Agrio Sampan Kisan - भारतीय किसान की पहली पसंद",
@@ -459,10 +460,16 @@ export const metadata: Metadata = {
     siteName: "Agrio India Crop Science",
     images: [
       {
-        url: "/home.png",
+        url: "https://www.agrioindiacropsciences.com/home.png",
         width: 1200,
         height: 630,
         alt: "Agrio India Crop Science - Agrio Sampan Kisan - Premium Agrochemicals for Indian Farmers",
+      },
+      {
+        url: "https://www.agrioindiacropsciences.com/logo.svg",
+        width: 512,
+        height: 512,
+        alt: "Agrio India Crop Science Logo",
       },
     ],
   },
@@ -471,7 +478,10 @@ export const metadata: Metadata = {
     site: "@agrioindiacrop",
     title: "Agrio India Crop Science | Agrio Sampan Kisan",
     description: "एग्रियो संपन किसान - भारतीय किसान की पहली पसंद। Buy Agrio Formula, Agrio Chakravyuh, Agrio Rocket, Agrio Hercules - Premium Agrochemicals for Higher Yield",
-    images: ["/home.png"],
+    images: [
+      "https://www.agrioindiacropsciences.com/home.png",
+      "https://www.agrioindiacropsciences.com/logo.svg",
+    ],
     creator: "@agrioindiacrop",
   },
   verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
@@ -506,6 +516,18 @@ export default async function RootLayout({
   return (
     <html lang={locale} className={`${poppins.variable} ${notoSansDevanagari.variable}`}>
       <head>
+        {/* Favicon Links - Using logo.svg as primary favicon */}
+        <link rel="icon" type="image/svg+xml" href="https://www.agrioindiacropsciences.com/logo.svg" />
+        <link rel="icon" type="image/x-icon" href="https://www.agrioindiacropsciences.com/favicon.ico" sizes="48x48" />
+        <link rel="apple-touch-icon" sizes="180x180" href="https://www.agrioindiacropsciences.com/apple-touch-icon.png" />
+        <link rel="manifest" href="https://www.agrioindiacropsciences.com/site.webmanifest" />
+        <meta name="theme-color" content="#16a34a" />
+        {/* Additional SEO Meta Tags */}
+        <meta name="application-name" content="Agrio India Crop Science" />
+        <meta name="msapplication-TileColor" content="#16a34a" />
+        <meta name="msapplication-TileImage" content="https://www.agrioindiacropsciences.com/logo.svg" />
+        {/* Ensure Google can index and display favicon */}
+        <meta name="google-site-verification" content={process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || ""} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

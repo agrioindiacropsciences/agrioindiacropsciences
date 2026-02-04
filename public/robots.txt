@@ -5,6 +5,12 @@
 User-agent: *
 Allow: /
 
+# Explicitly allow favicon and icon files
+Allow: /favicon.ico
+Allow: /logo.svg
+Allow: /apple-touch-icon.png
+Allow: /site.webmanifest
+
 # Disallow admin and dashboard areas
 Disallow: /admin/
 Disallow: /dashboard/

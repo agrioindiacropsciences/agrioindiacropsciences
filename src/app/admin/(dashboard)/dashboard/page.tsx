@@ -5,8 +5,6 @@ import { motion } from "framer-motion";
 import {
   Users,
   Ticket,
-  IndianRupee,
-  TrendingUp,
   Package,
   BarChart3,
   ArrowUpRight,
@@ -29,7 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminStore } from "@/store/useStore";
 import * as api from "@/lib/api";
 import type { DashboardStats, AdminUser } from "@/lib/api";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 function StatCardSkeleton() {
   return (
@@ -79,12 +77,18 @@ export default function AdminDashboardPage() {
     fetchData();
   }, []);
 
+  const formatChange = (val?: number) => {
+    if (val == null) return "—";
+    const prefix = val >= 0 ? "+" : "";
+    return `${prefix}${val}%`;
+  };
+
   const statsCards = [
     {
       title: "Total Users",
       value: stats?.total_users?.toLocaleString() || "0",
-      change: "+12.5%",
-      trend: "up",
+      change: formatChange(stats?.user_growth),
+      trend: (stats?.user_growth ?? 0) >= 0 ? "up" : "down",
       icon: Users,
       gradient: "from-blue-500 to-indigo-600",
       bgLight: "bg-blue-50",
@@ -93,27 +97,17 @@ export default function AdminDashboardPage() {
     {
       title: "Coupons Scanned",
       value: stats?.total_coupons_scanned?.toLocaleString() || "0",
-      change: "+8.2%",
-      trend: "up",
+      change: formatChange(stats?.scan_growth),
+      trend: (stats?.scan_growth ?? 0) >= 0 ? "up" : "down",
       icon: Ticket,
       gradient: "from-amber-500 to-orange-600",
       bgLight: "bg-amber-50",
       iconColor: "text-amber-600",
     },
     {
-      title: "Total Revenue",
-      value: formatCurrency(stats?.total_revenue || 0),
-      change: "+23.1%",
-      trend: "up",
-      icon: IndianRupee,
-      gradient: "from-green-500 to-emerald-600",
-      bgLight: "bg-green-50",
-      iconColor: "text-green-600",
-    },
-    {
       title: "Total Products",
       value: stats?.total_products?.toLocaleString() || "0",
-      change: "+4.3%",
+      change: "—",
       trend: "up",
       icon: Package,
       gradient: "from-purple-500 to-pink-600",
@@ -122,24 +116,28 @@ export default function AdminDashboardPage() {
     },
   ];
 
+  const todayScans = stats?.scans_per_day?.find(
+    (s) => s.date === new Date().toISOString().split("T")[0]
+  )?.value ?? 0;
+
   const quickStats = [
     {
-      title: "Active Campaigns",
-      value: stats?.total_orders?.toLocaleString() || "5",
+      title: "New Registrations Today",
+      value: stats?.new_registrations_today?.toLocaleString() || "0",
       icon: Target,
       color: "text-emerald-600",
       bg: "bg-emerald-50",
     },
     {
       title: "Today's Scans",
-      value: "124",
+      value: String(todayScans),
       icon: Activity,
       color: "text-blue-600",
       bg: "bg-blue-50",
     },
     {
-      title: "Conversion Rate",
-      value: "68%",
+      title: "Coupons Redeemed",
+      value: stats?.coupons_redeemed?.toLocaleString() || "0",
       icon: BarChart3,
       color: "text-purple-600",
       bg: "bg-purple-50",
@@ -336,14 +334,14 @@ export default function AdminDashboardPage() {
                       <TableCell className="text-gray-600">
                         {user.created_at ? formatDate(user.created_at) : "-"}
                       </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={user.role === "ADMIN" ? "default" : "success"}
-                          className="font-medium"
-                        >
-                          {user.role || "USER"}
-                        </Badge>
-                      </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={user.role === "SUSPENDED" ? "destructive" : "success"}
+                            className="font-medium"
+                          >
+                            {user.role === "SUSPENDED" ? "Suspended" : user.role || "Active"}
+                          </Badge>
+                        </TableCell>
                     </motion.tr>
                   ))}
                 </TableBody>

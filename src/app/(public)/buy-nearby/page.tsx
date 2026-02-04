@@ -148,19 +148,21 @@ export default function BuyNearbyPage() {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
+          setHasSearched(true);
           const { latitude, longitude } = position.coords;
           
           try {
             const response = await api.getDistributors({
-              pincode: "000000",
               lat: latitude,
               lng: longitude,
+              limit: 20,
             });
             
             if (response.success && response.data) {
               setDistributors(response.data);
               setSearchedPincode(language === "en" ? "Your Location" : "आपका स्थान");
-              setHasSearched(true);
+            } else {
+              setDistributors([]);
             }
           } catch (error) {
             toast({
@@ -174,13 +176,12 @@ export default function BuyNearbyPage() {
           
           setIsLocating(false);
         },
-        (error) => {
-          console.error(error);
+        () => {
           toast({
             title: language === "en" ? "Location Error" : "स्थान त्रुटि",
             description: language === "en"
-              ? "Unable to get your location. Please enter pincode manually."
-              : "आपका स्थान प्राप्त करने में असमर्थ। कृपया पिनकोड मैन्युअल रूप से दर्ज करें।",
+              ? "Unable to get your location. Please allow location access or enter pincode manually."
+              : "आपका स्थान प्राप्त करने में असमर्थ। कृपया लोकेशन एक्सेस दें या पिनकोड मैन्युअल रूप से दर्ज करें।",
             variant: "destructive",
           });
           setIsLocating(false);
@@ -450,7 +451,7 @@ export default function BuyNearbyPage() {
                                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
                                   <Button variant="outline" asChild className="w-full h-12 rounded-xl border-2">
                                     <a
-                                      href={`https://www.google.com/maps/dir/?api=1&destination=${distributor.latitude},${distributor.longitude}`}
+                                      href={`https://www.google.com/maps/dir/?api=1&origin=current+location&destination=${distributor.latitude},${distributor.longitude}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                     >

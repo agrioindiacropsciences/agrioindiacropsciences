@@ -15,8 +15,9 @@ import {
   LogOut,
   Menu,
   Search,
-  Bell,
   ChevronDown,
+  ImageIcon,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,7 @@ const navItems = [
   { href: "/admin/products", icon: Package, label: "Products" },
   { href: "/admin/coupons", icon: Ticket, label: "Coupons" },
   { href: "/admin/distributors", icon: MapPin, label: "Distributors" },
+  { href: "/admin/banners", icon: ImageIcon, label: "Banners" },
   { href: "/admin/notifications", icon: Bell, label: "Notifications" },
   { href: "/admin/reports", icon: BarChart3, label: "Reports" },
 ];
@@ -242,11 +244,6 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
 
             {/* Right: Actions */}
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
-              </Button>
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="gap-2">

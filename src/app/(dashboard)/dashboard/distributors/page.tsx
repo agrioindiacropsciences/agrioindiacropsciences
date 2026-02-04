@@ -110,19 +110,21 @@ export default function DistributorsPage() {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
+          setHasSearched(true);
           const { latitude, longitude } = position.coords;
           
           try {
             const response = await api.getDistributors({
-              pincode: "000000",
               lat: latitude,
               lng: longitude,
+              limit: 20,
             });
             
             if (response.success && response.data) {
               setDistributors(response.data);
               setSearchedPincode(language === "en" ? "Your Location" : "आपका स्थान");
-              setHasSearched(true);
+            } else {
+              setDistributors([]);
             }
           } catch (error) {
             toast({
@@ -303,7 +305,7 @@ export default function DistributorsPage() {
                       {distributor.latitude && distributor.longitude && (
                         <Button variant="outline" asChild>
                           <a
-                            href={`https://www.google.com/maps/dir/?api=1&destination=${distributor.latitude},${distributor.longitude}`}
+                            href={`https://www.google.com/maps/dir/?api=1&origin=current+location&destination=${distributor.latitude},${distributor.longitude}`}
                             target="_blank"
                             rel="noopener noreferrer"
                           >

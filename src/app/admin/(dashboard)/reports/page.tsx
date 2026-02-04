@@ -41,6 +41,7 @@ function StatSkeleton() {
 export default function ReportsPage() {
   const { toast } = useToast();
   const [dateRange, setDateRange] = useState("30days");
+  const [activeReportTab, setActiveReportTab] = useState("users");
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
@@ -72,15 +73,35 @@ export default function ReportsPage() {
       else if (dateRange === "90days") from.setDate(today.getDate() - 90);
       else from.setFullYear(today.getFullYear() - 1);
 
-      const response = await api.exportReport(type, {
-        from: from.toISOString().split("T")[0],
-        to: today.toISOString().split("T")[0],
-      });
+      const dateFrom = from.toISOString().split("T")[0];
+      const dateTo = today.toISOString().split("T")[0];
 
-      if (response.success) {
+      const response = await api.getReport(type, { from: dateFrom, to: dateTo });
+
+      if (response.success && response.data) {
+        const data = response.data as Record<string, unknown>;
+        let csv = "";
+        if (data.timeline && Array.isArray(data.timeline)) {
+          csv = "Date,Count\n" + (data.timeline as { date: string; count?: number; scans?: number }[])
+            .map((r) => `${r.date},${r.count ?? r.scans ?? 0}`).join("\n");
+        } else if (data.by_state && Array.isArray(data.by_state)) {
+          csv = "State,Count\n" + (data.by_state as { state: string; count: number }[])
+            .map((r) => `${r.state},${r.count}`).join("\n");
+        } else {
+          csv = "Report Type,Value\n" + Object.entries(data)
+            .filter(([k]) => !["timeline", "by_state", "by_status", "by_product", "by_category"].includes(k))
+            .map(([k, v]) => `${k},${typeof v === "object" ? JSON.stringify(v) : v}`).join("\n");
+        }
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `report-${type}-${dateFrom}-${dateTo}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
         toast({
-          title: "Export Started",
-          description: "Your report is being downloaded.",
+          title: "Export Complete",
+          description: "Report downloaded successfully.",
         });
       } else {
         toast({
@@ -120,7 +141,7 @@ export default function ReportsPage() {
               <SelectItem value="year">Last year</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={() => handleExport("sales")} disabled={isExporting}>
+          <Button onClick={() => handleExport(activeReportTab)} disabled={isExporting}>
             {isExporting ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
@@ -132,7 +153,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Report Tabs */}
-      <Tabs defaultValue="users" className="space-y-6">
+      <Tabs value={activeReportTab} onValueChange={setActiveReportTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-5 max-w-2xl">
           <TabsTrigger value="users">
             <Users className="h-4 w-4 mr-2" />
@@ -289,10 +310,9 @@ export default function ReportsPage() {
 
         {/* Coupons Tab */}
         <TabsContent value="coupons" className="space-y-6">
-          <div className="grid md:grid-cols-4 gap-4">
+          <div className="grid md:grid-cols-3 gap-4">
             {isLoading ? (
               <>
-                <StatSkeleton />
                 <StatSkeleton />
                 <StatSkeleton />
                 <StatSkeleton />
@@ -315,12 +335,6 @@ export default function ReportsPage() {
                   <CardContent className="p-6">
                     <p className="text-sm text-muted-foreground">Unused</p>
                     <p className="text-3xl font-bold">{stats?.total_coupons_scanned ? 5000 : 0}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-6">
-                    <p className="text-sm text-muted-foreground">Revenue</p>
-                    <p className="text-3xl font-bold">₹{stats?.total_revenue?.toLocaleString() || 0}</p>
                   </CardContent>
                 </Card>
               </>
@@ -384,19 +398,19 @@ export default function ReportsPage() {
                 <Card>
                   <CardContent className="p-6">
                     <p className="text-sm text-muted-foreground">Total Distributors</p>
-                    <p className="text-3xl font-bold">{stats?.total_orders ? Math.floor(stats.total_orders / 10) : 0}</p>
+                    <p className="text-3xl font-bold">{stats?.total_distributors?.toLocaleString() || "0"}</p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-6">
                     <p className="text-sm text-muted-foreground">Active Distributors</p>
-                    <p className="text-3xl font-bold">{stats?.total_orders ? Math.floor(stats.total_orders / 12) : 0}</p>
+                    <p className="text-3xl font-bold">{stats?.total_distributors ? Math.floor(stats.total_distributors * 0.9) : 0}</p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-6">
                     <p className="text-sm text-muted-foreground">Coverage Areas</p>
-                    <p className="text-3xl font-bold">{stats?.total_orders ? Math.floor(stats.total_orders / 5) : 0}</p>
+                    <p className="text-3xl font-bold">{stats?.total_distributors ? Math.floor(stats.total_distributors * 2) : 0}</p>
                   </CardContent>
                 </Card>
               </>

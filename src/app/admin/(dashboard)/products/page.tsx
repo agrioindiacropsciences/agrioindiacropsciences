@@ -15,6 +15,7 @@ import {
   Loader2,
   Filter,
   LayoutGrid,
+  Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -64,6 +67,7 @@ export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -86,6 +90,7 @@ export default function ProductsPage() {
     pack_sizes: [] as { size: string; sku: string; mrp: number; selling_price: number }[],
     is_active: true,
     is_best_seller: false,
+    best_seller_rank: null as number | null,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -119,13 +124,22 @@ export default function ProductsPage() {
   }, [fetchData]);
 
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
+    const filtered = products.filter((product) => {
       const matchesSearch =
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.name_hi.includes(searchQuery);
+        product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (product.name_hi || '').includes(searchQuery);
       const matchesCategory =
         categoryFilter === "all" || product.category?.id === categoryFilter;
       return matchesSearch && matchesCategory;
+    });
+    // Sort: best sellers first by rank (1, 2, 3...), then non-best-sellers
+    return [...filtered].sort((a, b) => {
+      const rankA = (a as any).best_seller_rank ?? 999;
+      const rankB = (b as any).best_seller_rank ?? 999;
+      if (a.is_best_seller && b.is_best_seller) return rankA - rankB;
+      if (a.is_best_seller) return -1;
+      if (b.is_best_seller) return 1;
+      return 0;
     });
   }, [products, searchQuery, categoryFilter]);
 
@@ -135,10 +149,15 @@ export default function ProductsPage() {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length > 0) {
-      setSelectedImages(files);
-      const previews = files.map(file => URL.createObjectURL(file));
-      setImagePreviews(previews);
+      if (editDialogOpen && editingProduct) {
+        setSelectedImages(prev => [...prev, ...files]);
+        setImagePreviews(prev => [...prev, ...files.map(file => URL.createObjectURL(file))]);
+      } else {
+        setSelectedImages(files);
+        setImagePreviews(files.map(file => URL.createObjectURL(file)));
+      }
     }
+    e.target.value = "";
   };
 
   const resetForm = () => {
@@ -157,14 +176,19 @@ export default function ProductsPage() {
       pack_sizes: [],
       is_active: true,
       is_best_seller: false,
+      best_seller_rank: null,
     });
     setSelectedImages([]);
     setImagePreviews([]);
+    setExistingImageUrls([]);
     setEditingProduct(null);
   };
 
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
+    const existingUrls = product.images || [];
+    setExistingImageUrls(existingUrls);
+    setSelectedImages([]);
     setFormData({
       name: product.name || "",
       name_hi: product.name_hi || "",
@@ -180,8 +204,9 @@ export default function ProductsPage() {
       pack_sizes: product.pack_sizes || [],
       is_active: product.is_active ?? true,
       is_best_seller: product.is_best_seller ?? false,
+      best_seller_rank: (product as any).best_seller_rank || (product as any).sales_rank || null,
     });
-    setImagePreviews(product.images || []);
+    setImagePreviews(existingUrls);
     setEditDialogOpen(true);
   };
 
@@ -199,7 +224,7 @@ export default function ProductsPage() {
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('name', formData.name);
-      if (formData.name_hi) formDataToSend.append('name_hi', formData.name_hi);
+      formDataToSend.append('name_hi', formData.name_hi || '');
       if (formData.description) formDataToSend.append('description', formData.description);
       if (formData.description_hi) formDataToSend.append('description_hi', formData.description_hi);
       if (formData.composition) formDataToSend.append('composition', formData.composition);
@@ -208,6 +233,9 @@ export default function ProductsPage() {
       formDataToSend.append('category_id', formData.category_id);
       formDataToSend.append('is_active', String(formData.is_active));
       formDataToSend.append('is_best_seller', String(formData.is_best_seller));
+      if (formData.is_best_seller && formData.best_seller_rank !== null) {
+        formDataToSend.append('best_seller_rank', String(formData.best_seller_rank));
+      }
       
       if (formData.suitable_crops.length > 0) {
         formDataToSend.append('suitable_crops', JSON.stringify(formData.suitable_crops));
@@ -222,6 +250,9 @@ export default function ProductsPage() {
         formDataToSend.append('pack_sizes', JSON.stringify(formData.pack_sizes));
       }
 
+      if (existingImageUrls.length > 0) {
+        formDataToSend.append('existing_image_urls', JSON.stringify(existingImageUrls));
+      }
       selectedImages.forEach(image => {
         formDataToSend.append('images', image);
       });
@@ -267,7 +298,7 @@ export default function ProductsPage() {
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('name', formData.name);
-      if (formData.name_hi) formDataToSend.append('name_hi', formData.name_hi);
+      formDataToSend.append('name_hi', formData.name_hi || '');
       if (formData.description) formDataToSend.append('description', formData.description);
       if (formData.description_hi) formDataToSend.append('description_hi', formData.description_hi);
       if (formData.composition) formDataToSend.append('composition', formData.composition);
@@ -276,6 +307,9 @@ export default function ProductsPage() {
       formDataToSend.append('category_id', formData.category_id);
       formDataToSend.append('is_active', String(formData.is_active));
       formDataToSend.append('is_best_seller', String(formData.is_best_seller));
+      if (formData.is_best_seller && formData.best_seller_rank !== null) {
+        formDataToSend.append('best_seller_rank', String(formData.best_seller_rank));
+      }
       
       if (formData.suitable_crops.length > 0) {
         formDataToSend.append('suitable_crops', JSON.stringify(formData.suitable_crops));
@@ -515,9 +549,16 @@ export default function ProductsPage() {
                         </TableCell>
                         <TableCell>
                           {product.is_best_seller ? (
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-2">
                               <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
-                              <span className="text-sm font-medium text-amber-600">Yes</span>
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium text-amber-600">Yes</span>
+                                {(product as any).best_seller_rank && (
+                                  <span className="text-xs text-gray-500">
+                                    Rank #{(product as any).best_seller_rank}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           ) : (
                             <span className="text-gray-400 text-sm">No</span>
@@ -727,6 +768,68 @@ export default function ProductsPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Best Seller Section */}
+              <div className="pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Star className="h-5 w-5 text-amber-500" />
+                    <Label htmlFor="isBestSeller" className="text-base font-semibold">
+                      Best Selling Product
+                    </Label>
+                  </div>
+                  <Switch
+                    id="isBestSeller"
+                    checked={formData.is_best_seller}
+                    onCheckedChange={(checked) => {
+                      setFormData({ 
+                        ...formData, 
+                        is_best_seller: checked,
+                        best_seller_rank: checked ? (formData.best_seller_rank || 1) : null
+                      });
+                    }}
+                  />
+                </div>
+                
+                {formData.is_best_seller && (
+                  <div className="mt-4 space-y-2">
+                    <Label htmlFor="bestSellerRank" className="flex items-center gap-2">
+                      <Trophy className="h-4 w-4 text-amber-500" />
+                      Best Seller Ranking (Position: 1, 2, 3, 4...)
+                    </Label>
+                    <Input
+                      id="bestSellerRank"
+                      type="number"
+                      min="1"
+                      placeholder="e.g., 1 for #1 best seller"
+                      className="mt-1"
+                      value={formData.best_seller_rank || ""}
+                      onChange={(e) => {
+                        const value = e.target.value ? parseInt(e.target.value, 10) : null;
+                        setFormData({ 
+                          ...formData, 
+                          best_seller_rank: value && value > 0 ? value : null 
+                        });
+                      }}
+                    />
+                    <p className="text-xs text-gray-500">
+                      Lower number = Higher rank (1 is highest, 2 is second, etc.)
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Active Status */}
+              <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                <Label htmlFor="isActive" className="text-base font-semibold">
+                  Product Active
+                </Label>
+                <Switch
+                  id="isActive"
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -782,10 +885,14 @@ export default function ProductsPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          const newPreviews = imagePreviews.filter((_, i) => i !== index);
-                          const newImages = selectedImages.filter((_, i) => i !== index);
-                          setImagePreviews(newPreviews);
-                          setSelectedImages(newImages);
+                          if (index < existingImageUrls.length) {
+                            setExistingImageUrls(prev => prev.filter((_, i) => i !== index));
+                            setImagePreviews(prev => prev.filter((_, i) => i !== index));
+                          } else {
+                            const newIdx = index - existingImageUrls.length;
+                            setSelectedImages(prev => prev.filter((_, i) => i !== newIdx));
+                            setImagePreviews(prev => prev.filter((_, i) => i !== index));
+                          }
                         }}
                         className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
                       >
@@ -856,6 +963,68 @@ export default function ProductsPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Best Seller Section */}
+              <div className="pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Star className="h-5 w-5 text-amber-500" />
+                    <Label htmlFor="edit-isBestSeller" className="text-base font-semibold">
+                      Best Selling Product
+                    </Label>
+                  </div>
+                  <Switch
+                    id="edit-isBestSeller"
+                    checked={formData.is_best_seller}
+                    onCheckedChange={(checked) => {
+                      setFormData({ 
+                        ...formData, 
+                        is_best_seller: checked,
+                        best_seller_rank: checked ? (formData.best_seller_rank || 1) : null
+                      });
+                    }}
+                  />
+                </div>
+                
+                {formData.is_best_seller && (
+                  <div className="mt-4 space-y-2">
+                    <Label htmlFor="edit-bestSellerRank" className="flex items-center gap-2">
+                      <Trophy className="h-4 w-4 text-amber-500" />
+                      Best Seller Ranking (Position: 1, 2, 3, 4...)
+                    </Label>
+                    <Input
+                      id="edit-bestSellerRank"
+                      type="number"
+                      min="1"
+                      placeholder="e.g., 1 for #1 best seller"
+                      className="mt-1"
+                      value={formData.best_seller_rank || ""}
+                      onChange={(e) => {
+                        const value = e.target.value ? parseInt(e.target.value, 10) : null;
+                        setFormData({ 
+                          ...formData, 
+                          best_seller_rank: value && value > 0 ? value : null 
+                        });
+                      }}
+                    />
+                    <p className="text-xs text-gray-500">
+                      Lower number = Higher rank (1 is highest, 2 is second, etc.)
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Active Status */}
+              <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                <Label htmlFor="edit-isActive" className="text-base font-semibold">
+                  Product Active
+                </Label>
+                <Switch
+                  id="edit-isActive"
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                />
               </div>
             </div>
           </div>

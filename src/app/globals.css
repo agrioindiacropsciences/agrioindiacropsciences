@@ -478,9 +478,7 @@ html {
     font-size: 2.25rem;
     line-height: 2.5rem;
   }
-}
-
-/* Focus visible for accessibility */
+}/* Focus visible for accessibility */
 .focus-ring:focus-visible {
   outline: none;
   ring: 2px;

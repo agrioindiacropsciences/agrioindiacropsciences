@@ -47,6 +47,8 @@ export default function DistributorsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingDistributor, setEditingDistributor] = useState<Distributor | null>(null);
   const [distributors, setDistributors] = useState<Distributor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -66,6 +68,22 @@ export default function DistributorsPage() {
     latitude: "",
     longitude: "",
   });
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      owner_name: "",
+      phone: "",
+      email: "",
+      address: "",
+      city: "",
+      state: "",
+      pincode: "",
+      latitude: "",
+      longitude: "",
+    });
+    setEditingDistributor(null);
+  };
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchDistributors = useCallback(async () => {
@@ -134,6 +152,74 @@ export default function DistributorsPage() {
           description: "Distributor created successfully",
         });
         setAddDialogOpen(false);
+        resetForm();
+        fetchDistributors();
+      } else {
+        toast({
+          title: "Error",
+          description: response.error?.message || "Failed to create distributor",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong",
+        variant: "destructive",
+      });
+    }
+    setIsSubmitting(false);
+  };
+
+  const handleEditDistributor = (dist: Distributor) => {
+    setEditingDistributor(dist);
+    setFormData({
+      name: dist.name,
+      owner_name: dist.owner_name || (dist as any).business_name || "",
+      phone: dist.phone || "",
+      email: dist.email || "",
+      address: dist.address || "",
+      city: dist.city || "",
+      state: dist.state || "",
+      pincode: dist.pincode || "",
+      latitude: dist.latitude?.toString() || "",
+      longitude: dist.longitude?.toString() || "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateDistributor = async () => {
+    if (!editingDistributor || !formData.name || !formData.phone || !formData.pincode) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await api.updateDistributor(editingDistributor.id, {
+        name: formData.name,
+        owner_name: formData.owner_name,
+        phone: formData.phone,
+        email: formData.email,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        pincode: formData.pincode,
+        latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
+        longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
+      });
+
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "Distributor updated successfully",
+        });
+        setEditDialogOpen(false);
+        setEditingDistributor(null);
         setFormData({
           name: "",
           owner_name: "",
@@ -150,7 +236,7 @@ export default function DistributorsPage() {
       } else {
         toast({
           title: "Error",
-          description: response.error?.message || "Failed to create distributor",
+          description: response.error?.message || "Failed to update distributor",
           variant: "destructive",
         });
       }
@@ -286,13 +372,7 @@ export default function DistributorsPage() {
                           <Button 
                             variant="ghost" 
                             size="sm"
-                            onClick={() => {
-                              // TODO: Implement edit distributor functionality
-                              toast({
-                                title: "Edit Distributor",
-                                description: "Edit functionality coming soon",
-                              });
-                            }}
+                            onClick={() => handleEditDistributor(dist)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -464,6 +544,117 @@ export default function DistributorsPage() {
               {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               <Plus className="h-4 w-4 mr-2" />
               Add Distributor
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Distributor Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={(o) => { setEditDialogOpen(o); if (!o) resetForm(); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Distributor</DialogTitle>
+          </DialogHeader>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <Label>Distributor Name *</Label>
+              <Input 
+                placeholder="Business name" 
+                className="mt-1"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Owner/Contact Person</Label>
+              <Input 
+                placeholder="Contact person name" 
+                className="mt-1"
+                value={formData.owner_name}
+                onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Phone Number *</Label>
+              <Input 
+                placeholder="+91 XXXXX XXXXX" 
+                className="mt-1"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input 
+                type="email" 
+                placeholder="email@example.com" 
+                className="mt-1"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Label>Address</Label>
+              <Input 
+                placeholder="Full address" 
+                className="mt-1"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>City</Label>
+              <Input 
+                placeholder="City name" 
+                className="mt-1"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>State</Label>
+              <Input 
+                placeholder="State name" 
+                className="mt-1"
+                value={formData.state}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Pincode *</Label>
+              <Input 
+                placeholder="6-digit pincode" 
+                className="mt-1"
+                value={formData.pincode}
+                onChange={(e) => setFormData({ ...formData, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })}
+              />
+            </div>
+            <div>
+              <Label>Latitude (optional)</Label>
+              <Input 
+                placeholder="e.g., 19.0760" 
+                className="mt-1"
+                value={formData.latitude}
+                onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Longitude (optional)</Label>
+              <Input 
+                placeholder="e.g., 72.8777" 
+                className="mt-1"
+                value={formData.longitude}
+                onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setEditDialogOpen(false); resetForm(); }}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateDistributor} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Update Distributor
             </Button>
           </DialogFooter>
         </DialogContent>

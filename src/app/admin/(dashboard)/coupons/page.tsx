@@ -11,6 +11,7 @@ import {
   QrCode,
   Gift,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import * as api from "@/lib/api";
 import type { AdminCoupon, Product, Campaign } from "@/lib/api";
@@ -63,6 +65,10 @@ export default function CouponsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [viewCouponDialogOpen, setViewCouponDialogOpen] = useState(false);
+  const [selectedCoupon, setSelectedCoupon] = useState<AdminCoupon | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [generateForm, setGenerateForm] = useState({
     campaign_id: "",
@@ -84,6 +90,7 @@ export default function CouponsPage() {
     reward_type: "CASHBACK" | "DISCOUNT" | "GIFT";
     reward_value: string;
     probability: string;
+    image_url: string;
   }>({
     name: "",
     name_hi: "",
@@ -96,6 +103,7 @@ export default function CouponsPage() {
     reward_type: "CASHBACK",
     reward_value: "100",
     probability: "1",
+    image_url: "",
   });
 
   const fetchCoupons = useCallback(async () => {
@@ -294,6 +302,7 @@ export default function CouponsPage() {
           reward_value: parseInt(campaignForm.reward_value),
           probability: parseFloat(campaignForm.probability) || 1,
           priority: 1,
+          image_url: campaignForm.reward_type === "GIFT" ? campaignForm.image_url.trim() : undefined,
         }],
       });
 
@@ -306,7 +315,7 @@ export default function CouponsPage() {
         setCampaignForm({
           name: "", name_hi: "", start_date: "", end_date: "",
           distribution_type: "RANDOM", is_active: true, tier_name: "Default Tier",
-          reward_name: "", reward_type: "CASHBACK", reward_value: "100", probability: "1",
+          reward_name: "", reward_type: "CASHBACK", reward_value: "100", probability: "1", image_url: "",
         });
         fetchCampaigns();
       } else {
@@ -325,6 +334,51 @@ export default function CouponsPage() {
     }
     setIsCreatingCampaign(false);
   };
+
+  const handleDeleteCoupon = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this coupon?")) return;
+    setIsDeleting(true);
+    try {
+      const res = await api.deleteCoupon(id);
+      if (res.success) {
+        toast({ title: "Deleted", description: "Coupon deleted successfully" });
+        fetchCoupons();
+        setSelectedIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
+      } else {
+        toast({ title: "Error", description: res.error?.message || "Failed to delete", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Something went wrong", variant: "destructive" });
+    }
+    setIsDeleting(false);
+  };
+
+  const handleDeleteSelected = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) {
+      toast({ title: "No selection", description: "Select coupons to delete", variant: "destructive" });
+      return;
+    }
+    if (!confirm(`Delete ${ids.length} selected coupon(s)?`)) return;
+    setIsDeleting(true);
+    try {
+      const res = await api.deleteCouponsBulk(ids);
+      if (res.success && res.data) {
+        toast({ title: "Deleted", description: `${res.data.deleted_count} coupon(s) deleted` });
+        setSelectedIds(new Set());
+        fetchCoupons();
+      } else {
+        toast({ title: "Error", description: res.error?.message || "Failed to delete", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Something went wrong", variant: "destructive" });
+    }
+    setIsDeleting(false);
+  };
+
+  const unusedFiltered = useMemo(() => filteredCoupons.filter((c) => !c.is_used), [filteredCoupons]);
+  const allUnusedSelected = unusedFiltered.length > 0 && unusedFiltered.every((c) => selectedIds.has(c.id));
+  const someUnusedSelected = unusedFiltered.some((c) => selectedIds.has(c.id));
 
   return (
     <div className="space-y-6 pb-8">
@@ -364,6 +418,17 @@ export default function CouponsPage() {
                 <Sparkles className="h-4 w-4 mr-2" />
                 Generate Coupons
               </Button>
+              {someUnusedSelected && (
+                <Button
+                  variant="outline"
+                  onClick={handleDeleteSelected}
+                  disabled={isDeleting}
+                  className="bg-red-500/20 border-red-400/50 hover:bg-red-500/30 text-white"
+                >
+                  {isDeleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                  Delete Selected ({selectedIds.size})
+                </Button>
+              )}
             </div>
           </div>
           
@@ -445,6 +510,19 @@ export default function CouponsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50/50">
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={allUnusedSelected}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedIds(new Set(unusedFiltered.map((c) => c.id)));
+                          } else {
+                            setSelectedIds(new Set());
+                          }
+                        }}
+                        aria-label="Select all"
+                      />
+                    </TableHead>
                     <TableHead className="font-semibold">Coupon Code</TableHead>
                     <TableHead className="font-semibold">Product</TableHead>
                     <TableHead className="font-semibold">Reward</TableHead>
@@ -463,6 +541,22 @@ export default function CouponsPage() {
                         transition={{ delay: index * 0.03 }}
                         className="hover:bg-gray-50/50 transition-colors"
                       >
+                        <TableCell>
+                          {!coupon.is_used && (
+                            <Checkbox
+                              checked={selectedIds.has(coupon.id)}
+                              onCheckedChange={(checked) => {
+                                setSelectedIds((prev) => {
+                                  const n = new Set(prev);
+                                  if (checked) n.add(coupon.id);
+                                  else n.delete(coupon.id);
+                                  return n;
+                                });
+                              }}
+                              aria-label={`Select ${coupon.code}`}
+                            />
+                          )}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <QrCode className="h-4 w-4 text-gray-400" />
@@ -487,36 +581,53 @@ export default function CouponsPage() {
                         </TableCell>
                         <TableCell className="text-gray-600">{coupon.redeemed_by?.name || "-"}</TableCell>
                         <TableCell>
-                          <Button 
-                            variant="link" 
-                            size="sm" 
-                            className="text-primary p-0"
-                            onClick={async () => {
-                              try {
-                                const response = await api.getAdminCoupon(coupon.id);
-                                if (response.success && response.data) {
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="link" 
+                              size="sm" 
+                              className="text-primary p-0"
+                              onClick={async () => {
+                                try {
+                                  const response = await api.getAdminCoupon(coupon.id);
+                                  if (response.success && response.data) {
+                                    setSelectedCoupon(response.data as AdminCoupon);
+                                    setViewCouponDialogOpen(true);
+                                  } else {
+                                    toast({
+                                      title: "Error",
+                                      description: "Failed to load coupon details",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                } catch (error) {
                                   toast({
-                                    title: "Coupon Details",
-                                    description: `Code: ${response.data.code}, Status: ${response.data.is_used ? 'Used' : 'Unused'}`,
+                                    title: "Error",
+                                    description: "Failed to load coupon details",
+                                    variant: "destructive",
                                   });
                                 }
-                              } catch (error) {
-                                toast({
-                                  title: "Error",
-                                  description: "Failed to load coupon details",
-                                  variant: "destructive",
-                                });
-                              }
-                            }}
-                          >
-                            View
-                          </Button>
+                              }}
+                            >
+                              View
+                            </Button>
+                            {!coupon.is_used && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => handleDeleteCoupon(coupon.id)}
+                                disabled={isDeleting}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </motion.tr>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-12">
+                      <TableCell colSpan={7} className="text-center py-12">
                         <div className="h-16 w-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
                           <Ticket className="h-8 w-8 text-gray-400" />
                         </div>
@@ -555,6 +666,102 @@ export default function CouponsPage() {
           </Button>
         </div>
       </motion.div>
+
+      {/* View Coupon Details Dialog */}
+      <Dialog open={viewCouponDialogOpen} onOpenChange={setViewCouponDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5 text-primary" />
+              Coupon Details
+            </DialogTitle>
+          </DialogHeader>
+          {selectedCoupon && (
+            <div className="space-y-6">
+              {/* QR Code */}
+              <div className="flex justify-center p-4 bg-gray-50 rounded-xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={getQrUrl(selectedCoupon.code)}
+                  alt={`QR for ${selectedCoupon.code}`}
+                  className="w-48 h-48"
+                />
+              </div>
+              {/* Details */}
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-gray-500">Coupon Code</span>
+                  <span className="font-mono font-semibold">{selectedCoupon.code}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-gray-500">Generated</span>
+                  <span>
+                    {selectedCoupon.created_at
+                      ? new Date(selectedCoupon.created_at).toLocaleString("en-IN", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })
+                      : "-"}
+                  </span>
+                </div>
+                {selectedCoupon.batch_number && (
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-gray-500">Batch No.</span>
+                    <span className="font-mono text-xs">{selectedCoupon.batch_number}</span>
+                  </div>
+                )}
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-gray-500">Product</span>
+                  <span>{selectedCoupon.product?.name || selectedCoupon.product_name || "-"}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-gray-500">Reward</span>
+                  <span>
+                    {selectedCoupon.reward_type === "CASHBACK" && `₹${selectedCoupon.reward_value}`}
+                    {selectedCoupon.reward_type === "DISCOUNT" && `${selectedCoupon.reward_value}% off`}
+                    {selectedCoupon.reward_type === "GIFT" && "Gift"}
+                    {!selectedCoupon.reward_type && "-"}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-gray-500">Status</span>
+                  <Badge variant={selectedCoupon.is_used ? "secondary" : "success"}>
+                    {selectedCoupon.is_used ? "Used" : "Unused"}
+                  </Badge>
+                </div>
+                {selectedCoupon.redeemed_by && (
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-gray-500">Redeemed By</span>
+                    <span>{selectedCoupon.redeemed_by.name || selectedCoupon.redeemed_by.phone_number || "-"}</span>
+                  </div>
+                )}
+                {selectedCoupon.scanned_at && (
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-gray-500">Scanned At</span>
+                    <span>{new Date(selectedCoupon.scanned_at).toLocaleString()}</span>
+                  </div>
+                )}
+                {(selectedCoupon.expires_at || selectedCoupon.expiry_date) && (
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-gray-500">Expires</span>
+                    <span>{new Date(selectedCoupon.expires_at || selectedCoupon.expiry_date).toLocaleDateString()}</span>
+                  </div>
+                )}
+                <div className="flex justify-between py-2">
+                  <span className="text-gray-500">Created</span>
+                  <span>{new Date(selectedCoupon.created_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setViewCouponDialogOpen(false)}>Close</Button>
+                <Button onClick={() => downloadQrPng(selectedCoupon.code, getQrUrl(selectedCoupon.code))}>
+                  Download QR
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Generate Coupon Dialog */}
       <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
@@ -610,7 +817,7 @@ export default function CouponsPage() {
               <Label htmlFor="generate-qr" className="cursor-pointer text-sm">Generate QR codes</Label>
             </div>
             <div>
-              <Label>Linked Product (Optional)</Label>
+              <Label>Linked Product (For Free Product coupons)</Label>
               <Select 
                 value={generateForm.product_id || "none"}
                 onValueChange={(value) => setGenerateForm({ ...generateForm, product_id: value === "none" ? "" : value })}
@@ -625,6 +832,17 @@ export default function CouponsPage() {
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground mt-1">Product photo & details will show on coupon. User gets this product when redeemed.</p>
+            </div>
+            <div>
+              <Label>Expiry Date (Optional)</Label>
+              <Input 
+                type="date"
+                className="mt-1"
+                value={generateForm.expiry_date}
+                onChange={(e) => setGenerateForm({ ...generateForm, expiry_date: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Coupons will expire on this date</p>
             </div>
             <div>
               <Label>Code Prefix (Optional)</Label>
@@ -703,12 +921,28 @@ export default function CouponsPage() {
                   <Label>Reward Value (₹) *</Label>
                   <Input type="number" placeholder="e.g., 100" className="mt-1" value={campaignForm.reward_value} onChange={(e) => setCampaignForm({ ...campaignForm, reward_value: e.target.value })} />
                 </div>
+                {campaignForm.reward_type === "GIFT" && (
+                  <div>
+                    <Label>Gift Image URL * <span className="text-red-500">(Required for Gift - shows after scratch)</span></Label>
+                    <Input 
+                      type="url" 
+                      placeholder="https://..." 
+                      className="mt-1" 
+                      value={campaignForm.image_url} 
+                      onChange={(e) => setCampaignForm({ ...campaignForm, image_url: e.target.value })} 
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">This image will be shown to user after they scratch the coupon</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateCampaignDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreateCampaign} disabled={isCreatingCampaign || !campaignForm.name}>
+            <Button 
+              onClick={handleCreateCampaign} 
+              disabled={isCreatingCampaign || !campaignForm.name || (campaignForm.reward_type === "GIFT" && !campaignForm.image_url.trim())}
+            >
               {isCreatingCampaign && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Create
             </Button>

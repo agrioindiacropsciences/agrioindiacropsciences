@@ -44,8 +44,13 @@ export default function BestSellingPage() {
       try {
         const response = await getBestSellers(10);
         if (response.success && response.data) {
-          // Maintain order from backend (products come in display order)
-          setProducts(response.data);
+          // Sort by best_seller_rank if available, otherwise maintain backend order
+          const sortedProducts = [...response.data].sort((a, b) => {
+            const rankA = (a as any).best_seller_rank || (a as any).sales_rank || 999;
+            const rankB = (b as any).best_seller_rank || (b as any).sales_rank || 999;
+            return rankA - rankB; // Lower rank number = higher position
+          });
+          setProducts(sortedProducts);
         }
       } catch (error) {
         console.error("Failed to fetch best sellers:", error);

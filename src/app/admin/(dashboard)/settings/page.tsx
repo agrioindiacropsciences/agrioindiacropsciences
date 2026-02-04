@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Building2,
@@ -16,6 +16,7 @@ import {
   Database,
   Key,
   Bell,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,8 +26,118 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import * as api from "@/lib/api";
+
+type SettingsData = Record<string, Record<string, unknown>>;
 
 export default function SettingsPage() {
+  const { toast } = useToast();
+  const [settings, setSettings] = useState<SettingsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    company_name: "Agrio India Crop Science",
+    tagline: "Agrio Sampan kisan",
+    tagline_hi: "भारतीय किसान की पहली पसंद",
+    address: "Agrio India Crop Science, E-31 Industrial Area, Sikandrabad, Bulandshahr - 203205",
+    support_email: "agrioindiacropsciences@gmail.com",
+    support_phone: "+91 95206 09999",
+    whatsapp_number: "+91 94296 93729",
+    website_url: "https://agrioindia.com",
+    scan_enabled: true,
+    shop_enabled: false,
+    referral_enabled: true,
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      setLoading(true);
+      try {
+        const res = await api.getAdminSettings();
+        if (res.success && res.data) {
+          setSettings(res.data as SettingsData);
+          const d = res.data as Record<string, unknown>;
+          const contact = (d.contact || {}) as Record<string, unknown>;
+          const flags = (d.feature_flags || {}) as Record<string, unknown>;
+          const general = (d.general || {}) as Record<string, unknown>;
+          setFormData((prev) => ({
+            ...prev,
+            support_email: String(contact?.support_email ?? prev.support_email),
+            support_phone: String(contact?.support_phone ?? prev.support_phone),
+            whatsapp_number: String(contact?.whatsapp_number ?? prev.whatsapp_number),
+            scan_enabled: Boolean(flags?.scan_enabled ?? prev.scan_enabled),
+            shop_enabled: Boolean(flags?.shop_enabled ?? prev.shop_enabled),
+            referral_enabled: Boolean(flags?.referral_enabled ?? prev.referral_enabled),
+            company_name: String(general?.company_name ?? prev.company_name),
+            address: String(general?.address ?? prev.address),
+            website_url: String(general?.website_url ?? prev.website_url),
+          }));
+        }
+      } catch (e) {
+        console.error("Failed to fetch settings:", e);
+        toast({ title: "Error", description: "Failed to load settings", variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, [toast]);
+
+  const handleSaveCompany = async () => {
+    setSaving(true);
+    try {
+      const payload: Record<string, unknown> = {
+        company_name: formData.company_name,
+        tagline: formData.tagline,
+        tagline_hi: formData.tagline_hi,
+        address: formData.address,
+        support_email: formData.support_email,
+        support_phone: formData.support_phone,
+        whatsapp_number: formData.whatsapp_number,
+        website_url: formData.website_url,
+      };
+      const res = await api.updateAdminSettings(payload);
+      if (res.success) {
+        toast({ title: "Saved", description: "Company settings updated successfully" });
+      } else {
+        toast({ title: "Error", description: res.error?.message || "Failed to save", variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "Error", description: "Failed to save settings", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveFeatureFlags = async () => {
+    setSaving(true);
+    try {
+      const res = await api.updateAdminSettings({
+        scan_enabled: formData.scan_enabled,
+        shop_enabled: formData.shop_enabled,
+        referral_enabled: formData.referral_enabled,
+      });
+      if (res.success) {
+        toast({ title: "Saved", description: "Feature flags updated" });
+      } else {
+        toast({ title: "Error", description: res.error?.message || "Failed to save", variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "Error", description: "Failed to save", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pb-8">
       {/* Hero Header */}
@@ -97,21 +208,34 @@ export default function SettingsPage() {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
                     <Label>Company Name</Label>
-                    <Input defaultValue="Agrio India Crop Science" className="mt-1" />
+                    <Input
+                      value={formData.company_name}
+                      onChange={(e) => setFormData((p) => ({ ...p, company_name: e.target.value }))}
+                      className="mt-1"
+                    />
                   </div>
                   <div>
                     <Label>Tagline</Label>
-                    <Input defaultValue="Agrio Sampan kisan" className="mt-1" />
+                    <Input
+                      value={formData.tagline}
+                      onChange={(e) => setFormData((p) => ({ ...p, tagline: e.target.value }))}
+                      className="mt-1"
+                    />
                   </div>
                   <div>
                     <Label>Tagline (Hindi)</Label>
-                    <Input defaultValue="भारतीय किसान की पहली पसंद" className="mt-1" />
+                    <Input
+                      value={formData.tagline_hi}
+                      onChange={(e) => setFormData((p) => ({ ...p, tagline_hi: e.target.value }))}
+                      className="mt-1"
+                    />
                   </div>
                   <div className="md:col-span-2">
                     <Label>Address</Label>
-                    <Textarea 
-                      defaultValue="Agrio India Crop Science, E-31 Industrial Area, Sikandrabad, Bulandshahr - 203205" 
-                      className="mt-1" 
+                    <Textarea
+                      value={formData.address}
+                      onChange={(e) => setFormData((p) => ({ ...p, address: e.target.value }))}
+                      className="mt-1"
                     />
                   </div>
                   <div>
@@ -119,28 +243,44 @@ export default function SettingsPage() {
                       <Mail className="h-4 w-4 text-gray-400" />
                       Email
                     </Label>
-                    <Input defaultValue="agrioindiacropsciences@gmail.com" className="mt-1" />
+                    <Input
+                      value={formData.support_email}
+                      onChange={(e) => setFormData((p) => ({ ...p, support_email: e.target.value }))}
+                      className="mt-1"
+                    />
                   </div>
                   <div>
                     <Label className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-gray-400" />
                       Phone
                     </Label>
-                    <Input defaultValue="+91 95206 09999" className="mt-1" />
+                    <Input
+                      value={formData.support_phone}
+                      onChange={(e) => setFormData((p) => ({ ...p, support_phone: e.target.value }))}
+                      className="mt-1"
+                    />
                   </div>
                   <div>
                     <Label className="flex items-center gap-2">
                       <Bell className="h-4 w-4 text-gray-400" />
                       WhatsApp
                     </Label>
-                    <Input defaultValue="+91 94296 93729" className="mt-1" />
+                    <Input
+                      value={formData.whatsapp_number}
+                      onChange={(e) => setFormData((p) => ({ ...p, whatsapp_number: e.target.value }))}
+                      className="mt-1"
+                    />
                   </div>
                   <div>
                     <Label className="flex items-center gap-2">
                       <Globe className="h-4 w-4 text-gray-400" />
                       Website URL
                     </Label>
-                    <Input defaultValue="https://agrioindia.com" className="mt-1" />
+                    <Input
+                      value={formData.website_url}
+                      onChange={(e) => setFormData((p) => ({ ...p, website_url: e.target.value }))}
+                      className="mt-1"
+                    />
                   </div>
                 </div>
 
@@ -157,8 +297,8 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="flex justify-end pt-4">
-                  <Button className="shadow-lg">
-                    <Save className="h-4 w-4 mr-2" />
+                  <Button className="shadow-lg" onClick={handleSaveCompany} disabled={saving}>
+                    {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                     Save Changes
                   </Button>
                 </div>
@@ -211,56 +351,53 @@ export default function SettingsPage() {
             </Card>
           </TabsContent>
 
-          {/* System Configuration */}
+          {/* System Configuration - Feature Flags */}
           <TabsContent value="system">
             <Card className="border-0 shadow-md">
               <CardHeader className="border-b bg-gray-50/50">
                 <CardTitle className="flex items-center gap-2">
                   <Database className="h-5 w-5 text-primary" />
-                  System Configuration
+                  Feature Flags
                 </CardTitle>
-                <CardDescription>Configure system settings and integrations.</CardDescription>
+                <CardDescription>Enable or disable app features.</CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
-                <div>
-                  <h4 className="font-semibold mb-4 flex items-center gap-2">
-                    <Key className="h-4 w-4 text-gray-400" />
-                    OTP Service Settings
-                  </h4>
-                  <div className="grid md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                     <div>
-                      <Label>Provider</Label>
-                      <Input defaultValue="MSG91" className="mt-1" />
+                      <p className="font-medium text-gray-900">Scan & Win</p>
+                      <p className="text-sm text-gray-500">Allow users to scan QR codes and win rewards</p>
                     </div>
-                    <div>
-                      <Label>API Key</Label>
-                      <Input type="password" defaultValue="••••••••••" className="mt-1" />
-                    </div>
+                    <Switch
+                      checked={formData.scan_enabled}
+                      onCheckedChange={(v) => setFormData((p) => ({ ...p, scan_enabled: v }))}
+                    />
                   </div>
-                </div>
-
-                <Separator />
-
-                <div>
-                  <h4 className="font-semibold mb-4 flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-gray-400" />
-                    Email Service Settings
-                  </h4>
-                  <div className="grid md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                     <div>
-                      <Label>SMTP Host</Label>
-                      <Input defaultValue="smtp.gmail.com" className="mt-1" />
+                      <p className="font-medium text-gray-900">Shop</p>
+                      <p className="text-sm text-gray-500">Enable in-app shopping</p>
                     </div>
+                    <Switch
+                      checked={formData.shop_enabled}
+                      onCheckedChange={(v) => setFormData((p) => ({ ...p, shop_enabled: v }))}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                     <div>
-                      <Label>SMTP Port</Label>
-                      <Input defaultValue="587" className="mt-1" />
+                      <p className="font-medium text-gray-900">Referral</p>
+                      <p className="text-sm text-gray-500">Enable referral rewards program</p>
                     </div>
+                    <Switch
+                      checked={formData.referral_enabled}
+                      onCheckedChange={(v) => setFormData((p) => ({ ...p, referral_enabled: v }))}
+                    />
                   </div>
                 </div>
 
                 <div className="flex justify-end pt-4">
-                  <Button className="shadow-lg">
-                    <Save className="h-4 w-4 mr-2" />
+                  <Button className="shadow-lg" onClick={handleSaveFeatureFlags} disabled={saving}>
+                    {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                     Save Changes
                   </Button>
                 </div>

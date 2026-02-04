@@ -139,6 +139,7 @@ export interface Product {
   image_url: string | null;
   technical_details?: Record<string, unknown>;
   is_best_seller: boolean;
+  best_seller_rank?: number | null;
   is_active: boolean;
   sales_count: number;
   related_products?: Product[];
@@ -193,7 +194,7 @@ export interface DistributorsResponse {
 }
 
 export interface DistributorsQuery {
-  pincode: string;
+  pincode?: string;
   lat?: number;
   lng?: number;
   page?: number;
@@ -364,11 +365,14 @@ export interface AdminNotificationsResponse {
 export interface AdminFcmSendRequest {
   title: string;
   body: string;
+  titleHi?: string;
+  messageHi?: string;
   imageUrl?: string;
   topic?: string; // default: all_users
-  type: 'REWARD' | 'PROMO' | 'ORDER' | 'SYSTEM';
+  type: 'REWARD' | 'PROMO' | 'ORDER' | 'SYSTEM' | 'URL';
   slug?: string;
   productId?: string;
+  url?: string; // For URL type notifications
 }
 
 // ==================== Support ====================
@@ -509,7 +513,7 @@ export interface AdminCoupon {
   product_name?: string;
   product?: { id: string; name: string; name_hi?: string };
   batch_number?: string;
-  status: 'ACTIVE' | 'USED' | 'EXPIRED';
+  status: 'UNUSED' | 'USED' | 'EXPIRED';
   is_used?: boolean;
   reward_type?: 'CASHBACK' | 'DISCOUNT' | 'GIFT';
   reward_value?: number;
@@ -518,6 +522,7 @@ export interface AdminCoupon {
   scanned_at?: string;
   created_at: string;
   expires_at?: string;
+  expiry_date?: string;
 }
 
 export interface AdminCouponsResponse {
@@ -549,6 +554,7 @@ export interface CampaignTierConfig {
   probability: number;
   priority: number;
   max_winners?: number;
+  image_url?: string; // Required for GIFT type - shows after scratch
 }
 
 export interface Campaign {
@@ -597,6 +603,7 @@ export interface CreateProductRequest {
   safety_precautions?: string[];
   images?: string[];
   is_best_seller?: boolean;
+  best_seller_rank?: number | null;
   is_active?: boolean;
   pack_sizes: PackSize[];
 }

@@ -288,17 +288,43 @@ export async function getCategoryById(id: string): Promise<ApiResponse<T.Categor
 // ==================== Distributors APIs ====================
 
 /**
- * Get distributors by pincode
+ * Get distributors by pincode or lat/lng (current location)
+ * Backend returns { distributors, pagination } - we map to flat Distributor[] for frontend
  */
 export async function getDistributors(params: T.DistributorsQuery): Promise<ApiResponse<T.Distributor[]>> {
   const searchParams = new URLSearchParams();
-  searchParams.append('pincode', params.pincode);
+  if (params.pincode) searchParams.append('pincode', params.pincode);
   if (params.lat !== undefined) searchParams.append('lat', String(params.lat));
   if (params.lng !== undefined) searchParams.append('lng', String(params.lng));
   if (params.page) searchParams.append('page', String(params.page));
   if (params.limit) searchParams.append('limit', String(params.limit));
   
-  return get<T.Distributor[]>(`/distributors?${searchParams.toString()}`);
+  const res = await get<T.DistributorsResponse>(`/distributors?${searchParams.toString()}`);
+  if (!res.success || !res.data) return res as ApiResponse<T.Distributor[]>;
+  
+  const raw = res.data;
+  const list = raw.distributors ?? raw.data ?? [];
+  const mapped: T.Distributor[] = list.map((d: Record<string, unknown>) => {
+    const addr = d.address as Record<string, string> | undefined;
+    const loc = d.location as { lat?: number; lng?: number } | undefined;
+    const addrParts = addr ? [addr.street, addr.area, addr.city].filter(Boolean) : [];
+    return {
+      id: d.id as string,
+      name: d.name as string,
+      owner_name: (d.owner_name ?? d.business_name ?? '') as string,
+      address: (addr ? addrParts.join(', ') : (d.address as string) ?? '') as string,
+      city: (addr?.city ?? d.city ?? '') as string,
+      state: (addr?.state ?? d.state ?? '') as string,
+      pincode: (addr?.pincode ?? d.pincode ?? '') as string,
+      phone: d.phone as string,
+      email: d.email as string | undefined,
+      latitude: loc?.lat ?? d.latitude,
+      longitude: loc?.lng ?? d.longitude,
+      distance_km: d.distance_km as number | undefined,
+      is_active: (d.is_active ?? true) as boolean,
+    };
+  });
+  return { success: true, data: mapped };
 }
 
 /**
@@ -539,9 +565,32 @@ export async function adminLogout(): Promise<void> {
 
 /**
  * Get dashboard stats
+ * Maps backend response (total_scans) to frontend format (total_coupons_scanned)
  */
 export async function getDashboardStats(): Promise<ApiResponse<T.DashboardStats>> {
-  return adminGet<T.DashboardStats>('/admin/dashboard/stats');
+  const res = await adminGet<Record<string, unknown>>('/admin/dashboard/stats');
+  if (!res.success || !res.data) return res as ApiResponse<T.DashboardStats>;
+  const d = res.data;
+  return {
+    success: true,
+    data: {
+      total_users: d.total_users as number,
+      total_coupons_scanned: (d.total_scans ?? d.total_coupons_scanned) as number,
+      total_revenue: d.total_revenue as number,
+      total_products: d.total_products as number,
+      user_growth: d.user_growth as number,
+      active_users: d.active_users as number,
+      total_scans: d.total_scans as number,
+      scan_growth: d.scan_growth as number,
+      coupons_redeemed: d.coupons_redeemed as number,
+      redemption_growth: d.redemption_growth as number,
+      total_distributors: d.total_distributors as number,
+      new_registrations_today: d.new_registrations_today as number,
+      scans_per_day: d.scans_per_day as { date: string; value: number }[],
+      crop_preferences: d.crop_preferences as { name: string; value: number }[],
+      top_states: d.top_states as { state: string; users: number }[],
+    } as T.DashboardStats,
+  };
 }
 
 // Admin-specific request helper
@@ -673,35 +722,46 @@ async function adminPutFormData<T>(endpoint: string, formData: FormData): Promis
       headers,
       body: formData,
     });
-    return response.json();
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data?.error || { code: 'REQUEST_FAILED', message: data?.message || `Request failed (${response.status})` },
+      } as ApiResponse<T>;
+    }
+    return data as ApiResponse<T>;
   } catch (error) {
     return {
       success: false,
       error: { code: 'NETWORK_ERROR', message: error instanceof Error ? error.message : 'Network error' },
-    };
+    } as ApiResponse<T>;
   }
 }
 
 // Admin Users
 export async function getAdminUsers(
-  pageOrOptions: number | { page?: number; limit?: number; query?: string } = 1, 
+  pageOrOptions: number | { page?: number; limit?: number; query?: string; status?: string } = 1, 
   limit = 10, 
-  query?: string
+  query?: string,
+  status?: string
 ): Promise<ApiResponse<T.AdminUsersResponse>> {
   let page = 1;
   let q = query;
   let l = limit;
+  let s = status;
   
   if (typeof pageOrOptions === 'object') {
     page = pageOrOptions.page || 1;
     l = pageOrOptions.limit || 10;
     q = pageOrOptions.query;
+    s = pageOrOptions.status;
   } else {
     page = pageOrOptions;
   }
   
   const params = new URLSearchParams({ page: String(page), limit: String(l) });
   if (q) params.append('q', q);
+  if (s) params.append('status', s);
   return adminGet<T.AdminUsersResponse>(`/admin/users?${params.toString()}`);
 }
 
@@ -802,6 +862,14 @@ export async function getAdminCoupons(
 
 export async function getAdminCoupon(id: string): Promise<ApiResponse<T.AdminCoupon>> {
   return adminGet<T.AdminCoupon>(`/admin/coupons/${id}`);
+}
+
+export async function deleteCoupon(id: string): Promise<ApiResponse<null>> {
+  return adminDelete<null>(`/admin/coupons/${id}`);
+}
+
+export async function deleteCouponsBulk(ids: string[]): Promise<ApiResponse<{ deleted_count: number }>> {
+  return adminPost<{ deleted_count: number }>('/admin/coupons/delete-bulk', { ids });
 }
 
 export async function generateCoupons(data: T.GenerateCouponsRequest): Promise<ApiResponse<T.GenerateCouponsResponse>> {
@@ -906,11 +974,11 @@ export async function getReport(
   const params = new URLSearchParams();
   
   if (typeof dateRange === 'object') {
-    if (dateRange.from) params.append('from', dateRange.from);
-    if (dateRange.to) params.append('to', dateRange.to);
+    if (dateRange.from) params.append('start_date', dateRange.from);
+    if (dateRange.to) params.append('end_date', dateRange.to);
   } else if (dateRange) {
-    params.append('from', dateRange);
-    if (to) params.append('to', to);
+    params.append('start_date', dateRange);
+    if (to) params.append('end_date', to);
   }
   
   const qs = params.toString();
@@ -925,11 +993,11 @@ export async function exportReport(
   const params = new URLSearchParams();
   
   if (typeof dateRange === 'object') {
-    if (dateRange.from) params.append('from', dateRange.from);
-    if (dateRange.to) params.append('to', dateRange.to);
+    if (dateRange.from) params.append('start_date', dateRange.from);
+    if (dateRange.to) params.append('end_date', dateRange.to);
   } else if (dateRange) {
-    params.append('from', dateRange);
-    if (to) params.append('to', to);
+    params.append('start_date', dateRange);
+    if (to) params.append('end_date', to);
   }
   
   const qs = params.toString();
@@ -941,19 +1009,56 @@ export async function getAdminBanners(): Promise<ApiResponse<T.Banner[]>> {
   return adminGet<T.Banner[]>('/admin/banners');
 }
 
-export async function createBanner(data: FormData): Promise<ApiResponse<T.Banner>> {
+export interface CreateBannerRequest {
+  section: string;
+  image_url: string;
+  image_url_hi?: string;
+  title?: string;
+  link_type?: 'PRODUCT' | 'CATEGORY' | 'URL' | 'NONE';
+  link_value?: string;
+  display_order?: number;
+  start_date?: string;
+  end_date?: string;
+  is_active?: boolean;
+}
+
+export async function createBanner(data: FormData | CreateBannerRequest): Promise<ApiResponse<T.Banner>> {
   const token = getAdminToken();
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+  
+  const isFormData = data instanceof FormData;
+  const headers: HeadersInit = {
+    ...(token && { 'Authorization': `Bearer ${token}` }),
+    ...(!isFormData && { 'Content-Type': 'application/json' }),
+  };
+  
+  const body = isFormData ? data : JSON.stringify({
+    section: (data as CreateBannerRequest).section,
+    imageUrl: (data as CreateBannerRequest).image_url,
+    imageUrlHi: (data as CreateBannerRequest).image_url_hi,
+    title: (data as CreateBannerRequest).title,
+    linkType: (data as CreateBannerRequest).link_type || 'NONE',
+    linkValue: (data as CreateBannerRequest).link_value,
+    displayOrder: (data as CreateBannerRequest).display_order || 0,
+    startDate: (data as CreateBannerRequest).start_date,
+    endDate: (data as CreateBannerRequest).end_date,
+    isActive: (data as CreateBannerRequest).is_active !== false,
+  });
   
   try {
     const response = await fetch(`${API_BASE_URL}/admin/banners`, {
       method: 'POST',
-      headers: {
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-      },
-      body: data,
+      headers,
+      body,
     });
-    return response.json();
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data?.error || { code: 'REQUEST_FAILED', message: data?.message || `Request failed (${response.status})` },
+      };
+    }
+    return data;
   } catch (error) {
     return {
       success: false,
@@ -962,8 +1067,23 @@ export async function createBanner(data: FormData): Promise<ApiResponse<T.Banner
   }
 }
 
-export async function updateBanner(id: string, data: Partial<T.Banner>): Promise<ApiResponse<T.Banner>> {
-  return adminPut<T.Banner>(`/admin/banners/${id}`, data);
+export async function updateBanner(id: string, data: FormData | (Partial<T.Banner> & Partial<CreateBannerRequest>)): Promise<ApiResponse<T.Banner>> {
+  if (data instanceof FormData) {
+    return adminPutFormData<T.Banner>(`/admin/banners/${id}`, data);
+  }
+  const d = data as Record<string, unknown>;
+  const mapped: Record<string, unknown> = {};
+  if (d.section !== undefined) mapped.section = d.section;
+  if (d.image_url !== undefined) mapped.imageUrl = d.image_url;
+  if (d.image_url_hi !== undefined) mapped.imageUrlHi = d.image_url_hi;
+  if (d.title !== undefined) mapped.title = d.title;
+  if (d.link_type !== undefined) mapped.linkType = d.link_type;
+  if (d.link_value !== undefined) mapped.linkValue = d.link_value;
+  if (d.display_order !== undefined) mapped.displayOrder = d.display_order;
+  if (d.start_date !== undefined) mapped.startDate = d.start_date;
+  if (d.end_date !== undefined) mapped.endDate = d.end_date;
+  if (d.is_active !== undefined) mapped.isActive = d.is_active;
+  return adminPut<T.Banner>(`/admin/banners/${id}`, Object.keys(mapped).length ? mapped : data);
 }
 
 export async function deleteBanner(id: string): Promise<ApiResponse<null>> {

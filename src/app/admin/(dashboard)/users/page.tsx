@@ -66,6 +66,7 @@ export default function UsersPage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -73,7 +74,12 @@ export default function UsersPage() {
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await api.getAdminUsers(page, 10, searchQuery || undefined);
+      const response = await api.getAdminUsers({
+        page,
+        limit: 10,
+        query: searchQuery || undefined,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+      });
       if (response.success && response.data) {
         setUsers(response.data.users || []);
         if (response.data.pagination) {
@@ -85,7 +91,7 @@ export default function UsersPage() {
       console.error("Failed to fetch users:", error);
     }
     setIsLoading(false);
-  }, [page, searchQuery]);
+  }, [page, searchQuery, statusFilter]);
 
   useEffect(() => {
     fetchUsers();
@@ -136,6 +142,7 @@ export default function UsersPage() {
   };
 
   const handleUpdateStatus = async (userId: string, isActive: boolean) => {
+    setStatusUpdatingId(userId);
     try {
       const response = await api.updateUserStatus(userId, isActive);
       if (response.success) {
@@ -143,7 +150,7 @@ export default function UsersPage() {
           title: "Success",
           description: `User ${isActive ? "activated" : "suspended"} successfully.`,
         });
-        fetchUsers();
+        await fetchUsers();
       } else {
         toast({
           title: "Error",
@@ -157,6 +164,8 @@ export default function UsersPage() {
         description: "Something went wrong.",
         variant: "destructive",
       });
+    } finally {
+      setStatusUpdatingId(null);
     }
   };
 
@@ -366,17 +375,33 @@ export default function UsersPage() {
                               {user.role !== "SUSPENDED" ? (
                                 <DropdownMenuItem 
                                   className="text-red-600"
-                                  onClick={() => handleUpdateStatus(user.id, false)}
+                                  onSelect={(e) => {
+                                    e.preventDefault();
+                                    handleUpdateStatus(user.id, false);
+                                  }}
+                                  disabled={statusUpdatingId === user.id}
                                 >
-                                  <Ban className="h-4 w-4 mr-2" />
+                                  {statusUpdatingId === user.id ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <Ban className="h-4 w-4 mr-2" />
+                                  )}
                                   Suspend User
                                 </DropdownMenuItem>
                               ) : (
                                 <DropdownMenuItem 
                                   className="text-green-600"
-                                  onClick={() => handleUpdateStatus(user.id, true)}
+                                  onSelect={(e) => {
+                                    e.preventDefault();
+                                    handleUpdateStatus(user.id, true);
+                                  }}
+                                  disabled={statusUpdatingId === user.id}
                                 >
-                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  {statusUpdatingId === user.id ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                  )}
                                   Activate User
                                 </DropdownMenuItem>
                               )}

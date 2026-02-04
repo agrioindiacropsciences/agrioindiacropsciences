@@ -171,7 +171,13 @@ export default function HomePage() {
       try {
         const response = await getBestSellers(4);
         if (response.success && response.data) {
-          setBestSellingProducts(response.data);
+          // Sort by best_seller_rank if available, otherwise maintain backend order
+          const sortedProducts = [...response.data].sort((a, b) => {
+            const rankA = (a as any).best_seller_rank || (a as any).sales_rank || 999;
+            const rankB = (b as any).best_seller_rank || (b as any).sales_rank || 999;
+            return rankA - rankB; // Lower rank number = higher position
+          });
+          setBestSellingProducts(sortedProducts);
         }
       } catch (error) {
         console.error("Failed to fetch best sellers on home page:", error);

@@ -39,9 +39,9 @@ export async function sendOtp(phone_number: string): Promise<ApiResponse<T.SendO
  */
 export async function verifyOtp(phone_number: string, otp_code: string): Promise<ApiResponse<T.VerifyOtpResponse>> {
   const formattedPhone = formatPhoneNumber(phone_number);
-  const response = await post<T.VerifyOtpResponse>('/auth/verify-otp', { 
-    phone_number: formattedPhone, 
-    otp_code 
+  const response = await post<T.VerifyOtpResponse>('/auth/verify-otp', {
+    phone_number: formattedPhone,
+    otp_code
   });
   if (response.success && response.data) {
     setTokens(response.data.token, response.data.refresh_token);
@@ -200,12 +200,47 @@ export async function getUserRewards(): Promise<ApiResponse<T.Reward[]>> {
 }
 
 // ==================== Crops APIs ====================
-
 /**
  * Get all crops
  */
 export async function getCrops(): Promise<ApiResponse<T.Crop[]>> {
   return get<T.Crop[]>('/crops');
+}
+
+/**
+ * Get all crops (Admin)
+ */
+export async function getAdminCrops(query?: string): Promise<ApiResponse<T.Crop[]>> {
+  const params = new URLSearchParams();
+  if (query) params.append('q', query);
+  return adminGet<T.Crop[]>(`/crops?${params.toString()}`);
+}
+
+/**
+ * Create crop
+ */
+export async function createCrop(data: any): Promise<ApiResponse<T.Crop>> {
+  if (data instanceof FormData) {
+    return adminPostFormData<T.Crop>('/crops', data);
+  }
+  return adminPost<T.Crop>('/crops', data);
+}
+
+/**
+ * Update crop
+ */
+export async function updateCrop(id: string, data: any): Promise<ApiResponse<T.Crop>> {
+  if (data instanceof FormData) {
+    return adminPutFormData<T.Crop>(`/crops/${id}`, data);
+  }
+  return adminPut<T.Crop>(`/crops/${id}`, data);
+}
+
+/**
+ * Delete crop
+ */
+export async function deleteCrop(id: string): Promise<ApiResponse<null>> {
+  return adminDelete<null>(`/crops/${id}`);
 }
 
 // ==================== Products APIs ====================
@@ -222,7 +257,7 @@ export async function getProducts(params: T.ProductsQuery = {}): Promise<ApiResp
   if (params.page) searchParams.append('page', String(params.page));
   if (params.limit) searchParams.append('limit', String(params.limit));
   if (params.sort) searchParams.append('sort', params.sort);
-  
+
   const qs = searchParams.toString();
   return get<T.ProductsResponse>(`/products${qs ? `?${qs}` : ''}`);
 }
@@ -298,10 +333,10 @@ export async function getDistributors(params: T.DistributorsQuery): Promise<ApiR
   if (params.lng !== undefined) searchParams.append('lng', String(params.lng));
   if (params.page) searchParams.append('page', String(params.page));
   if (params.limit) searchParams.append('limit', String(params.limit));
-  
+
   const res = await get<T.DistributorsResponse>(`/distributors?${searchParams.toString()}`);
   if (!res.success || !res.data) return res as ApiResponse<T.Distributor[]>;
-  
+
   const raw = res.data;
   const list = (raw.distributors ?? raw.data ?? []) as unknown as Record<string, unknown>[];
   const mapped: T.Distributor[] = list.map((d) => {
@@ -548,7 +583,7 @@ export async function adminLogin(email: string, password: string): Promise<ApiRe
 export async function adminRefreshToken(): Promise<ApiResponse<T.RefreshTokenResponse>> {
   const refresh_token = typeof window !== 'undefined' ? localStorage.getItem(ADMIN_REFRESH_KEY) : null;
   if (!refresh_token) return { success: false, error: { code: 'NO_TOKEN', message: 'No refresh token' } };
-  
+
   const response = await post<T.RefreshTokenResponse>('/admin/auth/refresh', { refresh_token });
   if (response.success && response.data) {
     setAdminTokens(response.data.token, response.data.refresh_token);
@@ -602,7 +637,7 @@ async function adminGet<T>(endpoint: string): Promise<ApiResponse<T>> {
   };
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
-  
+
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, { headers });
     return response.json();
@@ -622,7 +657,7 @@ async function adminPost<T>(endpoint: string, body: unknown): Promise<ApiRespons
   };
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
-  
+
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
@@ -646,7 +681,7 @@ async function adminPut<T>(endpoint: string, body: unknown): Promise<ApiResponse
   };
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
-  
+
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'PUT',
@@ -670,7 +705,7 @@ async function adminDelete<T>(endpoint: string): Promise<ApiResponse<T>> {
   };
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
-  
+
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'DELETE',
@@ -692,7 +727,7 @@ async function adminPostFormData<T>(endpoint: string, formData: FormData): Promi
   };
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
-  
+
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
@@ -715,7 +750,7 @@ async function adminPutFormData<T>(endpoint: string, formData: FormData): Promis
   };
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
-  
+
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'PUT',
@@ -740,8 +775,8 @@ async function adminPutFormData<T>(endpoint: string, formData: FormData): Promis
 
 // Admin Users
 export async function getAdminUsers(
-  pageOrOptions: number | { page?: number; limit?: number; query?: string; status?: string } = 1, 
-  limit = 10, 
+  pageOrOptions: number | { page?: number; limit?: number; query?: string; status?: string } = 1,
+  limit = 10,
   query?: string,
   status?: string
 ): Promise<ApiResponse<T.AdminUsersResponse>> {
@@ -749,7 +784,7 @@ export async function getAdminUsers(
   let q = query;
   let l = limit;
   let s = status;
-  
+
   if (typeof pageOrOptions === 'object') {
     page = pageOrOptions.page || 1;
     l = pageOrOptions.limit || 10;
@@ -758,7 +793,7 @@ export async function getAdminUsers(
   } else {
     page = pageOrOptions;
   }
-  
+
   const params = new URLSearchParams({ page: String(page), limit: String(l) });
   if (q) params.append('q', q);
   if (s) params.append('status', s);
@@ -772,17 +807,17 @@ export async function getAdminUserDetails(id: string): Promise<ApiResponse<T.Adm
 export async function exportUsers(): Promise<Blob> {
   const token = getAdminToken();
   if (!token) throw new Error('Admin token not found');
-  
+
   const response = await fetch(`${API_BASE_URL}/admin/users/export`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
   });
-  
+
   if (!response.ok) {
     throw new Error('Failed to export users');
   }
-  
+
   return response.blob();
 }
 
@@ -790,16 +825,20 @@ export async function updateUserStatus(id: string, is_active: boolean): Promise<
   return adminPut<null>(`/admin/users/${id}/status`, { is_active });
 }
 
+export async function deleteUser(id: string): Promise<ApiResponse<null>> {
+  return adminDelete<null>(`/admin/users/${id}`);
+}
+
 // Admin Products
 export async function getAdminProducts(
   pageOrOptions: number | { page?: number; limit?: number; category?: string } = 1,
-  limit = 10, 
+  limit = 10,
   category?: string
 ): Promise<ApiResponse<T.ProductsResponse>> {
   let page = 1;
   let cat = category;
   let l = limit;
-  
+
   if (typeof pageOrOptions === 'object') {
     page = pageOrOptions.page || 1;
     l = pageOrOptions.limit || 10;
@@ -807,7 +846,7 @@ export async function getAdminProducts(
   } else {
     page = pageOrOptions;
   }
-  
+
   const params = new URLSearchParams({ page: String(page), limit: String(l) });
   if (cat) params.append('category', cat);
   return adminGet<T.ProductsResponse>(`/admin/products?${params.toString()}`);
@@ -840,13 +879,13 @@ export async function deleteProduct(id: string): Promise<ApiResponse<null>> {
 // Admin Coupons
 export async function getAdminCoupons(
   pageOrOptions: number | { page?: number; limit?: number; status?: string } = 1,
-  limit = 10, 
+  limit = 10,
   status?: string
 ): Promise<ApiResponse<T.AdminCouponsResponse>> {
   let page = 1;
   let s = status;
   let l = limit;
-  
+
   if (typeof pageOrOptions === 'object') {
     page = pageOrOptions.page || 1;
     l = pageOrOptions.limit || 10;
@@ -854,7 +893,7 @@ export async function getAdminCoupons(
   } else {
     page = pageOrOptions;
   }
-  
+
   const params = new URLSearchParams({ page: String(page), limit: String(l) });
   if (s) params.append('status', s);
   return adminGet<T.AdminCouponsResponse>(`/admin/coupons?${params.toString()}`);
@@ -883,14 +922,14 @@ export async function getAdminCampaigns(
 ): Promise<ApiResponse<T.CampaignsResponse>> {
   let page = 1;
   let l = limit;
-  
+
   if (typeof pageOrOptions === 'object') {
     page = pageOrOptions.page || 1;
     l = pageOrOptions.limit || 100;
   } else {
     page = pageOrOptions;
   }
-  
+
   const params = new URLSearchParams({ page: String(page), limit: String(l) });
   return adminGet<T.CampaignsResponse>(`/admin/campaigns?${params.toString()}`);
 }
@@ -928,14 +967,14 @@ export async function getAdminDistributors(
 ): Promise<ApiResponse<T.DistributorsResponse>> {
   let page = 1;
   let l = limit;
-  
+
   if (typeof pageOrOptions === 'object') {
     page = pageOrOptions.page || 1;
     l = pageOrOptions.limit || 10;
   } else {
     page = pageOrOptions;
   }
-  
+
   const params = new URLSearchParams({ page: String(page), limit: String(l) });
   return adminGet<T.DistributorsResponse>(`/admin/distributors?${params.toString()}`);
 }
@@ -967,12 +1006,12 @@ export async function updateAdminSettings(data: Record<string, unknown>): Promis
 
 // Admin Reports
 export async function getReport(
-  type: string, 
+  type: string,
   dateRange?: { from?: string; to?: string } | string,
   to?: string
 ): Promise<ApiResponse<unknown>> {
   const params = new URLSearchParams();
-  
+
   if (typeof dateRange === 'object') {
     if (dateRange.from) params.append('start_date', dateRange.from);
     if (dateRange.to) params.append('end_date', dateRange.to);
@@ -980,18 +1019,18 @@ export async function getReport(
     params.append('start_date', dateRange);
     if (to) params.append('end_date', to);
   }
-  
+
   const qs = params.toString();
   return adminGet<unknown>(`/admin/reports/${type}${qs ? `?${qs}` : ''}`);
 }
 
 export async function exportReport(
-  type: string, 
+  type: string,
   dateRange?: { from?: string; to?: string } | string,
   to?: string
 ): Promise<ApiResponse<unknown>> {
   const params = new URLSearchParams();
-  
+
   if (typeof dateRange === 'object') {
     if (dateRange.from) params.append('start_date', dateRange.from);
     if (dateRange.to) params.append('end_date', dateRange.to);
@@ -999,7 +1038,7 @@ export async function exportReport(
     params.append('start_date', dateRange);
     if (to) params.append('end_date', to);
   }
-  
+
   const qs = params.toString();
   return adminGet<unknown>(`/admin/reports/${type}/export${qs ? `?${qs}` : ''}`);
 }
@@ -1025,13 +1064,13 @@ export interface CreateBannerRequest {
 export async function createBanner(data: FormData | CreateBannerRequest): Promise<ApiResponse<T.Banner>> {
   const token = getAdminToken();
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
-  
+
   const isFormData = data instanceof FormData;
   const headers: HeadersInit = {
     ...(token && { 'Authorization': `Bearer ${token}` }),
     ...(!isFormData && { 'Content-Type': 'application/json' }),
   };
-  
+
   const body = isFormData ? data : JSON.stringify({
     section: (data as CreateBannerRequest).section,
     imageUrl: (data as CreateBannerRequest).image_url,
@@ -1044,7 +1083,7 @@ export async function createBanner(data: FormData | CreateBannerRequest): Promis
     endDate: (data as CreateBannerRequest).end_date,
     isActive: (data as CreateBannerRequest).is_active !== false,
   });
-  
+
   try {
     const response = await fetch(`${API_BASE_URL}/admin/banners`, {
       method: 'POST',

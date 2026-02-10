@@ -87,7 +87,7 @@ export default function RewardsPage() {
   const downloadCertificate = async (id: string) => {
     try {
       const response = await api.getRewardCertificate(id);
-      
+
       if (response.success && response.data) {
         if (response.data.download_url) {
           window.open(response.data.download_url, "_blank");
@@ -176,7 +176,7 @@ export default function RewardsPage() {
       >
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
-        
+
         <div className="relative">
           <div className="flex items-center gap-3 mb-4">
             <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
@@ -191,7 +191,7 @@ export default function RewardsPage() {
               </p>
             </div>
           </div>
-          
+
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mt-6">
             <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">

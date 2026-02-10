@@ -94,6 +94,7 @@ export interface Crop {
   image_url?: string;
   season?: string;
   is_active: boolean;
+  display_order?: number;
 }
 
 export interface UserCrops {
@@ -431,6 +432,14 @@ export interface AppConfig {
     scan_enabled: boolean;
     shop_enabled: boolean;
     referral_enabled: boolean;
+  };
+  content?: {
+    home_features: any[];
+    why_choose_us: any[];
+    home_hero: {
+      hero_image: string;
+      app_bg_farmer: string;
+    };
   };
 }
 

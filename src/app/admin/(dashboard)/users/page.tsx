@@ -16,6 +16,7 @@ import {
   UserCheck,
   UserX,
   Filter,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,7 +105,7 @@ export default function UsersPage() {
 
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
-      const matchesStatus = statusFilter === "all" || 
+      const matchesStatus = statusFilter === "all" ||
         (statusFilter === "active" && user.role !== "SUSPENDED") ||
         (statusFilter === "suspended" && user.role === "SUSPENDED");
       return matchesStatus;
@@ -126,7 +127,7 @@ export default function UsersPage() {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-      
+
       toast({
         title: "Export Successful",
         description: "User data has been exported successfully.",
@@ -167,12 +168,40 @@ export default function UsersPage() {
     } finally {
       setStatusUpdatingId(null);
     }
+
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
+
+    try {
+      const response = await api.deleteUser(userId);
+      if (response.success) {
+        toast({
+          title: "User Deleted",
+          description: "User has been permanently deleted.",
+        });
+        await fetchUsers();
+      } else {
+        toast({
+          title: "Error",
+          description: response.error?.message || "Failed to delete user.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong.",
+        variant: "destructive",
+      });
+    }
   };
 
   const openUserDetails = async (user: AdminUser) => {
     setSelectedUser(user);
     setDetailsOpen(true);
-    
+
     try {
       const response = await api.getAdminUserDetails(user.id);
       if (response.success && response.data) {
@@ -193,7 +222,7 @@ export default function UsersPage() {
       >
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
-        
+
         <div className="relative">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -205,8 +234,8 @@ export default function UsersPage() {
                 <p className="text-white/70 text-sm">Manage all registered users</p>
               </div>
             </div>
-            <Button 
-              onClick={handleExport} 
+            <Button
+              onClick={handleExport}
               disabled={isExporting}
               className="bg-white text-indigo-600 hover:bg-white/90 shadow-lg"
             >
@@ -218,7 +247,7 @@ export default function UsersPage() {
               Export Users
             </Button>
           </div>
-          
+
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mt-6">
             <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
@@ -373,7 +402,7 @@ export default function UsersPage() {
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               {user.role !== "SUSPENDED" ? (
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   className="text-red-600"
                                   onSelect={(e) => {
                                     e.preventDefault();
@@ -389,7 +418,7 @@ export default function UsersPage() {
                                   Suspend User
                                 </DropdownMenuItem>
                               ) : (
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   className="text-green-600"
                                   onSelect={(e) => {
                                     e.preventDefault();
@@ -405,6 +434,17 @@ export default function UsersPage() {
                                   Activate User
                                 </DropdownMenuItem>
                               )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  handleDeleteUser(user.id);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete User
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -438,26 +478,26 @@ export default function UsersPage() {
           Showing {filteredUsers.length} of {total} users
         </p>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             disabled={page <= 1}
             onClick={() => setPage(p => Math.max(1, p - 1))}
           >
             Previous
           </Button>
           {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((p) => (
-            <Button 
+            <Button
               key={p}
               variant={page === p ? "default" : "outline"}
-              size="sm" 
+              size="sm"
               onClick={() => setPage(p)}
             >
               {p}
             </Button>
           ))}
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             disabled={page >= totalPages}
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}

@@ -17,6 +17,10 @@ import {
   Key,
   Bell,
   Loader2,
+  Plus,
+  Edit2,
+  Trash2,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import * as api from "@/lib/api";
+import type { CmsPage, FAQ } from "@/lib/api";
 
 type SettingsData = Record<string, Record<string, unknown>>;
 
@@ -49,15 +54,44 @@ export default function SettingsPage() {
     shop_enabled: false,
     referral_enabled: true,
   });
+  const [contentForm, setContentForm] = useState({
+    terms_en: "",
+    terms_hi: "",
+    privacy_en: "",
+    privacy_hi: "",
+  });
+  const [termsPageMeta, setTermsPageMeta] = useState<CmsPage | null>(null);
+  const [privacyPageMeta, setPrivacyPageMeta] = useState<CmsPage | null>(null);
+  const [contentLoading, setContentLoading] = useState(true);
+  const [savingTerms, setSavingTerms] = useState(false);
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
+  const [faqs, setFaqs] = useState<FAQ[]>([]);
+  const [faqsLoading, setFaqsLoading] = useState(true);
+  const [faqSaving, setFaqSaving] = useState(false);
+  const [editingFaq, setEditingFaq] = useState<{
+    id?: string;
+    question: string;
+    question_hi: string;
+    answer: string;
+    answer_hi: string;
+    category: string;
+  } | null>(null);
 
   useEffect(() => {
-    const fetchSettings = async () => {
+    const fetchData = async () => {
       setLoading(true);
+      setContentLoading(true);
+      setFaqsLoading(true);
       try {
-        const res = await api.getAdminSettings();
-        if (res.success && res.data) {
-          setSettings(res.data as SettingsData);
-          const d = res.data as Record<string, unknown>;
+        const [settingsRes, pagesRes, faqsRes] = await Promise.all([
+          api.getAdminSettings(),
+          api.getAdminPages(),
+          api.getAdminFaqs(),
+        ]);
+
+        if (settingsRes.success && settingsRes.data) {
+          setSettings(settingsRes.data as SettingsData);
+          const d = settingsRes.data as Record<string, unknown>;
           const contact = (d.contact || {}) as Record<string, unknown>;
           const flags = (d.feature_flags || {}) as Record<string, unknown>;
           const general = (d.general || {}) as Record<string, unknown>;
@@ -74,14 +108,37 @@ export default function SettingsPage() {
             website_url: String(general?.website_url ?? prev.website_url),
           }));
         }
+
+        if (pagesRes.success && pagesRes.data) {
+          const pages = (pagesRes.data || []) as CmsPage[];
+          const terms = pages.find((p) => p.slug === "terms");
+          const privacy = pages.find((p) => p.slug === "privacy-policy");
+
+          if (terms) setTermsPageMeta(terms);
+          if (privacy) setPrivacyPageMeta(privacy);
+
+          setContentForm((prev) => ({
+            ...prev,
+            terms_en: terms?.content ?? prev.terms_en,
+            terms_hi: terms?.content_hi ?? prev.terms_hi,
+            privacy_en: privacy?.content ?? prev.privacy_en,
+            privacy_hi: privacy?.content_hi ?? prev.privacy_hi,
+          }));
+        }
+
+        if (faqsRes.success && faqsRes.data) {
+          setFaqs(faqsRes.data);
+        }
       } catch (e) {
-        console.error("Failed to fetch settings:", e);
+        console.error("Failed to fetch settings, pages or FAQs:", e);
         toast({ title: "Error", description: "Failed to load settings", variant: "destructive" });
       } finally {
         setLoading(false);
+        setContentLoading(false);
+        setFaqsLoading(false);
       }
     };
-    fetchSettings();
+    fetchData();
   }, [toast]);
 
   const handleSaveCompany = async () => {
@@ -130,6 +187,198 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveTerms = async () => {
+    setSavingTerms(true);
+    try {
+      const base = termsPageMeta || {
+        slug: "terms",
+        title: "Terms & Conditions",
+        title_hi: "नियम और शर्तें",
+        content: "",
+        content_hi: "",
+        updated_at: new Date().toISOString(),
+      };
+
+      const res = await api.updatePage("terms", {
+        title: base.title,
+        title_hi: base.title_hi,
+        content: contentForm.terms_en,
+        content_hi: contentForm.terms_hi,
+      });
+
+      if (res.success) {
+        toast({
+          title: "Saved",
+          description: "Terms & Conditions updated successfully",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: res.error?.message || "Failed to save Terms & Conditions",
+          variant: "destructive",
+        });
+      }
+    } catch (e) {
+      console.error("Failed to save terms page:", e);
+      toast({
+        title: "Error",
+        description: "Failed to save Terms & Conditions",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingTerms(false);
+    }
+  };
+
+  const handleSavePrivacy = async () => {
+    setSavingPrivacy(true);
+    try {
+      const base = privacyPageMeta || {
+        slug: "privacy-policy",
+        title: "Privacy Policy",
+        title_hi: "गोपनीयता नीति",
+        content: "",
+        content_hi: "",
+        updated_at: new Date().toISOString(),
+      };
+
+      const res = await api.updatePage("privacy-policy", {
+        title: base.title,
+        title_hi: base.title_hi,
+        content: contentForm.privacy_en,
+        content_hi: contentForm.privacy_hi,
+      });
+
+      if (res.success) {
+        toast({
+          title: "Saved",
+          description: "Privacy Policy updated successfully",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: res.error?.message || "Failed to save Privacy Policy",
+          variant: "destructive",
+        });
+      }
+    } catch (e) {
+      console.error("Failed to save privacy policy page:", e);
+      toast({
+        title: "Error",
+        description: "Failed to save Privacy Policy",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingPrivacy(false);
+    }
+  };
+
+  const handleEditFaq = (faq?: FAQ) => {
+    if (faq) {
+      setEditingFaq({
+        id: faq.id,
+        question: faq.question,
+        question_hi: faq.question_hi || "",
+        answer: faq.answer,
+        answer_hi: faq.answer_hi || "",
+        category: faq.category || "",
+      });
+    } else {
+      setEditingFaq({
+        question: "",
+        question_hi: "",
+        answer: "",
+        answer_hi: "",
+        category: "",
+      });
+    }
+  };
+
+  const handleSaveFaq = async () => {
+    if (!editingFaq) return;
+    if (!editingFaq.question.trim() || !editingFaq.answer.trim()) {
+      toast({
+        title: "Validation",
+        description: "Question and answer (English) are required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setFaqSaving(true);
+    try {
+      const payload: Partial<FAQ> = {
+        question: editingFaq.question,
+        question_hi: editingFaq.question_hi,
+        answer: editingFaq.answer,
+        answer_hi: editingFaq.answer_hi,
+        category: editingFaq.category,
+      };
+
+      const res = editingFaq.id
+        ? await api.updateFaq(editingFaq.id, payload)
+        : await api.createFaq(payload);
+
+      if (res.success && res.data) {
+        const updated = res.data;
+        setFaqs((prev) => {
+          if (editingFaq.id) {
+            return prev.map((f) => (f.id === editingFaq.id ? updated : f));
+          }
+          return [...prev, updated];
+        });
+        setEditingFaq(null);
+        toast({
+          title: "Saved",
+          description: "FAQ saved successfully",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: res.error?.message || "Failed to save FAQ",
+          variant: "destructive",
+        });
+      }
+    } catch (e) {
+      console.error("Failed to save FAQ:", e);
+      toast({
+        title: "Error",
+        description: "Failed to save FAQ",
+        variant: "destructive",
+      });
+    } finally {
+      setFaqSaving(false);
+    }
+  };
+
+  const handleDeleteFaq = async (id: string) => {
+    if (!window.confirm("Delete this FAQ permanently?")) return;
+    try {
+      const res = await api.deleteFaq(id);
+      if (res.success) {
+        setFaqs((prev) => prev.filter((f) => f.id !== id));
+        if (editingFaq?.id === id) setEditingFaq(null);
+        toast({
+          title: "Deleted",
+          description: "FAQ deleted successfully",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: res.error?.message || "Failed to delete FAQ",
+          variant: "destructive",
+        });
+      }
+    } catch (e) {
+      console.error("Failed to delete FAQ:", e);
+      toast({
+        title: "Error",
+        description: "Failed to delete FAQ",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -148,7 +397,7 @@ export default function SettingsPage() {
       >
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
-        
+
         <div className="relative flex items-center gap-4">
           <div className="h-14 w-14 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
             <Settings2 className="h-7 w-7" />
@@ -322,7 +571,7 @@ export default function SettingsPage() {
                   { name: "Manager", email: "manager@agrioindia.com", role: "Admin" },
                   { name: "Support", email: "support@agrioindia.com", role: "Viewer" },
                 ].map((admin, index) => (
-                  <motion.div 
+                  <motion.div
                     key={index}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -416,26 +665,253 @@ export default function SettingsPage() {
                 <CardDescription>Manage website content and legal documents.</CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
-                <div>
-                  <Label>Terms & Conditions</Label>
-                  <Textarea 
-                    className="mt-1 min-h-[200px]"
-                    placeholder="Enter your terms and conditions..."
-                  />
-                </div>
-                <div>
-                  <Label>Privacy Policy</Label>
-                  <Textarea 
-                    className="mt-1 min-h-[200px]"
-                    placeholder="Enter your privacy policy..."
-                  />
-                </div>
-                <div className="flex justify-end pt-4">
-                  <Button className="shadow-lg">
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Changes
-                  </Button>
-                </div>
+                {contentLoading ? (
+                  <div className="py-12 flex justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-8">
+                      {/* Terms & Conditions */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="font-semibold">
+                            Terms &amp; Conditions
+                          </Label>
+                          <Button
+                            size="sm"
+                            className="shadow-sm"
+                            onClick={handleSaveTerms}
+                            disabled={savingTerms}
+                          >
+                            {savingTerms ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Save className="h-4 w-4 mr-2" />
+                            )}
+                            Save Terms
+                          </Button>
+                        </div>
+                        <Textarea
+                          className="mt-1 min-h-[160px]"
+                          placeholder="Enter your Terms &amp; Conditions (English)..."
+                          value={contentForm.terms_en}
+                          onChange={(e) =>
+                            setContentForm((prev) => ({ ...prev, terms_en: e.target.value }))
+                          }
+                        />
+                        <Textarea
+                          className="mt-2 min-h-[140px]"
+                          placeholder="अपनी नियम और शर्तें (हिंदी) दर्ज करें..."
+                          value={contentForm.terms_hi}
+                          onChange={(e) =>
+                            setContentForm((prev) => ({ ...prev, terms_hi: e.target.value }))
+                          }
+                        />
+                      </div>
+
+                      {/* Privacy Policy */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="font-semibold">
+                            Privacy Policy
+                          </Label>
+                          <Button
+                            size="sm"
+                            className="shadow-sm"
+                            onClick={handleSavePrivacy}
+                            disabled={savingPrivacy}
+                          >
+                            {savingPrivacy ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Save className="h-4 w-4 mr-2" />
+                            )}
+                            Save Privacy
+                          </Button>
+                        </div>
+                        <Textarea
+                          className="mt-1 min-h-[160px]"
+                          placeholder="Enter your Privacy Policy (English)..."
+                          value={contentForm.privacy_en}
+                          onChange={(e) =>
+                            setContentForm((prev) => ({ ...prev, privacy_en: e.target.value }))
+                          }
+                        />
+                        <Textarea
+                          className="mt-2 min-h-[140px]"
+                          placeholder="अपनी गोपनीयता नीति (हिंदी) दर्ज करें..."
+                          value={contentForm.privacy_hi}
+                          onChange={(e) =>
+                            setContentForm((prev) => ({ ...prev, privacy_hi: e.target.value }))
+                          }
+                        />
+                      </div>
+
+                      {/* FAQs Management */}
+                      <Separator className="my-4" />
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <HelpCircle className="h-5 w-5 text-primary" />
+                            <span className="font-semibold">FAQs</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-2"
+                            onClick={() => handleEditFaq()}
+                          >
+                            <Plus className="h-4 w-4" />
+                            Add FAQ
+                          </Button>
+                        </div>
+
+                        {faqsLoading ? (
+                          <div className="py-6 flex justify-center text-sm text-gray-500">
+                            Loading FAQs...
+                          </div>
+                        ) : faqs.length === 0 ? (
+                          <p className="text-sm text-gray-500">
+                            No FAQs created yet. Click &quot;Add FAQ&quot; to create one.
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {faqs.map((faq) => (
+                              <div
+                                key={faq.id}
+                                className="flex items-start justify-between rounded-lg border bg-gray-50 px-3 py-2"
+                              >
+                                <div className="pr-3">
+                                  <p className="font-medium text-gray-900 text-sm">
+                                    {faq.question}
+                                  </p>
+                                  {faq.category && (
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                      Category: {faq.category}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    size="icon"
+                                    variant="outline"
+                                    className="h-8 w-8"
+                                    onClick={() => handleEditFaq(faq)}
+                                  >
+                                    <Edit2 className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="outline"
+                                    className="h-8 w-8 text-red-500 border-red-200 hover:bg-red-50"
+                                    onClick={() => handleDeleteFaq(faq.id)}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {editingFaq && (
+                          <div className="mt-4 space-y-3 rounded-lg border bg-white p-4">
+                            <p className="font-semibold text-sm mb-1">
+                              {editingFaq.id ? "Edit FAQ" : "New FAQ"}
+                            </p>
+                            <div className="grid md:grid-cols-2 gap-3">
+                              <div>
+                                <Label className="text-xs">Question (English)</Label>
+                                <Input
+                                  className="mt-1"
+                                  value={editingFaq.question}
+                                  onChange={(e) =>
+                                    setEditingFaq((prev) =>
+                                      prev ? { ...prev, question: e.target.value } : prev
+                                    )
+                                  }
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Question (Hindi)</Label>
+                                <Input
+                                  className="mt-1"
+                                  value={editingFaq.question_hi}
+                                  onChange={(e) =>
+                                    setEditingFaq((prev) =>
+                                      prev ? { ...prev, question_hi: e.target.value } : prev
+                                    )
+                                  }
+                                />
+                              </div>
+                            </div>
+                            <div className="grid md:grid-cols-2 gap-3">
+                              <div>
+                                <Label className="text-xs">Answer (English)</Label>
+                                <Textarea
+                                  className="mt-1 min-h-[90px]"
+                                  value={editingFaq.answer}
+                                  onChange={(e) =>
+                                    setEditingFaq((prev) =>
+                                      prev ? { ...prev, answer: e.target.value } : prev
+                                    )
+                                  }
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Answer (Hindi)</Label>
+                                <Textarea
+                                  className="mt-1 min-h-[90px]"
+                                  value={editingFaq.answer_hi}
+                                  onChange={(e) =>
+                                    setEditingFaq((prev) =>
+                                      prev ? { ...prev, answer_hi: e.target.value } : prev
+                                    )
+                                  }
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Category (optional)</Label>
+                              <Input
+                                className="mt-1 max-w-xs"
+                                placeholder="e.g. getting_started, support"
+                                value={editingFaq.category}
+                                onChange={(e) =>
+                                  setEditingFaq((prev) =>
+                                    prev ? { ...prev, category: e.target.value } : prev
+                                  )
+                                }
+                              />
+                            </div>
+                            <div className="flex justify-end gap-2 pt-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setEditingFaq(null)}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={handleSaveFaq}
+                                disabled={faqSaving}
+                              >
+                                {faqSaving ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Save className="h-4 w-4 mr-2" />
+                                )}
+                                Save FAQ
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -456,7 +932,7 @@ export default function SettingsPage() {
                   { title: "Database Backup", desc: "Download database backup", btn: "Download Backup" },
                   { title: "View System Logs", desc: "View error and activity logs", btn: "View Logs" },
                 ].map((item, index) => (
-                  <motion.div 
+                  <motion.div
                     key={index}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -500,7 +976,7 @@ export default function SettingsPage() {
                 <Separator />
                 <div>
                   <Label>IP Whitelist (one per line)</Label>
-                  <Textarea 
+                  <Textarea
                     className="mt-1"
                     placeholder="192.168.1.1&#10;10.0.0.1"
                   />

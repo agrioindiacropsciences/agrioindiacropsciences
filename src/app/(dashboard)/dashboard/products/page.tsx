@@ -136,12 +136,17 @@ export default function DashboardProductsPage() {
             >
               <Card className="group overflow-hidden card-hover h-full">
                 <div className="relative h-40 bg-gradient-to-br from-green-100 to-green-50 overflow-hidden">
-                  {product.images && product.images.length > 0 ? (
+                  {product.image_url ||
+                  (product.images && product.images.length > 0) ? (
                     <Image
-                      src={product.images[0]}
+                      src={
+                        product.image_url ||
+                        (product.images && product.images[0]) ||
+                        "/logo.svg"
+                      }
                       alt={language === "en" ? product.name : product.name_hi}
                       fill
-                      className="object-cover"
+                      className="object-contain p-4"
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     />
                   ) : (

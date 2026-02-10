@@ -90,6 +90,9 @@ export default function ProductDetailPage() {
   }
 
   const relatedProducts = product.related_products || [];
+  const mainImage =
+    product.image_url ||
+    (product.images && product.images.length > 0 ? product.images[0] : null);
 
   return (
     <div className="min-h-screen bg-secondary/20">
@@ -130,12 +133,12 @@ export default function ProductDetailPage() {
           >
             <Card className="overflow-hidden">
               <div className="relative aspect-square bg-gradient-to-br from-green-100 to-green-50 flex items-center justify-center">
-                {product.images && product.images.length > 0 ? (
+                {mainImage ? (
                   <Image
-                    src={product.images[0]}
+                    src={mainImage}
                     alt={language === "en" ? product.name : product.name_hi}
                     fill
-                    className="object-cover"
+                    className="object-contain p-6"
                     sizes="(max-width: 1024px) 100vw, 50vw"
                     priority
                   />
@@ -397,12 +400,17 @@ export default function ProductDetailPage() {
                   className="group overflow-hidden card-hover"
                 >
                   <div className="relative h-40 bg-gradient-to-br from-green-100 to-green-50 overflow-hidden">
-                    {relatedProduct.images && relatedProduct.images.length > 0 ? (
+                    {relatedProduct.image_url ||
+                    (relatedProduct.images && relatedProduct.images.length > 0) ? (
                       <Image
-                        src={relatedProduct.images[0]}
+                        src={
+                          relatedProduct.image_url ||
+                          (relatedProduct.images && relatedProduct.images[0]) ||
+                          "/logo.svg"
+                        }
                         alt={language === "en" ? relatedProduct.name : relatedProduct.name_hi}
                         fill
-                        className="object-cover"
+                        className="object-contain p-4"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                       />
                     ) : (

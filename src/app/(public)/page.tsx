@@ -158,35 +158,68 @@ const stats = [
   { value: 500, suffix: "+", label: "Distributors", labelHi: "वितरक", icon: Users },
 ];
 
-import { getBestSellers } from "@/lib/api";
+import { getBestSellers, getAppConfig } from "@/lib/api";
 import type { Product } from "@/lib/api/types";
+
+const ICON_MAP: Record<string, any> = {
+  QrCode, MapPin, Leaf, Languages, ArrowRight, TrendingUp, Users, Package, Phone, MessageCircle, Star, Award, Shield, Sparkles, ChevronRight, Beaker
+};
 
 export default function HomePage() {
   const { language } = useStore();
   const [bestSellingProducts, setBestSellingProducts] = React.useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = React.useState(true);
 
+  // Dynamic Content State
+  const [homeFeatures, setHomeFeatures] = React.useState<any[]>(features);
+  const [homeWhyChooseUs, setHomeWhyChooseUs] = React.useState<any[]>(whyChooseUs);
+  const [heroImage, setHeroImage] = React.useState<string>("/home.png");
+
   React.useEffect(() => {
-    const fetchBestSellers = async () => {
+    const fetchData = async () => {
       try {
+        // Fetch Config
+        const configRes = await getAppConfig();
+        if (configRes.success && configRes.data?.content) {
+          const content = configRes.data.content;
+
+          if (content.home_features && content.home_features.length > 0) {
+            setHomeFeatures(content.home_features.map((f: any) => ({
+              ...f,
+              icon: ICON_MAP[f.icon_name] || Leaf // Fallback icon
+            })));
+          }
+
+          if (content.why_choose_us && content.why_choose_us.length > 0) {
+            setHomeWhyChooseUs(content.why_choose_us.map((f: any) => ({
+              ...f,
+              icon: ICON_MAP[f.icon_name] || Shield // Fallback icon
+            })));
+          }
+
+          if (content.home_hero?.hero_image) {
+            setHeroImage(content.home_hero.hero_image);
+          }
+        }
+
+        // Fetch Best Sellers
         const response = await getBestSellers(4);
         if (response.success && response.data) {
-          // Sort by best_seller_rank if available, otherwise maintain backend order
           const sortedProducts = [...response.data].sort((a, b) => {
             const rankA = (a as any).best_seller_rank || (a as any).sales_rank || 999;
             const rankB = (b as any).best_seller_rank || (b as any).sales_rank || 999;
-            return rankA - rankB; // Lower rank number = higher position
+            return rankA - rankB;
           });
           setBestSellingProducts(sortedProducts);
         }
       } catch (error) {
-        console.error("Failed to fetch best sellers on home page:", error);
+        console.error("Failed to fetch home data:", error);
       } finally {
         setLoadingProducts(false);
       }
     };
 
-    fetchBestSellers();
+    fetchData();
   }, []);
 
 
@@ -593,7 +626,7 @@ export default function HomePage() {
           </AnimatedSection>
 
           <AnimatedContainer className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6" staggerDelay={0.1}>
-            {features.map((feature, index) => (
+            {homeFeatures.map((feature, index) => (
               <AnimatedItem key={index}>
                 <Link href={feature.href}>
                   <motion.div
@@ -601,41 +634,41 @@ export default function HomePage() {
                     transition={{ duration: 0.3 }}
                     className="block h-full cursor-pointer"
                   >
-                  <Card className="h-full min-h-[300px] border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group relative flex flex-col">
-                    {/* Background Image with Blur */}
-                    {feature.image && (
-                      <div className="absolute inset-0 bg-white">
-                        <Image
-                          src={feature.image}
-                          alt={language === "en" ? feature.title : feature.titleHi}
-                          fill
-                          className="object-contain opacity-75"
-                          style={{ filter: 'blur(1px)', objectPosition: 'center' }}
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-white/15 to-white/25" />
-                      </div>
-                    )}
+                    <Card className="h-full min-h-[300px] border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group relative flex flex-col">
+                      {/* Background Image with Blur */}
+                      {feature.image && (
+                        <div className="absolute inset-0 bg-white">
+                          <Image
+                            src={feature.image}
+                            alt={language === "en" ? feature.title : feature.titleHi}
+                            fill
+                            className="object-contain opacity-75"
+                            style={{ filter: 'blur(1px)', objectPosition: 'center' }}
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-white/15 to-white/25" />
+                        </div>
+                      )}
 
-                    <CardContent className="p-8 text-center relative z-10 flex flex-col flex-grow">
-                      {/* Gradient background on hover */}
-                      <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
+                      <CardContent className="p-8 text-center relative z-10 flex flex-col flex-grow">
+                        {/* Gradient background on hover */}
+                        <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
 
-                      <motion.div
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        className={`mx-auto h-16 w-16 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 shadow-lg relative z-10`}
-                      >
-                        <feature.icon className="h-8 w-8 text-white" />
-                      </motion.div>
-                      <h3 className="font-bold text-xl mb-3 relative z-10">
-                        {language === "en" ? feature.title : feature.titleHi}
-                      </h3>
-                      <p className="text-gray-800 leading-relaxed relative z-10">
-                        {language === "en" ? feature.description : feature.descriptionHi}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
+                        <motion.div
+                          whileHover={{ scale: 1.1, rotate: 5 }}
+                          className={`mx-auto h-16 w-16 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 shadow-lg relative z-10`}
+                        >
+                          <feature.icon className="h-8 w-8 text-white" />
+                        </motion.div>
+                        <h3 className="font-bold text-xl mb-3 relative z-10">
+                          {language === "en" ? feature.title : feature.titleHi}
+                        </h3>
+                        <p className="text-gray-800 leading-relaxed relative z-10">
+                          {language === "en" ? feature.description : feature.descriptionHi}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 </Link>
               </AnimatedItem>
             ))}
@@ -667,95 +700,95 @@ export default function HomePage() {
               <TractorLoader size="lg" />
             </div>
           ) : (
-          <AnimatedContainer className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6" staggerDelay={0.1}>
-            {bestSellingProducts.map((product, index) => {
-              const technicalDetails = (product.technical_details as any) || {};
-              const price = product.pack_sizes && product.pack_sizes.length > 0
-                ? Number(product.pack_sizes[0].selling_price)
-                : 0;
-              const packSize = product.pack_sizes && product.pack_sizes.length > 0
-                ? product.pack_sizes[0].size
-                : "";
-              const gradient = (technicalDetails.gradient as string) || "from-green-500 to-emerald-500";
-              const image = product.image_url || "/logo.svg";
-              const technical = language === "en" ? product.composition : (technicalDetails.technicalHi as string || product.composition);
+            <AnimatedContainer className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6" staggerDelay={0.1}>
+              {bestSellingProducts.map((product, index) => {
+                const technicalDetails = (product.technical_details as any) || {};
+                const price = product.pack_sizes && product.pack_sizes.length > 0
+                  ? Number(product.pack_sizes[0].selling_price)
+                  : 0;
+                const packSize = product.pack_sizes && product.pack_sizes.length > 0
+                  ? product.pack_sizes[0].size
+                  : "";
+                const gradient = (technicalDetails.gradient as string) || "from-green-500 to-emerald-500";
+                const image = product.image_url || "/logo.svg";
+                const technical = language === "en" ? product.composition : (technicalDetails.technicalHi as string || product.composition);
 
-              return (
-                <AnimatedItem key={product.id}>
-                  <Card className="group overflow-hidden h-full border-0 shadow-lg hover:shadow-2xl transition-shadow duration-300 bg-white">
-                    {/* Gradient Top Border */}
-                    <div className={`h-1 bg-gradient-to-r ${gradient}`} />
+                return (
+                  <AnimatedItem key={product.id}>
+                    <Card className="group overflow-hidden h-full border-0 shadow-lg hover:shadow-2xl transition-shadow duration-300 bg-white">
+                      {/* Gradient Top Border */}
+                      <div className={`h-1 bg-gradient-to-r ${gradient}`} />
 
-                    {/* Product Image Section - Box size matches image aspect ratio */}
-                    <div className="relative w-full aspect-[3/4] bg-white overflow-hidden border border-gray-100">
-                      <Image
-                        src={image}
-                        alt={language === "en" ? product.name : product.name_hi}
-                        fill
-                        className="object-contain p-4"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                      />
+                      {/* Product Image Section - Box size matches image aspect ratio */}
+                      <div className="relative w-full aspect-[3/4] bg-white overflow-hidden border border-gray-100">
+                        <Image
+                          src={image}
+                          alt={language === "en" ? product.name : product.name_hi}
+                          fill
+                          className="object-contain p-4"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        />
 
-                      {/* Rank Badge */}
-                      <div
-                        className={`absolute top-3 left-3 h-9 w-9 rounded-lg flex items-center justify-center font-bold text-white shadow-lg bg-gradient-to-br ${index === 0 ? "from-yellow-400 to-amber-500" :
-                          index === 1 ? "from-gray-300 to-gray-500" :
-                            index === 2 ? "from-amber-600 to-amber-700" :
-                              gradient
-                          }`}
-                      >
-                        <span className="text-sm">#{index + 1}</span>
-                      </div>
-
-                      {/* Best Seller Badge */}
-                      <Badge className="absolute top-3 right-3 bg-white/95 text-gray-900 border-0 shadow-md text-xs px-2 py-1">
-                        <Star className="h-3 w-3 mr-1 text-amber-500 fill-amber-500" />
-                        {language === "en" ? "Best" : "बेस्ट"}
-                      </Badge>
-                    </div>
-
-                    <CardContent className="p-4">
-                      {/* Category */}
-                      <Badge className={`mb-2 bg-gradient-to-r ${gradient} text-white border-0 text-xs`}>
-                        {language === "en" ? product.category.name : product.category.name_hi}
-                      </Badge>
-
-                      {/* Product Name */}
-                      <h3 className="font-bold text-base mb-2 text-gray-900 group-hover:text-primary transition-colors line-clamp-1">
-                        {language === "en" ? product.name : product.name_hi}
-                      </h3>
-
-                      {/* Technical Composition */}
-                      <div className="flex items-start gap-2 mb-3 p-2 bg-gray-50 rounded-lg">
-                        <div className={`h-6 w-6 rounded-md bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0`}>
-                          <Beaker className="h-3 w-3 text-white" />
+                        {/* Rank Badge */}
+                        <div
+                          className={`absolute top-3 left-3 h-9 w-9 rounded-lg flex items-center justify-center font-bold text-white shadow-lg bg-gradient-to-br ${index === 0 ? "from-yellow-400 to-amber-500" :
+                            index === 1 ? "from-gray-300 to-gray-500" :
+                              index === 2 ? "from-amber-600 to-amber-700" :
+                                gradient
+                            }`}
+                        >
+                          <span className="text-sm">#{index + 1}</span>
                         </div>
-                        <p className="text-xs text-gray-700 leading-relaxed line-clamp-2">
-                          {technical}
-                        </p>
+
+                        {/* Best Seller Badge */}
+                        <Badge className="absolute top-3 right-3 bg-white/95 text-gray-900 border-0 shadow-md text-xs px-2 py-1">
+                          <Star className="h-3 w-3 mr-1 text-amber-500 fill-amber-500" />
+                          {language === "en" ? "Best" : "बेस्ट"}
+                        </Badge>
                       </div>
 
-                      {/* Price */}
-                      <div className="flex items-center justify-between pt-2 border-t">
-                        <div>
-                          <p className={`text-lg font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>₹{price}</p>
-                          {packSize && (
-                            <p className="text-[10px] text-gray-700">per {packSize}</p>
-                          )}
+                      <CardContent className="p-4">
+                        {/* Category */}
+                        <Badge className={`mb-2 bg-gradient-to-r ${gradient} text-white border-0 text-xs`}>
+                          {language === "en" ? product.category.name : product.category.name_hi}
+                        </Badge>
+
+                        {/* Product Name */}
+                        <h3 className="font-bold text-base mb-2 text-gray-900 group-hover:text-primary transition-colors line-clamp-1">
+                          {language === "en" ? product.name : product.name_hi}
+                        </h3>
+
+                        {/* Technical Composition */}
+                        <div className="flex items-start gap-2 mb-3 p-2 bg-gray-50 rounded-lg">
+                          <div className={`h-6 w-6 rounded-md bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0`}>
+                            <Beaker className="h-3 w-3 text-white" />
+                          </div>
+                          <p className="text-xs text-gray-700 leading-relaxed line-clamp-2">
+                            {technical}
+                          </p>
                         </div>
-                        <Button asChild size="sm" className={`shadow-md bg-gradient-to-r ${gradient} hover:opacity-90 border-0 h-8 text-xs`}>
-                          <Link href="/contact">
-                            {language === "en" ? "Enquire" : "पूछताछ"}
-                            <ChevronRight className="ml-1 h-3 w-3" />
-                          </Link>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </AnimatedItem>
-              );
-            })}
-          </AnimatedContainer>
+
+                        {/* Price */}
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          <div>
+                            <p className={`text-lg font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>₹{price}</p>
+                            {packSize && (
+                              <p className="text-[10px] text-gray-700">per {packSize}</p>
+                            )}
+                          </div>
+                          <Button asChild size="sm" className={`shadow-md bg-gradient-to-r ${gradient} hover:opacity-90 border-0 h-8 text-xs`}>
+                            <Link href="/contact">
+                              {language === "en" ? "Enquire" : "पूछताछ"}
+                              <ChevronRight className="ml-1 h-3 w-3" />
+                            </Link>
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </AnimatedItem>
+                );
+              })}
+            </AnimatedContainer>
           )}
 
           <AnimatedSection delay={0.4} className="text-center mt-12">
@@ -972,7 +1005,7 @@ export default function HomePage() {
           </AnimatedSection>
 
           <AnimatedContainer className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8" staggerDelay={0.1}>
-            {whyChooseUs.map((item, index) => (
+            {homeWhyChooseUs.map((item, index) => (
               <AnimatedItem key={index}>
                 <motion.div
                   whileHover={{ y: -8 }}

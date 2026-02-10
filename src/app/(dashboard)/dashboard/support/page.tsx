@@ -24,39 +24,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useStore } from "@/store/useStore";
-
-const faqs = [
-  {
-    question: "How do I scan a coupon code?",
-    questionHi: "मैं कूपन कोड कैसे स्कैन करूं?",
-    answer: "Go to the Scan & Win section in your dashboard. You can either scan the QR code on your product or enter the 12-character code manually.",
-    answerHi: "अपने डैशबोर्ड में स्कैन और जीतें सेक्शन पर जाएं। आप या तो अपने उत्पाद पर QR कोड स्कैन कर सकते हैं या 12-अक्षर का कोड मैन्युअल रूप से दर्ज कर सकते हैं।",
-  },
-  {
-    question: "How do I redeem my rewards?",
-    questionHi: "मैं अपने पुरस्कार कैसे भुनाऊं?",
-    answer: "Visit the My Rewards section to see all your earned rewards. You can download the reward certificate and redeem it at any authorized Agrio India distributor.",
-    answerHi: "अपने सभी अर्जित पुरस्कार देखने के लिए मेरे पुरस्कार सेक्शन पर जाएं। आप पुरस्कार प्रमाणपत्र डाउनलोड कर सकते हैं और किसी भी अधिकृत एग्रियो इंडिया वितरक पर इसे भुना सकते हैं।",
-  },
-  {
-    question: "What if my coupon code is invalid?",
-    questionHi: "अगर मेरा कूपन कोड अमान्य है तो क्या होगा?",
-    answer: "Make sure you are entering the code correctly. If the code is still invalid, please contact our support team with a photo of the coupon.",
-    answerHi: "सुनिश्चित करें कि आप कोड सही ढंग से दर्ज कर रहे हैं। यदि कोड अभी भी अमान्य है, तो कृपया कूपन की फोटो के साथ हमारी सहायता टीम से संपर्क करें।",
-  },
-  {
-    question: "How do I find a distributor near me?",
-    questionHi: "मैं अपने पास वितरक कैसे खोजूं?",
-    answer: "Use the Buy Nearby feature in your dashboard. Enter your pincode or use your current location to find authorized distributors in your area.",
-    answerHi: "अपने डैशबोर्ड में पास में खरीदें सुविधा का उपयोग करें। अपने क्षेत्र में अधिकृत वितरकों को खोजने के लिए अपना पिनकोड दर्ज करें या अपने वर्तमान स्थान का उपयोग करें।",
-  },
-  {
-    question: "Can I change my registered mobile number?",
-    questionHi: "क्या मैं अपना पंजीकृत मोबाइल नंबर बदल सकता हूं?",
-    answer: "For security reasons, mobile number cannot be changed directly. Please contact our support team to request a mobile number change.",
-    answerHi: "सुरक्षा कारणों से, मोबाइल नंबर सीधे नहीं बदला जा सकता। कृपया मोबाइल नंबर बदलने के अनुरोध के लिए हमारी सहायता टीम से संपर्क करें।",
-  },
-];
+import { useFaqs } from "@/hooks/useApi";
 
 const contactOptions = [
   {
@@ -98,6 +66,7 @@ const contactOptions = [
 
 export default function SupportPage() {
   const { language } = useStore();
+  const { data: faqs, loading: faqsLoading } = useFaqs();
 
   return (
     <div className="space-y-8 pb-8">
@@ -195,31 +164,43 @@ export default function SupportPage() {
         </h2>
         <Card className="border-0 shadow-md overflow-hidden">
           <CardContent className="p-0">
-            <Accordion type="single" collapsible className="w-full">
-              {faqs.map((faq, index) => (
-                <AccordionItem 
-                  key={index} 
-                  value={`item-${index}`}
-                  className="border-b last:border-b-0"
-                >
-                  <AccordionTrigger className="px-5 py-4 text-left hover:no-underline hover:bg-gray-50 transition-colors">
-                    <span className="flex items-center gap-3">
-                      <span className="h-6 w-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0">
-                        {index + 1}
+            {faqsLoading ? (
+              <div className="py-10 flex justify-center text-sm text-gray-500">
+                {language === "en" ? "Loading FAQs..." : "प्रश्न लोड हो रहे हैं..."}
+              </div>
+            ) : faqs && faqs.length > 0 ? (
+              <Accordion type="single" collapsible className="w-full">
+                {faqs.map((faq, index) => (
+                  <AccordionItem
+                    key={faq.id ?? index}
+                    value={`item-${index}`}
+                    className="border-b last:border-b-0"
+                  >
+                    <AccordionTrigger className="px-5 py-4 text-left hover:no-underline hover:bg-gray-50 transition-colors">
+                      <span className="flex items-center gap-3">
+                        <span className="h-6 w-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0">
+                          {index + 1}
+                        </span>
+                        <span className="font-medium text-gray-900">
+                          {language === "en" ? faq.question : faq.question_hi || faq.question}
+                        </span>
                       </span>
-                      <span className="font-medium text-gray-900">
-                        {language === "en" ? faq.question : faq.questionHi}
-                      </span>
-                    </span>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-5 pb-4 pt-0">
-                    <div className="pl-9 text-gray-600 leading-relaxed">
-                      {language === "en" ? faq.answer : faq.answerHi}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-5 pb-4 pt-0">
+                      <div className="pl-9 text-gray-600 leading-relaxed">
+                        {language === "en" ? faq.answer : faq.answer_hi || faq.answer}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            ) : (
+              <div className="py-10 px-5 text-sm text-gray-500">
+                {language === "en"
+                  ? "No FAQs are available at the moment."
+                  : "इस समय कोई प्रश्न उपलब्ध नहीं हैं।"}
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>

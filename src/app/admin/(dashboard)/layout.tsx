@@ -18,6 +18,7 @@ import {
   ChevronDown,
   ImageIcon,
   Bell,
+  Sprout,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,7 @@ import * as api from "@/lib/api";
 
 const navItems = [
   { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/admin/crops", icon: Sprout, label: "Crops" },
   { href: "/admin/users", icon: Users, label: "Users" },
   { href: "/admin/products", icon: Package, label: "Products" },
   { href: "/admin/coupons", icon: Ticket, label: "Coupons" },
@@ -61,7 +63,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   useEffect(() => {
     const checkAuth = async () => {
       const token = api.getAdminToken();
-      
+
       if (!token) {
         // No token - redirect to login
         setAdminAuthenticated(false);

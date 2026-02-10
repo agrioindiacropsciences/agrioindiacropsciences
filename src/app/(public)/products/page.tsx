@@ -114,12 +114,19 @@ export default function ProductsPage() {
 
   // Get unique categories with colors
   const categoryData = useMemo(() => {
-    const allCategory = { id: "All", name: "All", nameHi: "सभी", color: "from-gray-500 to-gray-600" };
+    const allCategory = {
+      id: "All",
+      name: "All",
+      nameHi: "सभी",
+      color: "from-gray-500 to-gray-600",
+      imageUrl: undefined as string | undefined,
+    };
     const categoryList = categories.map((cat) => ({
       id: cat.id,
       name: cat.name,
       nameHi: cat.name_hi,
       color: getCategoryGradient(cat.name),
+      imageUrl: cat.image_url,
     }));
     return [allCategory, ...categoryList];
   }, [categories]);
@@ -285,12 +292,25 @@ export default function ProductsPage() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`relative px-5 py-2.5 rounded-full font-medium transition-all duration-300 ${
+                className={`relative px-5 py-2.5 rounded-full font-medium transition-all duration-300 overflow-hidden ${
                   selectedCategory === cat.id
                     ? "text-white shadow-lg"
                     : "bg-white text-gray-700 hover:bg-gray-100 shadow-md"
                 }`}
               >
+                {cat.imageUrl && (
+                  <div className="absolute inset-0 opacity-20">
+                    <div className="relative w-full h-full">
+                      <Image
+                        src={cat.imageUrl}
+                        alt={cat.name}
+                        fill
+                        className="object-cover"
+                        sizes="120px"
+                      />
+                    </div>
+                  </div>
+                )}
                 {selectedCategory === cat.id && (
                   <motion.div
                     layoutId="categoryBg"

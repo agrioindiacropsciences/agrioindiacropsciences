@@ -25,22 +25,22 @@ export function TractorLoader({ size = "md", className = "", showLabel = true }:
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4 }}
       >
-        {/* Smoke puffs from exhaust - more puffs, darker smoke */}
-        <div className="absolute -top-2 right-0 w-full h-12 overflow-visible pointer-events-none">
+        {/* Smoke puffs from exhaust - sharper, more realistic */}
+        <div className="absolute -top-4 right-0 w-full h-16 overflow-visible pointer-events-none">
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <motion.div
               key={i}
-              className="absolute right-2 top-0 w-6 h-6 rounded-full bg-gray-700/80 blur-md"
+              className="absolute right-3 top-2 w-4 h-4 rounded-full bg-gradient-to-b from-gray-200 via-gray-400 to-gray-700/90 shadow-sm"
               animate={{
-                y: [0, -24, -48],
-                x: [0, 10, 20],
-                opacity: [0.7, 0.5, 0],
-                scale: [0.9, 1.3, 1.8],
+                y: [0, -28, -56],
+                x: [0, 6, 10],
+                opacity: [0.9, 0.6, 0],
+                scale: [0.8, 1.2, 1.6],
               }}
               transition={{
-                duration: 1.5,
+                duration: 2,
                 repeat: Infinity,
-                delay: i * 0.3,
+                delay: i * 0.35,
               }}
             />
           ))}

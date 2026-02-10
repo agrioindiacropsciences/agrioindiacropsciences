@@ -37,7 +37,7 @@ export default function AdminLoginPage() {
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "admin@agrioindia.com",
+      email: "admin@agrioindiacropsciences.com",
       password: "",
     },
   });
@@ -148,10 +148,10 @@ export default function AdminLoginPage() {
                 <Sparkles className="h-4 w-4 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm font-medium text-blue-900 mb-1">Demo Credentials</p>
+                <p className="text-sm font-medium text-blue-900 mb-1">Admin Credentials</p>
                 <p className="text-xs text-blue-700">
-                  Email: admin@agrioindia.com<br />
-                  Password: admin123
+                  Email: admin@agrioindiacropsciences.com<br />
+                  Password: f7formula7
                 </p>
               </div>
             </div>
@@ -172,7 +172,7 @@ export default function AdminLoginPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@agrioindia.com"
+                  placeholder="admin@agrioindiacropsciences.com"
                   className="h-12 pl-12 bg-gray-50 border-gray-200 focus:bg-white transition-colors"
                   {...register("email")}
                 />

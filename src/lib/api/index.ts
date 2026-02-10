@@ -320,6 +320,26 @@ export async function getCategoryById(id: string): Promise<ApiResponse<T.Categor
   return get<T.Category>(`/categories/${id}`);
 }
 
+/**
+ * Admin: list categories
+ */
+export async function getAdminCategories(): Promise<ApiResponse<T.Category[]>> {
+  return adminGet<T.Category[]>('/admin/categories');
+}
+
+/**
+ * Admin: update category (supports image upload via FormData)
+ */
+export async function updateAdminCategory(
+  id: string,
+  data: FormData | Partial<T.Category & { image_url?: string; is_active?: boolean; display_order?: number }>
+): Promise<ApiResponse<T.Category>> {
+  if (data instanceof FormData) {
+    return adminPutFormData<T.Category>(`/admin/categories/${id}`, data);
+  }
+  return adminPut<T.Category>(`/admin/categories/${id}`, data);
+}
+
 // ==================== Distributors APIs ====================
 
 /**

@@ -19,6 +19,7 @@ import {
   ImageIcon,
   Bell,
   Sprout,
+  LayoutGrid,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,7 @@ import * as api from "@/lib/api";
 const navItems = [
   { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/admin/crops", icon: Sprout, label: "Crops" },
+  { href: "/admin/categories", icon: LayoutGrid, label: "Categories" },
   { href: "/admin/users", icon: Users, label: "Users" },
   { href: "/admin/products", icon: Package, label: "Products" },
   { href: "/admin/coupons", icon: Ticket, label: "Coupons" },
@@ -83,7 +85,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
             setAdmin({
               id: "admin",
               name: "Admin",
-              email: "admin@agrioindia.com",
+              email: "admin@agrioindiacropsciences.com",
               role: "ADMIN"
             });
           }

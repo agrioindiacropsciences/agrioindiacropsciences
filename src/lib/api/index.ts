@@ -672,6 +672,131 @@ export async function getDashboardStats(): Promise<ApiResponse<T.DashboardStats>
   };
 }
 
+
+// ==================== AI Support APIs ====================
+
+/**
+ * AI Chat support
+ */
+export async function sendAiChatMessage(data: T.AiChatRequest): Promise<ApiResponse<T.AiChatResponse>> {
+  return post<T.AiChatResponse>('/support/ai/chat', data);
+}
+
+/**
+ * Admin: list AI knowledge categories
+ */
+export async function getAdminAiCategories(): Promise<ApiResponse<T.AiKnowledgeCategory[]>> {
+  return adminGet<T.AiKnowledgeCategory[]>('/admin/ai-knowledge/categories');
+}
+
+/**
+ * Admin: create AI knowledge category
+ */
+export async function createAdminAiCategory(data: Partial<T.AiKnowledgeCategory>): Promise<ApiResponse<T.AiKnowledgeCategory>> {
+  return adminPost<T.AiKnowledgeCategory>('/admin/ai-knowledge/categories', data);
+}
+
+/**
+ * Admin: update AI knowledge category
+ */
+export async function updateAdminAiCategory(id: string, data: Partial<T.AiKnowledgeCategory>): Promise<ApiResponse<T.AiKnowledgeCategory>> {
+  return adminPut<T.AiKnowledgeCategory>(`/admin/ai-knowledge/categories/${id}`, data);
+}
+
+/**
+ * Admin: delete AI knowledge category
+ */
+export async function deleteAdminAiCategory(id: string): Promise<ApiResponse<null>> {
+  return adminDelete<null>(`/admin/ai-knowledge/categories/${id}`);
+}
+
+/**
+ * Admin: list AI knowledge entries
+ */
+export async function getAdminAiEntries(categoryId?: string, language?: string): Promise<ApiResponse<T.AiKnowledgeEntry[]>> {
+  const params = new URLSearchParams();
+  if (categoryId) params.append('categoryId', categoryId);
+  if (language) params.append('language', language);
+  const qs = params.toString();
+  return adminGet<T.AiKnowledgeEntry[]>(`/admin/ai-knowledge/entries${qs ? `?${qs}` : ''}`);
+}
+
+/**
+ * Admin: create AI knowledge entry
+ */
+export async function createAdminAiEntry(data: Partial<T.AiKnowledgeEntry>): Promise<ApiResponse<T.AiKnowledgeEntry>> {
+  return adminPost<T.AiKnowledgeEntry>('/admin/ai-knowledge/entries', data);
+}
+
+/**
+ * Admin: update AI knowledge entry
+ */
+export async function updateAdminAiEntry(id: string, data: Partial<T.AiKnowledgeEntry>): Promise<ApiResponse<T.AiKnowledgeEntry>> {
+  return adminPut<T.AiKnowledgeEntry>(`/admin/ai-knowledge/entries/${id}`, data);
+}
+
+/**
+ * Admin: delete AI knowledge entry
+ */
+export async function deleteAdminAiEntry(id: string): Promise<ApiResponse<null>> {
+  return adminDelete<null>(`/admin/ai-knowledge/entries/${id}`);
+}
+
+/**
+ * Admin: list AI knowledge PDF files
+ */
+export async function getAdminAiFiles(): Promise<ApiResponse<T.AiKnowledgeFile[]>> {
+  return adminGet<T.AiKnowledgeFile[]>('/admin/ai-knowledge/files');
+}
+
+/**
+ * Admin: upload AI knowledge PDF file
+ */
+export async function uploadAdminAiFile(file: File): Promise<ApiResponse<T.AiKnowledgeFile>> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return adminPostFormData<T.AiKnowledgeFile>('/admin/ai-knowledge/files/upload', formData);
+}
+
+/**
+ * Admin: delete AI knowledge PDF file
+ */
+export async function deleteAdminAiFile(id: string): Promise<ApiResponse<null>> {
+  return adminDelete<null>(`/admin/ai-knowledge/files/${id}`);
+}
+
+/**
+ * Admin: toggle AI knowledge PDF file status
+ */
+export async function toggleAdminAiFileStatus(id: string, isActive: boolean): Promise<ApiResponse<T.AiKnowledgeFile>> {
+  return adminPatch<T.AiKnowledgeFile>(`/admin/ai-knowledge/files/${id}/status`, { isActive });
+}
+
+// Admin-specific request helper
+async function adminPatch<T>(endpoint: string, body: unknown): Promise<ApiResponse<T>> {
+  const token = getAdminToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` }),
+  };
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(body),
+    });
+    return response.json();
+  } catch (error) {
+    return {
+      success: false,
+      error: { code: 'NETWORK_ERROR', message: error instanceof Error ? error.message : 'Network error' },
+    };
+  }
+}
+
 // Admin-specific request helper
 async function adminGet<T>(endpoint: string): Promise<ApiResponse<T>> {
   const token = getAdminToken();
@@ -1275,6 +1400,7 @@ export const supportApi = {
   submitContactForm,
   getFaqs,
   getCmsPage,
+  sendAiChatMessage,
 };
 
 // Notifications API namespace
@@ -1345,4 +1471,18 @@ export const adminApi = {
   deleteFaq,
   getPages: getAdminPages,
   updatePage,
+  // AI Knowledge
+  getAiCategories: getAdminAiCategories,
+  createAiCategory: createAdminAiCategory,
+  updateAiCategory: updateAdminAiCategory,
+  deleteAiCategory: deleteAdminAiCategory,
+  getAiEntries: getAdminAiEntries,
+  createAiEntry: createAdminAiEntry,
+  updateAiEntry: updateAdminAiEntry,
+  deleteAiEntry: deleteAdminAiEntry,
+  // AI Files
+  getAiFiles: getAdminAiFiles,
+  uploadAiFile: uploadAdminAiFile,
+  deleteAiFile: deleteAdminAiFile,
+  toggleAiFileStatus: toggleAdminAiFileStatus,
 };

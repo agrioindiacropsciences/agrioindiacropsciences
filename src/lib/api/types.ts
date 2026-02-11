@@ -634,3 +634,53 @@ export interface CreateProductRequest {
   is_active?: boolean;
   pack_sizes: PackSize[];
 }
+
+// ==================== AI Knowledge ====================
+export interface AiKnowledgeCategory {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    entries: number;
+  };
+}
+
+export interface AiKnowledgeEntry {
+  id: string;
+  categoryId?: string;
+  title: string;
+  question?: string;
+  answer: string;
+  tags: string[];
+  language: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  category?: AiKnowledgeCategory;
+}
+
+export interface AiChatRequest {
+  message: string;
+  session_id?: string;
+  channel: 'web' | 'app' | 'admin';
+  language: 'en' | 'hi';
+}
+
+export interface AiChatResponse {
+  session_id: string;
+  reply: string;
+}
+
+export interface AiKnowledgeFile {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  content?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}

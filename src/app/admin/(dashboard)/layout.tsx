@@ -19,6 +19,7 @@ import {
   ImageIcon,
   Bell,
   Sprout,
+  Bot,
   LayoutGrid,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ const navItems = [
   { href: "/admin/distributors", icon: MapPin, label: "Distributors" },
   { href: "/admin/banners", icon: ImageIcon, label: "Banners" },
   { href: "/admin/notifications", icon: Bell, label: "Notifications" },
+  { href: "/admin/ai-knowledge", icon: Bot, label: "AI Knowledge" },
   { href: "/admin/reports", icon: BarChart3, label: "Reports" },
 ];
 

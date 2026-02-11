@@ -113,6 +113,15 @@ export interface Category {
   is_active: boolean;
 }
 
+/** Product summary returned when listing products under a category */
+export interface CategoryProduct {
+  id: string;
+  name: string;
+  name_hi: string;
+  slug: string;
+  is_active: boolean;
+}
+
 // ==================== Products ====================
 export interface PackSize {
   size: string;
@@ -464,6 +473,15 @@ export interface SearchResponse {
 export interface AdminLoginResponse {
   token: string;
   refresh_token: string;
+  admin: {
+    id: string;
+    name: string;
+    email: string;
+    role: 'SUPER_ADMIN' | 'ADMIN' | 'VIEWER';
+  };
+}
+
+export interface AdminMeResponse {
   admin: {
     id: string;
     name: string;

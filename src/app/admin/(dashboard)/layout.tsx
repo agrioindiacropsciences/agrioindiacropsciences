@@ -76,18 +76,16 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
 
       // Token exists - validate it by checking dashboard stats (lightweight check)
       try {
-        const response = await api.getDashboardStats();
-        if (response.success && response.data) {
-          // Token is valid - check if admin data exists in store, if not fetch it
+        const statsResponse = await api.getDashboardStats();
+        if (statsResponse.success && statsResponse.data) {
           if (!admin) {
-            // Admin data not in store - we can set a basic admin object
-            // In a real app, you might want to fetch admin profile
-            setAdmin({
-              id: "admin",
-              name: "Admin",
-              email: "admin@agrioindiacropsciences.com",
-              role: "ADMIN"
-            });
+            const profileResponse = await api.getAdminProfile();
+            if (profileResponse.success && profileResponse.data?.admin) {
+              const a = profileResponse.data.admin;
+              setAdmin({ id: a.id, name: a.name, email: a.email, role: a.role });
+            } else {
+              setAdmin({ id: '', name: 'Admin', email: '', role: 'ADMIN' });
+            }
           }
           setAdminAuthenticated(true);
         } else {

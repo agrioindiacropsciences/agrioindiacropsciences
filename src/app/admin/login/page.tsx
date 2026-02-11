@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { Loader2, Eye, EyeOff, Shield, Lock, Mail, ArrowRight, Sparkles } from "lucide-react";
+import { Loader2, Eye, EyeOff, Shield, Lock, Mail, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,7 +37,7 @@ export default function AdminLoginPage() {
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "admin@agrioindiacropsciences.com",
+      email: "",
       password: "",
     },
   });
@@ -136,27 +136,6 @@ export default function AdminLoginPage() {
             </p>
           </motion.div>
 
-          {/* Credentials Info */}
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100"
-          >
-            <div className="flex items-start gap-3">
-              <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-                <Sparkles className="h-4 w-4 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-blue-900 mb-1">Admin Credentials</p>
-                <p className="text-xs text-blue-700">
-                  Email: admin@agrioindiacropsciences.com<br />
-                  Password: f7formula7
-                </p>
-              </div>
-            </div>
-          </motion.div>
-
           {/* Form */}
           <motion.form 
             initial={{ opacity: 0, y: 10 }}
@@ -172,7 +151,7 @@ export default function AdminLoginPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@agrioindiacropsciences.com"
+                  placeholder="Enter your email"
                   className="h-12 pl-12 bg-gray-50 border-gray-200 focus:bg-white transition-colors"
                   {...register("email")}
                 />

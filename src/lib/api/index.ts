@@ -340,6 +340,22 @@ export async function updateAdminCategory(
   return adminPut<T.Category>(`/admin/categories/${id}`, data);
 }
 
+/**
+ * Admin: list products under a category
+ */
+export async function getAdminCategoryProducts(categoryId: string): Promise<ApiResponse<T.CategoryProduct[]>> {
+  const id = (categoryId || '').trim();
+  if (!id) return { success: false, error: { code: 'BAD_REQUEST', message: 'Category id is required' } };
+  return adminGet<T.CategoryProduct[]>(`/admin/categories/${encodeURIComponent(id)}/products`);
+}
+
+/**
+ * Admin: delete category (fails if category has products)
+ */
+export async function deleteAdminCategory(id: string): Promise<ApiResponse<{ message: string }>> {
+  return adminDelete<{ message: string }>(`/admin/categories/${id}`);
+}
+
 // ==================== Distributors APIs ====================
 
 /**
@@ -619,6 +635,14 @@ export async function adminLogout(): Promise<void> {
 }
 
 /**
+ * Get current admin profile (from DB, validates token).
+ * Use when token exists but store is empty (e.g. page refresh).
+ */
+export async function getAdminProfile(): Promise<ApiResponse<T.AdminMeResponse>> {
+  return adminGet<T.AdminMeResponse>('/admin/auth/me');
+}
+
+/**
  * Get dashboard stats
  * Maps backend response (total_scans) to frontend format (total_coupons_scanned)
  */
@@ -660,12 +684,22 @@ async function adminGet<T>(endpoint: string): Promise<ApiResponse<T>> {
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, { headers });
-    return response.json();
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return {
+        success: false,
+        error: (data as { error?: { code?: string; message?: string } })?.error ?? {
+          code: 'REQUEST_FAILED',
+          message: `Request failed (${response.status})`,
+        },
+      } as ApiResponse<T>;
+    }
+    return data as ApiResponse<T>;
   } catch (error) {
     return {
       success: false,
       error: { code: 'NETWORK_ERROR', message: error instanceof Error ? error.message : 'Network error' },
-    };
+    } as ApiResponse<T>;
   }
 }
 

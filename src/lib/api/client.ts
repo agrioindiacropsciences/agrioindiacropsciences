@@ -2,7 +2,7 @@
  * API Client for Agrio India Backend
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://agrio-india-backend.onrender.com/api/v1';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -127,7 +127,7 @@ async function refreshTokens(): Promise<boolean> {
 }
 
 // HTTP Methods
-export const get = <T>(endpoint: string, auth = false) => 
+export const get = <T>(endpoint: string, auth = false) =>
   request<T>(endpoint, { method: 'GET' }, auth);
 
 export const post = <T>(endpoint: string, body: unknown, auth = false) =>
@@ -145,7 +145,7 @@ export const del = <T>(endpoint: string, auth = false) =>
 // FormData upload helper (for file uploads)
 export async function postFormData<T>(endpoint: string, formData: FormData, auth = false): Promise<ApiResponse<T>> {
   const headers: HeadersInit = {};
-  
+
   if (auth) {
     const token = getAccessToken();
     if (token) {
@@ -195,7 +195,7 @@ export async function postFormData<T>(endpoint: string, formData: FormData, auth
 
 export async function patchFormData<T>(endpoint: string, formData: FormData, auth = false): Promise<ApiResponse<T>> {
   const headers: HeadersInit = {};
-  
+
   if (auth) {
     const token = getAccessToken();
     if (token) {

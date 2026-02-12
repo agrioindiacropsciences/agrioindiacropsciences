@@ -42,7 +42,7 @@ const features = [
     description: "Scan product QR codes to earn exciting rewards directly.",
     descriptionHi: "उत्पाद QR कोड स्कैन करके सीधे रोमांचक पुरस्कार अर्जित करें।",
     gradient: "from-purple-500 to-indigo-600",
-    image: "/scanandrewards.PNG",
+    image: "https://res.cloudinary.com/dyumjsohc/image/upload/v1770294234/agrio_india/static_assets/u9k6kpfodftzcm1gh22u.png",
     href: "/scan-win",
   },
   {
@@ -52,7 +52,7 @@ const features = [
     description: "Easily locate our trusted distributors in your area.",
     descriptionHi: "अपने क्षेत्र में हमारे विश्वसनीय वितरकों को आसानी से खोजें।",
     gradient: "from-blue-500 to-cyan-600",
-    image: "/nearbydistributor.PNG",
+    image: "https://res.cloudinary.com/dyumjsohc/image/upload/v1770294237/agrio_india/static_assets/kjqface1o8mfo9l0nsai.png",
     href: "/buy-nearby",
   },
   {
@@ -62,7 +62,7 @@ const features = [
     description: "High-quality products designed for the modern Indian farmer.",
     descriptionHi: "आधुनिक भारतीय किसान के लिए डिज़ाइन किए गए उच्च गुणवत्ता वाले उत्पाद।",
     gradient: "from-green-500 to-emerald-600",
-    image: "/farmerfriendly.PNG",
+    image: "https://res.cloudinary.com/dyumjsohc/image/upload/v1770294239/agrio_india/static_assets/i4xacs4ivxt7jmn72mcf.png",
     href: "/products",
   },
   {
@@ -72,7 +72,7 @@ const features = [
     description: "Access all information and support in Hindi.",
     descriptionHi: "हिंदी में सभी जानकारी और सहायता प्राप्त करें।",
     gradient: "from-orange-500 to-amber-600",
-    image: "/hindisupport.png",
+    image: "https://res.cloudinary.com/dyumjsohc/image/upload/v1770294244/agrio_india/static_assets/kgu2grrwkkrojhytwese.png",
     href: "/contact",
   },
 ];
@@ -87,7 +87,7 @@ const whyChooseUs = [
     stat: "100%",
     statLabel: "Quality Tested",
     statLabelHi: "गुणवत्ता परीक्षित",
-    image: "/assuredQuality.PNG",
+    image: "https://res.cloudinary.com/dyumjsohc/image/upload/v1770294250/agrio_india/static_assets/p9n3uq4c1dqpf6ycr6jq.png",
   },
   {
     icon: TrendingUp,
@@ -98,7 +98,7 @@ const whyChooseUs = [
     stat: "40%",
     statLabel: "Yield Increase",
     statLabelHi: "उपज में वृद्धि",
-    image: "/bettercrop.PNG",
+    image: "https://res.cloudinary.com/dyumjsohc/image/upload/v1770294254/agrio_india/static_assets/ekwjdmnngleojrgdnqqd.png",
   },
   {
     icon: Users,
@@ -109,7 +109,7 @@ const whyChooseUs = [
     stat: "2L+",
     statLabel: "Happy Farmers",
     statLabelHi: "खुश किसान",
-    image: "/trustedbyfarmer.PNG",
+    image: "https://res.cloudinary.com/dyumjsohc/image/upload/v1770294259/agrio_india/static_assets/fapowg3liywe4x6oxgoe.png",
   },
   {
     icon: Award,
@@ -120,7 +120,7 @@ const whyChooseUs = [
     stat: "100+",
     statLabel: "Products",
     statLabelHi: "उत्पाद",
-    image: "/widerangeproducts.PNG",
+    image: "https://res.cloudinary.com/dyumjsohc/image/upload/v1770294263/agrio_india/static_assets/pekwfjkoqedl0dllxyjv.png",
   },
 ];
 
@@ -173,7 +173,7 @@ export default function HomePage() {
   // Dynamic Content State
   const [homeFeatures, setHomeFeatures] = React.useState<any[]>(features);
   const [homeWhyChooseUs, setHomeWhyChooseUs] = React.useState<any[]>(whyChooseUs);
-  const [heroImage, setHeroImage] = React.useState<string>("/home.png");
+  const [heroImage, setHeroImage] = React.useState<string>("https://res.cloudinary.com/dyumjsohc/image/upload/v1770294230/agrio_india/static_assets/ggmj1s5khjkrfaqiiyf4.png");
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -296,7 +296,7 @@ export default function HomePage() {
           {/* Mobile background image */}
           <div className="absolute inset-0 lg:hidden overflow-hidden">
             <Image
-              src="/home.png"
+              src={heroImage}
               alt="Agrio India"
               fill
               className="object-cover opacity-75"
@@ -541,7 +541,7 @@ export default function HomePage() {
                     {/* Image container - box size matches image aspect ratio */}
                     <div className="relative w-full aspect-[4/3] rounded-[2.2rem] overflow-hidden">
                       <Image
-                        src="/home.png"
+                        src={heroImage}
                         alt="Agrio India - Premium Agrochemicals"
                         fill
                         className="object-cover"

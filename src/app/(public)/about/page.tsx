@@ -126,7 +126,7 @@ export default function AboutPage() {
         {/* Wave divider */}
         <div className="absolute bottom-0 left-0 right-0">
           <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0V120Z" fill="white"/>
+            <path d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0V120Z" fill="white" />
           </svg>
         </div>
       </section>
@@ -169,7 +169,7 @@ export default function AboutPage() {
                   className="relative h-[500px] rounded-3xl overflow-hidden shadow-2xl"
                 >
                   <Image
-                    src="/man-gardener-growing-green-spring-onion.jpg"
+                    src="https://images.unsplash.com/photo-1592982537447-7440770cbfc9?q=80&w=2000&auto=format&fit=crop"
                     alt="Indian farmer working in the field"
                     fill
                     className="object-cover"
@@ -177,7 +177,7 @@ export default function AboutPage() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 </motion.div>
-                
+
                 {/* Floating badge */}
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8 }}
@@ -212,7 +212,7 @@ export default function AboutPage() {
           />
           <div className="absolute inset-0 bg-gradient-to-r from-primary/95 to-emerald-600/95" />
         </div>
-        
+
         <div className="container mx-auto px-4 lg:px-8 relative">
           <AnimatedContainer className="grid grid-cols-2 lg:grid-cols-4 gap-8" staggerDelay={0.15}>
             {stats.map((stat, index) => (
@@ -252,16 +252,15 @@ export default function AboutPage() {
           <div className="relative">
             {/* Timeline line */}
             <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-1 bg-gradient-to-b from-primary via-accent to-primary -translate-x-1/2" />
-            
+
             <div className="space-y-12">
               {milestones.map((milestone, index) => (
                 <AnimatedSection
                   key={index}
                   direction={index % 2 === 0 ? "left" : "right"}
                   delay={index * 0.1}
-                  className={`flex flex-col md:flex-row items-center gap-8 ${
-                    index % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
-                  }`}
+                  className={`flex flex-col md:flex-row items-center gap-8 ${index % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
+                    }`}
                 >
                   <div className={`flex-1 ${index % 2 === 0 ? "md:text-right" : "md:text-left"}`}>
                     <motion.div
@@ -277,7 +276,7 @@ export default function AboutPage() {
                       </p>
                     </motion.div>
                   </div>
-                  
+
                   {/* Center dot */}
                   <div className="relative z-10">
                     <motion.div
@@ -285,7 +284,7 @@ export default function AboutPage() {
                       className="h-6 w-6 rounded-full bg-primary border-4 border-white shadow-lg"
                     />
                   </div>
-                  
+
                   <div className="flex-1 hidden md:block" />
                 </AnimatedSection>
               ))}
@@ -411,7 +410,7 @@ export default function AboutPage() {
           />
           <div className="absolute inset-0 bg-white/95" />
         </div>
-        
+
         <div className="container mx-auto px-4 lg:px-8 relative">
           <AnimatedSection className="text-center">
             <motion.div
@@ -428,7 +427,7 @@ export default function AboutPage() {
                 ? "Our commitment to quality and innovation has been recognized by leading industry bodies."
                 : "गुणवत्ता और नवाचार के प्रति हमारी प्रतिबद्धता को प्रमुख उद्योग निकायों द्वारा मान्यता दी गई है।"}
             </p>
-            
+
             <AnimatedContainer className="flex flex-wrap justify-center gap-4" staggerDelay={0.1}>
               {["ISO 9001:2015", "CIB Certified", "FICCI Award 2023", "Best Quality Award", "Excellence in Agriculture"].map(
                 (award, index) => (

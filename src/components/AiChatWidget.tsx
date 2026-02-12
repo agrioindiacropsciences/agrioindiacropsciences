@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import * as api from "@/lib/api";
+import { useLocale, useTranslations } from "next-intl";
 
 type Message = {
     id: string;
@@ -29,12 +30,16 @@ type Message = {
 };
 
 export default function AiChatWidget() {
+    const locale = useLocale(); // Get current locale (en or hi)
+    const t = useTranslations();
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([
         {
             id: "1",
             role: "assistant",
-            content: "Namaste! I am Tauji, your Agrio India guide. How can I help you regarding our products or crop care today?",
+            content: locale === "hi"
+                ? "नमस्ते! मैं ताऊजी हूं, आपका एग्रियो इंडिया गाइड। मैं आपकी कैसे मदद कर सकता हूं?"
+                : "Namaste! I am Tauji, your Agrio India guide. How can I help you regarding our products or crop care today?",
             timestamp: new Date()
         }
     ]);
@@ -72,7 +77,7 @@ export default function AiChatWidget() {
                 message: input,
                 session_id: sessionId,
                 channel: "web",
-                language: "en" // Could be dynamic based on site lang
+                language: locale === "hi" ? "hi" : "en" // Use user's selected language
             });
 
             if (response.success && response.data) {
@@ -88,7 +93,9 @@ export default function AiChatWidget() {
                 const errorMessage: Message = {
                     id: (Date.now() + 1).toString(),
                     role: "assistant",
-                    content: "I'm sorry, I'm having trouble connecting right now. Please try again later.",
+                    content: locale === "hi"
+                        ? "क्षमा करें, मुझे अभी कनेक्ट करने में परेशानी हो रही है। कृपया बाद में पुनः प्रयास करें।"
+                        : "I'm sorry, I'm having trouble connecting right now. Please try again later.",
                     timestamp: new Date()
                 };
                 setMessages(prev => [...prev, errorMessage]);
@@ -123,10 +130,14 @@ export default function AiChatWidget() {
                                     />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-sm">Ask Tau (AI Support)</h3>
+                                    <h3 className="font-bold text-sm">
+                                        {locale === "hi" ? "ताऊजी से पूछें (एआई सहायता)" : "Ask Tau (AI Support)"}
+                                    </h3>
                                     <div className="flex items-center gap-1.5">
                                         <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-                                        <span className="text-[10px] text-green-50 opacity-90">Online & Ready</span>
+                                        <span className="text-[10px] text-green-50 opacity-90">
+                                            {locale === "hi" ? "ऑनलाइन और तैयार" : "Online & Ready"}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -195,7 +206,7 @@ export default function AiChatWidget() {
                                         </div>
                                         <div className="bg-white border p-3 rounded-2xl rounded-tl-none text-sm flex items-center gap-2 text-gray-400">
                                             <Loader2 className="h-4 w-4 animate-spin" />
-                                            Thinking...
+                                            {locale === "hi" ? "सोच रहा हूं..." : "Thinking..."}
                                         </div>
                                     </div>
                                 </div>

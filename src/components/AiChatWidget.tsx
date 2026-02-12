@@ -236,7 +236,7 @@ export default function AiChatWidget() {
                                 </Button>
                             </form>
                             <p className="text-[10px] text-center text-gray-400 mt-2">
-                                Powered by Agrio AI • Gemini-1.5-Flash
+                                Powered by Agrio India Crop Science
                             </p>
                         </div>
                     </motion.div>

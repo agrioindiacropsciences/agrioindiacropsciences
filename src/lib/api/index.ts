@@ -428,14 +428,16 @@ export async function redeemCoupon(coupon_id: string, campaign_tier_id: string):
   return post<T.RedeemCouponResponse>('/coupons/redeem', { coupon_id, campaign_tier_id }, true);
 }
 
-// ==================== Scan & Redeem APIs ====================
-
 /**
- * Scan and redeem QR code (combined action)
+ * Verify product coupon with serial number and auth code
  */
-export async function scanAndRedeem(code: string): Promise<ApiResponse<T.ScanRedeemResponse>> {
-  return post<T.ScanRedeemResponse>('/scan/redeem', { code }, true);
+export async function verifyProductCoupon(serial_number: string, auth_code: string): Promise<ApiResponse<T.ProductCouponVerifyResponse>> {
+  return post<T.ProductCouponVerifyResponse>('/product-coupons/verify-claim', { serial_number, auth_code }, true);
 }
+
+
+
+
 
 // ==================== Rewards APIs ====================
 
@@ -1057,24 +1059,28 @@ export async function deleteProduct(id: string): Promise<ApiResponse<null>> {
 
 // Admin Coupons
 export async function getAdminCoupons(
-  pageOrOptions: number | { page?: number; limit?: number; status?: string } = 1,
+  pageOrOptions: number | { page?: number; limit?: number; status?: string; batch?: string } = 1,
   limit = 10,
-  status?: string
+  status?: string,
+  batch?: string
 ): Promise<ApiResponse<T.AdminCouponsResponse>> {
   let page = 1;
   let s = status;
   let l = limit;
+  let b = batch;
 
   if (typeof pageOrOptions === 'object') {
     page = pageOrOptions.page || 1;
     l = pageOrOptions.limit || 10;
     s = pageOrOptions.status;
+    b = pageOrOptions.batch;
   } else {
     page = pageOrOptions;
   }
 
   const params = new URLSearchParams({ page: String(page), limit: String(l) });
   if (s) params.append('status', s);
+  if (b) params.append('batch', b);
   return adminGet<T.AdminCouponsResponse>(`/admin/coupons?${params.toString()}`);
 }
 
@@ -1090,9 +1096,14 @@ export async function deleteCouponsBulk(ids: string[]): Promise<ApiResponse<{ de
   return adminPost<{ deleted_count: number }>('/admin/coupons/delete-bulk', { ids });
 }
 
-export async function generateCoupons(data: T.GenerateCouponsRequest): Promise<ApiResponse<T.GenerateCouponsResponse>> {
-  return adminPost<T.GenerateCouponsResponse>('/admin/coupons/generate', data);
+export async function getAdminBatches(): Promise<ApiResponse<{ batch_number: string; total_count: number; redeemed_count: number; created_at: string }[]>> {
+  return adminGet<{ batch_number: string; total_count: number; redeemed_count: number; created_at: string }[]>('/admin/coupons/bulk/batches');
 }
+
+export async function deleteAdminBatch(batchNumber: string): Promise<ApiResponse<{ deleted_count: number }>> {
+  return adminDelete<{ deleted_count: number }>(`/admin/coupons/bulk/batches/${batchNumber}`);
+}
+
 
 // Admin Campaigns
 export async function getAdminCampaigns(
@@ -1369,7 +1380,7 @@ export const distributorsApi = {
 export const couponsApi = {
   verify: verifyCoupon,
   redeem: redeemCoupon,
-  scanAndRedeem,
+  verifyProductCoupon,
 };
 
 // User API namespace
@@ -1423,12 +1434,28 @@ export const rewardsApi = {
   getCertificate: getRewardCertificate,
 };
 
+// Bulk Upload Coupons
+export async function bulkUploadCoupons(file: File): Promise<ApiResponse<any>> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return adminPostFormData<any>('/product-coupons/bulk-upload', formData);
+}
+
+// Admin Media
+export async function uploadMedia(file: File, folder = 'general'): Promise<ApiResponse<{ url: string; public_id: string }>> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('folder', folder);
+  return adminPostFormData<{ url: string; public_id: string }>('/admin/media/upload', formData);
+}
+
 // Admin API namespace
 export const adminApi = {
   login: adminLogin,
   refreshToken: adminRefreshToken,
   logout: adminLogout,
   getDashboardStats,
+  bulkUploadCoupons,
   // Users
   getUsers: getAdminUsers,
   getUserDetails: getAdminUserDetails,
@@ -1443,7 +1470,9 @@ export const adminApi = {
   // Coupons
   getCoupons: getAdminCoupons,
   getCoupon: getAdminCoupon,
-  generateCoupons,
+  getBatches: getAdminBatches,
+  deleteBatch: deleteAdminBatch,
+
   // Campaigns
   getCampaigns: getAdminCampaigns,
   createCampaign,
@@ -1485,4 +1514,5 @@ export const adminApi = {
   uploadAiFile: uploadAdminAiFile,
   deleteAiFile: deleteAdminAiFile,
   toggleAiFileStatus: toggleAdminAiFileStatus,
+  uploadMedia,
 };

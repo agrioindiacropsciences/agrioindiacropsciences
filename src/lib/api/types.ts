@@ -547,6 +547,7 @@ export interface AdminCoupon {
   scanned_by?: string;
   redeemed_by?: { id: string; name?: string; phone_number?: string };
   scanned_at?: string;
+  reward_name?: string;
   created_at: string;
   expires_at?: string;
   expiry_date?: string;
@@ -573,6 +574,7 @@ export interface GenerateCouponsResponse {
 
 // Campaign types for coupon generation
 export interface CampaignTierConfig {
+  id?: string;
   tier_name: string;
   reward_name: string;
   reward_name_hi?: string;
@@ -581,6 +583,7 @@ export interface CampaignTierConfig {
   probability: number;
   priority: number;
   max_winners?: number;
+  current_winners?: number;
   image_url?: string; // Required for GIFT type - shows after scratch
 }
 
@@ -683,4 +686,19 @@ export interface AiKnowledgeFile {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProductCouponVerifyResponse {
+  status: 'WON' | 'LOST';
+  reward?: {
+    rewardName: string;
+    rewardNameHi?: string;
+    tierName: string;
+    rewardType: string;
+    rewardValue: number;
+    imageUrl?: string;
+  };
+  redemptionId?: string;
+  message?: string;
+  redemption?: any;
 }

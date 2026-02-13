@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Html5Qrcode } from "html5-qrcode";
+import Link from "next/link";
 import {
   QrCode,
   Keyboard,
@@ -14,16 +15,17 @@ import {
   Sparkles,
   XCircle,
   StopCircle,
+  CheckCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useStore } from "@/store/useStore";
 import * as api from "@/lib/api";
 
-type ScanState = "idle" | "scanning" | "verifying" | "scratch" | "revealed" | "error";
+type ScanState = "idle" | "scanning" | "verify-form" | "verifying" | "scratch" | "revealed" | "error";
 
 interface WonPrize {
   name: string;
@@ -37,9 +39,13 @@ interface WonPrize {
 export default function ScanPage() {
   const { language, addReward } = useStore();
   const { toast } = useToast();
-  
+
   const [state, setState] = useState<ScanState>("idle");
-  const [manualCode, setManualCode] = useState("");
+
+  // Verification Form State
+  const [serialNumber, setSerialNumber] = useState("");
+  const [authCode, setAuthCode] = useState("");
+
   const [errorMessage, setErrorMessage] = useState("");
   const [wonPrize, setWonPrize] = useState<WonPrize | null>(null);
   const [redemptionId, setRedemptionId] = useState<string | null>(null);
@@ -61,7 +67,7 @@ export default function ScanPage() {
       const isMobileDevice = mobileRegex.test(userAgent.toLowerCase()) || window.innerWidth < 768;
       setIsMobile(isMobileDevice);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
@@ -76,7 +82,7 @@ export default function ScanPage() {
         // Fill with scratch surface color
         ctx.fillStyle = "#16a34a";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
+
         // Add text
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 20px Arial";
@@ -99,14 +105,14 @@ export default function ScanPage() {
   // Scratch functionality
   const handleScratch = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!isDrawing || !canvasRef.current) return;
-    
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
     let x, y;
-    
+
     if ("touches" in e) {
       x = e.touches[0].clientX - rect.left;
       y = e.touches[0].clientY - rect.top;
@@ -134,202 +140,16 @@ export default function ScanPage() {
     }
   };
 
-  // Verify + redeem for manual code entry (Step 1: /coupons/verify, Step 2: /coupons/redeem)
-  const verifyAndRedeemManual = async (code: string) => {
-    setState("verifying");
-    setErrorMessage("");
-
-    try {
-      // 1) Verify coupon
-      const verifyRes = await api.verifyCoupon(code.toUpperCase());
-
-      if (!verifyRes.success || !verifyRes.data || !verifyRes.data.is_valid) {
-        setState("error");
-        setErrorMessage(
-          verifyRes.error?.message ||
-            (language === "en"
-              ? "Invalid coupon code. Please try again."
-              : "अमान्य कूपन कोड। कृपया पुनः प्रयास करें।")
-        );
-        return;
-      }
-
-      const { coupon, campaign } = verifyRes.data;
-
-      // 2) Redeem coupon
-      const redeemRes = await api.redeemCoupon(coupon.id, campaign.tier.id);
-
-      if (!redeemRes.success || !redeemRes.data) {
-        setState("error");
-        setErrorMessage(
-          redeemRes.error?.message ||
-            (language === "en"
-              ? "Failed to redeem coupon. Please try again."
-              : "कूपन रिडीम करने में समस्या हुई, कृपया पुनः प्रयास करें।")
-        );
-        return;
-      }
-
-      const { redemption } = redeemRes.data;
-      const prize = redemption.prize;
-
-      setWonPrize({
-        name: prize.name,
-        name_hi: prize.name_hi,
-        type: prize.type,
-        value: prize.value,
-        image_url: prize.image_url,
-      });
-      setRedemptionId(redemption.id);
-
-      // Map backend status to frontend reward status
-      const mappedStatus: "pending" | "redeemed" =
-        redemption.status === "CLAIMED" ? "redeemed" : "pending";
-
-      // Add to rewards in store (used by My Rewards page)
-      addReward({
-        id: redemption.id,
-        couponCode: redemption.coupon_code,
-        prize: {
-          id: redemption.id,
-          name: prize.name,
-          nameHi: prize.name_hi,
-          description: prize.description || "",
-          descriptionHi: "",
-          value: prize.value,
-          image: prize.image_url || "",
-          type: prize.type.toLowerCase() as any,
-        },
-        productName: coupon.product?.name || "",
-          status: mappedStatus,
-        wonAt: redemption.redeemed_at,
-      });
-
-      setState("scratch");
-    } catch (error) {
-      setState("error");
-      setErrorMessage(
-        language === "en"
-          ? "Something went wrong. Please try again."
-          : "कुछ गलत हो गया। कृपया पुनः प्रयास करें।"
-      );
-    }
-  };
-
-  // Handle manual code submission
-  const handleManualSubmit = () => {
-    if (manualCode.length < 6) {
-      toast({
-        title: language === "en" ? "Invalid Code" : "अमान्य कोड",
-        description: language === "en"
-          ? "Please enter a valid coupon code"
-          : "कृपया एक वैध कूपन कोड दर्ज करें",
-        variant: "destructive",
-      });
-      return;
-    }
-    verifyAndRedeemManual(manualCode);
-  };
-
-  // Extract coupon/QR code from raw QR payload (can be plain code or URL with ?code=)
-  const extractCodeFromQr = (raw: string): string => {
-    const trimmed = raw.trim();
-    try {
-      const url = new URL(trimmed);
-      const paramCode = url.searchParams.get("code");
-      if (paramCode) return paramCode.trim().toUpperCase();
-      const segments = url.pathname.split("/").filter(Boolean);
-      if (segments.length > 0) {
-        return segments[segments.length - 1].trim().toUpperCase();
-      }
-      return trimmed.toUpperCase();
-    } catch {
-      // Not a URL
-      return trimmed.toUpperCase();
-    }
-  };
-
-  // Redeem directly from QR code using /scan/redeem as per backend spec
-  const redeemFromQr = async (rawCode: string) => {
-    const code = extractCodeFromQr(rawCode);
-    if (!code) {
-      setState("error");
-      setErrorMessage(
-        language === "en"
-          ? "Invalid QR code. Please try again."
-          : "अमान्य QR कोड। कृपया पुनः प्रयास करें।"
-      );
-      return;
-    }
-
-    setState("verifying");
-    setErrorMessage("");
-
-    try {
-      const res = await api.scanAndRedeem(code);
-      if (!res.success || !res.data) {
-        setState("error");
-        setErrorMessage(
-          res.error?.message ||
-            (language === "en"
-              ? "Invalid or already used QR code."
-              : "अमान्य या पहले से उपयोग किया हुआ QR कोड।")
-        );
-        return;
-      }
-
-      const { redemption, reward } = res.data;
-
-      setWonPrize({
-        name: reward.name,
-        name_hi: reward.name_hi,
-        type: reward.type,
-        value: reward.value,
-        image_url: reward.image_url || "",
-      });
-      setRedemptionId(redemption.id);
-
-      const mappedStatus: "pending" | "redeemed" =
-        redemption.status === "CLAIMED" ? "redeemed" : "pending";
-
-      addReward({
-        id: redemption.id,
-        couponCode: redemption.coupon_code,
-        prize: {
-          id: redemption.id,
-          name: reward.name,
-          nameHi: reward.name_hi,
-          description: "",
-          descriptionHi: "",
-          value: reward.value,
-          image: reward.image_url || "",
-          type: reward.type.toLowerCase() as any,
-        },
-        productName: "",
-        status: mappedStatus,
-        wonAt: redemption.scanned_at,
-      });
-
-      setState("scratch");
-    } catch (error) {
-      setState("error");
-      setErrorMessage(
-        language === "en"
-          ? "Something went wrong. Please try again."
-          : "कुछ गलत हो गया। कृपया पुनः प्रयास करें।"
-      );
-    }
-  };
-
-  // Start QR Scanner
+  // 1. Start QR Scanner
   const startQRScanner = async () => {
     if (isScanning) return;
-    
+    setState("scanning");
+
     try {
       setIsScanning(true);
       const scanner = new Html5Qrcode(qrCodeRegionId);
       qrCodeScannerRef.current = scanner;
-      
+
       await scanner.start(
         { facingMode: facingMode },
         {
@@ -338,16 +158,16 @@ export default function ScanPage() {
           aspectRatio: 1.0,
         },
         (decodedText) => {
-          // Success callback
           handleQRScanSuccess(decodedText);
         },
         (errorMessage) => {
-          // Error callback - ignore, scanner will keep trying
+          // console.log("Scan error", errorMessage);
         }
       );
     } catch (error) {
       console.error("QR Scanner error:", error);
       setIsScanning(false);
+      setState("idle");
       toast({
         title: language === "en" ? "Camera Error" : "कैमरा त्रुटि",
         description: language === "en"
@@ -373,18 +193,126 @@ export default function ScanPage() {
     }
   };
 
-  // Handle QR scan success
-  const handleQRScanSuccess = async (code: string) => {
-    // Prevent multiple rapid scans from processing at once
+  // 2. Handle QR Scan -> Go to Form
+  const handleQRScanSuccess = async (rawCode: string) => {
     if (isProcessingScan) return;
     setIsProcessingScan(true);
 
     await stopQRScanner();
-    await redeemFromQr(code);
+    console.log("Scanned Code:", rawCode);
 
-    // Allow user to restart scanner manually for another scan
+    // Try to extract Serial & Auth from QR if format allows
+    // Format assumptions: 
+    // 1. JSON: { "sn": "...", "ac": "..." }
+    // 2. URL params: ?sn=...&ac=...
+    // 3. Pipe separated: SERIAL|AUTH
+    // 4. Just Serial (user enters Auth)
+
+    let extractedSerial = "";
+    let extractedAuth = "";
+
+    try {
+      // Try JSON
+      const json = JSON.parse(rawCode);
+      if (json.sn || json.serial_number) extractedSerial = json.sn || json.serial_number;
+      if (json.ac || json.auth_code) extractedAuth = json.ac || json.auth_code;
+    } catch (e) {
+      // Not JSON
+      try {
+        // Try URL
+        const url = new URL(rawCode);
+        extractedSerial = url.searchParams.get("sn") || url.searchParams.get("serial") || "";
+        extractedAuth = url.searchParams.get("ac") || url.searchParams.get("auth") || "";
+      } catch (e2) {
+        // Not URL, try split
+        if (rawCode.includes('|')) {
+          const parts = rawCode.split('|');
+          extractedSerial = parts[0];
+          extractedAuth = parts[1] || "";
+        } else {
+          // Assume entire code is Serial? Or just pre-fill serial
+          extractedSerial = rawCode.trim();
+        }
+      }
+    }
+
+    setSerialNumber(extractedSerial);
+    setAuthCode(extractedAuth);
+
     setIsProcessingScan(false);
+    setState("verify-form");
   };
+
+  // 3. Verify & Claim (Form Submit)
+  const handleSubmitVerification = async () => {
+    if (!serialNumber || !authCode) {
+      setErrorMessage(language === "en" ? "Both fields are required" : "दोनों फ़ील्ड आवश्यक हैं");
+      return;
+    }
+
+    setState("verifying");
+    setErrorMessage("");
+
+    try {
+      const res = await api.verifyProductCoupon(serialNumber, authCode);
+
+      if (!res.success || !res.data) {
+        throw new Error(res.error?.message || "Verification failed");
+      }
+
+      const data = res.data; // { status: "WON"|"LOST", reward: {...}, redemptionId: "..." }
+
+      if (data.status === "LOST") {
+        setErrorMessage(data.message || (language === "en" ? "Better luck next time" : "अगली बार बेहतर किस्मत"));
+        setState("error");
+        return;
+      }
+
+      // WON
+      const reward = data.reward;
+
+      if (!reward) {
+        setErrorMessage("Reward data missing");
+        setState("error");
+        return;
+      }
+      setWonPrize({
+        name: reward.rewardName || reward.tierName,
+        name_hi: reward.rewardNameHi || "",
+        type: reward.rewardType,
+        value: Number(reward.rewardValue),
+        image_url: reward.imageUrl,
+        description: ""
+      });
+      setRedemptionId(data.redemptionId || null);
+
+      // Add to global store
+      addReward({
+        id: data.redemptionId || "",
+        couponCode: serialNumber,
+        prize: {
+          id: data.redemptionId || "",
+          name: reward.rewardName,
+          nameHi: reward.rewardNameHi || "",
+          value: Number(reward.rewardValue),
+          type: reward.rewardType.toLowerCase() as "points" | "cashback" | "discount" | "gift",
+          image: reward.imageUrl || "",
+          description: "",
+          descriptionHi: ""
+        },
+        productName: "Agrio Product", // Could come from API
+        status: "pending", // Pending verification
+        wonAt: new Date().toISOString()
+      });
+
+      setState("scratch");
+
+    } catch (err: any) {
+      setState("error");
+      setErrorMessage(err.message || (language === "en" ? "Verification failed" : "सत्यापन विफल"));
+    }
+  };
+
 
   // Toggle camera
   const toggleCamera = async () => {
@@ -398,334 +326,280 @@ export default function ScanPage() {
     }, 100);
   };
 
-  // Cleanup scanner on unmount
-  useEffect(() => {
-    return () => {
-      if (qrCodeScannerRef.current) {
-        qrCodeScannerRef.current.stop().catch(() => {});
-        try {
-          qrCodeScannerRef.current.clear();
-        } catch (error) {
-          // Ignore clear errors
-        }
-      }
-    };
-  }, []);
-
-  // Reset state
+  // Reset
   const resetScan = async () => {
     await stopQRScanner();
     setState("idle");
-    setManualCode("");
+    setSerialNumber("");
+    setAuthCode("");
     setErrorMessage("");
     setScratchProgress(0);
     setWonPrize(null);
     setRedemptionId(null);
   };
 
-  // Download certificate
-  const downloadCertificate = async () => {
-    if (!redemptionId) {
-      toast({
-        title: language === "en" ? "Error" : "त्रुटि",
-        description: language === "en" ? "No reward found" : "कोई पुरस्कार नहीं मिला",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const response = await api.getRewardCertificate(redemptionId);
-      
-      if (response.success && response.data) {
-        if (response.data.download_url) {
-          window.open(response.data.download_url, "_blank");
-        } else if (response.data.certificate_url) {
-          window.open(response.data.certificate_url, "_blank");
-        }
-        
-        toast({
-          title: language === "en" ? "Certificate Ready!" : "प्रमाणपत्र तैयार!",
-          description: language === "en"
-            ? "Your reward certificate is ready."
-            : "आपका पुरस्कार प्रमाणपत्र तैयार है।",
-          variant: "success",
-        });
-      } else {
-        toast({
-          title: language === "en" ? "Coming Soon" : "जल्द आ रहा है",
-          description: language === "en"
-            ? "Certificate will be available after verification."
-            : "सत्यापन के बाद प्रमाणपत्र उपलब्ध होगा।",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: language === "en" ? "Error" : "त्रुटि",
-        description: language === "en" ? "Failed to get certificate" : "प्रमाणपत्र प्राप्त करने में विफल",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
+    <div className="max-w-md mx-auto py-8 px-4">
+      {/* HEADER */}
+      <div className="text-center mb-8">
         <h1 className="text-2xl font-bold mb-2">
-          {language === "en" ? "Scan & Win" : "स्कैन और जीतें"}
+          {language === 'en' ? 'Scan & Win' : 'स्कैन करें और जीतें'}
         </h1>
-        <p className="text-muted-foreground">
-          {language === "en"
-            ? "Scan a product QR code or enter the code manually to win exciting rewards."
-            : "रोमांचक पुरस्कार जीतने के लिए उत्पाद QR कोड स्कैन करें या कोड मैन्युअल रूप से दर्ज करें।"}
+        <p className="text-muted-foreground text-sm">
+          {language === 'en' ? 'Scan the QR code on your product to verify and win rewards.' : 'पुरस्कार जीतने के लिए अपने उत्पाद पर QR कोड स्कैन करें।'}
         </p>
       </div>
 
-      <>
-        {/* Idle / Input State */}
-        {(state === "idle" || state === "error") && (
-          <div
-            key="input"
-            
-            
-            
-          >
-            <Tabs defaultValue={isMobile ? "scan" : "manual"} className="w-full">
-              <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                {isMobile && (
-                  <TabsTrigger value="scan">
-                    <QrCode className="h-4 w-4 mr-2" />
-                    {language === "en" ? "Scan QR Code" : "QR कोड स्कैन करें"}
-                  </TabsTrigger>
-                )}
-                <TabsTrigger value="manual">
-                  <Keyboard className="h-4 w-4 mr-2" />
-                  {language === "en" ? "Enter Code" : "कोड दर्ज करें"}
-                </TabsTrigger>
-              </TabsList>
+      <Card className="overflow-hidden border-2 border-primary/10 shadow-xl">
+        <CardContent className="p-0">
 
-              {/* QR Scanner Tab */}
-              <TabsContent value="scan">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="aspect-square max-w-sm mx-auto rounded-xl bg-gray-900 flex items-center justify-center relative overflow-hidden">
-                      <div id={qrCodeRegionId} className="w-full h-full" />
-                      {!isScanning && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-gray-900/90">
-                          <div className="text-center text-white">
-                            <Camera className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                            <p className="text-sm opacity-70 mb-4">
-                              {language === "en"
-                                ? "Click Start to begin scanning"
-                                : "स्कैनिंग शुरू करने के लिए Start पर क्लिक करें"}
-                            </p>
-                            <Button onClick={startQRScanner} size="lg">
-                              <Camera className="h-4 w-4 mr-2" />
-                              {language === "en" ? "Start Scanner" : "स्कैनर शुरू करें"}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    {isScanning && (
-                      <div className="flex gap-3 mt-4 justify-center">
-                        <Button variant="outline" size="sm" onClick={toggleCamera}>
-                          <FlipHorizontal className="h-4 w-4 mr-2" />
-                          {language === "en" ? "Flip Camera" : "कैमरा बदलें"}
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={stopQRScanner}>
-                          <StopCircle className="h-4 w-4 mr-2" />
-                          {language === "en" ? "Stop Scanner" : "स्कैनर रोकें"}
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
+          {/* STATE: IDLE */}
+          {state === "idle" && (
+            <div className="p-8 flex flex-col items-center text-center space-y-6">
+              <div className="h-32 w-32 bg-primary/5 rounded-full flex items-center justify-center animate-pulse">
+                <QrCode className="h-16 w-16 text-primary" />
+              </div>
 
-              {/* Manual Entry Tab */}
-              <TabsContent value="manual">
-                <Card>
-                  <CardContent className="p-6 space-y-4">
-                    <div className="text-center mb-6">
-                      <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                        <Keyboard className="h-8 w-8 text-primary" />
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {language === "en"
-                          ? "Enter the unique code found on your product"
-                          : "अपने उत्पाद पर मिला अद्वितीय कोड दर्ज करें"}
-                      </p>
-                    </div>
-
-                    <Input
-                      placeholder={language === "en" ? "Enter coupon code" : "कूपन कोड दर्ज करें"}
-                      value={manualCode}
-                      onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                      className="text-center text-lg tracking-wider font-mono h-14"
-                    />
-
-                    {state === "error" && errorMessage && (
-                      <div className="flex items-center gap-2 text-destructive text-sm">
-                        <XCircle className="h-4 w-4" />
-                        {errorMessage}
-                      </div>
-                    )}
-
-                    <Button
-                      onClick={handleManualSubmit}
-                      className="w-full h-12"
-                      disabled={manualCode.length < 6}
-                    >
-                      {language === "en" ? "Verify Coupon" : "कूपन सत्यापित करें"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-        )}
-
-        {/* Verifying State */}
-        {state === "verifying" && (
-          <div
-            key="verifying"
-            
-            
-            
-          >
-            <Card>
-              <CardContent className="p-12 text-center">
-                <Loader2 className="h-16 w-16 text-primary animate-spin mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">
-                  {language === "en" ? "Verifying Coupon..." : "कूपन सत्यापित हो रहा है..."}
-                </h3>
-                <p className="text-muted-foreground">
-                  {language === "en"
-                    ? "Please wait while we verify your coupon code."
-                    : "कृपया प्रतीक्षा करें जब तक हम आपका कूपन कोड सत्यापित करते हैं।"}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Scratch Card State */}
-        {state === "scratch" && wonPrize && (
-          <div
-            key="scratch"
-            
-            
-            
-          >
-            <Card>
-              <CardContent className="p-6 text-center">
-                <h3 className="text-xl font-bold mb-2">
-                  {language === "en" ? "Scratch to Reveal Your Prize!" : "अपना पुरस्कार जानने के लिए खुरचें!"}
-                </h3>
-                <p className="text-muted-foreground mb-6">
-                  {language === "en"
-                    ? "Scratch the card below to reveal your reward"
-                    : "अपना पुरस्कार जानने के लिए नीचे दिए गए कार्ड को खुरचें"}
-                </p>
-
-                <div className="relative w-72 h-48 mx-auto rounded-xl overflow-hidden border-4 border-dashed border-primary">
-                  {/* Prize underneath */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center">
-                    <div className="text-center">
-                      <Gift className="h-12 w-12 text-amber-600 mx-auto mb-2" />
-                      <p className="font-bold text-lg text-amber-800">
-                        {language === "en" ? wonPrize.name : wonPrize.name_hi}
-                      </p>
-                      {wonPrize.value > 0 && (
-                        <p className="text-amber-700">₹{wonPrize.value}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Scratch canvas */}
-                  <canvas
-                    ref={canvasRef}
-                    width={288}
-                    height={192}
-                    className="absolute inset-0 scratch-canvas"
-                    onMouseDown={() => setIsDrawing(true)}
-                    onMouseUp={() => setIsDrawing(false)}
-                    onMouseLeave={() => setIsDrawing(false)}
-                    onMouseMove={handleScratch}
-                    onTouchStart={() => setIsDrawing(true)}
-                    onTouchEnd={() => setIsDrawing(false)}
-                    onTouchMove={handleScratch}
-                  />
+              <div className="space-y-3 w-full">
+                <Button onClick={startQRScanner} size="lg" className="w-full h-14 text-lg font-bold shadow-lg shadow-primary/25">
+                  <Camera className="mr-2 h-5 w-5" />
+                  {language === 'en' ? 'Scan QR Code' : 'QR कोड स्कैन करें'}
+                </Button>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                  <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-muted-foreground">{language === 'en' ? 'Or' : 'या'}</span></div>
                 </div>
+                <Button variant="outline" onClick={() => setState("verify-form")} className="w-full">
+                  <Keyboard className="mr-2 h-4 w-4" />
+                  {language === 'en' ? 'Enter Code Manually' : 'मैन्युअल रूप से कोड दर्ज करें'}
+                </Button>
+              </div>
+            </div>
+          )}
 
-                <p className="text-sm text-muted-foreground mt-4">
-                  {language === "en"
-                    ? `${Math.round(scratchProgress)}% scratched`
-                    : `${Math.round(scratchProgress)}% खुरचा गया`}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+          {/* STATE: SCANNING */}
+          {state === "scanning" && (
+            <div className="relative bg-black h-[400px]">
+              <div id={qrCodeRegionId} className="w-full h-full" />
 
-        {/* Prize Revealed State */}
-        {state === "revealed" && wonPrize && (
-          <div
-            key="revealed"
-            
-            
-            
-          >
-            <Card className="overflow-hidden">
-              <div className="bg-gradient-to-br from-primary to-primary-dark p-8 text-white text-center">
-                <div
-                  
-                  
-                  
-                >
-                  <Sparkles className="h-16 w-16 mx-auto mb-4" />
-                </div>
-                <h2 className="text-3xl font-bold mb-2">
-                  {language === "en" ? "Congratulations!" : "बधाई हो!"}
-                </h2>
-                <p className="opacity-90">
-                  {language === "en" ? "You Won" : "आपने जीता"}
+              {/* Overlay Controls */}
+              <div className="absolute top-4 right-4 z-10 flex gap-2">
+                <Button size="icon" variant="secondary" onClick={toggleCamera} className="rounded-full h-10 w-10 bg-white/20 backdrop-blur-md border-0 text-white hover:bg-white/30">
+                  <FlipHorizontal className="h-5 w-5" />
+                </Button>
+                <Button size="icon" variant="destructive" onClick={resetScan} className="rounded-full h-10 w-10">
+                  <XCircle className="h-5 w-5" />
+                </Button>
+              </div>
+
+              <div className="absolute bottom-8 left-0 right-0 text-center px-4">
+                <p className="text-white bg-black/50 backdrop-blur-sm py-2 px-4 rounded-full inline-block text-sm font-medium">
+                  {language === 'en' ? 'Align QR code within the frame' : 'फ्रेम के भीतर QR कोड संरेखित करें'}
                 </p>
               </div>
-              <CardContent className="p-8 text-center">
-                <div className="h-20 w-20 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
-                  <Gift className="h-10 w-10 text-amber-600" />
-                </div>
-                <h3 className="text-2xl font-bold mb-2">
-                  {language === "en" ? wonPrize.name : wonPrize.name_hi}
-                </h3>
-                {wonPrize.value > 0 && (
-                  <p className="text-xl text-primary font-semibold mb-2">
-                    ₹{wonPrize.value}
-                  </p>
-                )}
-                <p className="text-muted-foreground mb-6">
-                  {wonPrize.description || (language === "en" 
-                    ? "Your reward has been credited to your account!"
-                    : "आपका पुरस्कार आपके खाते में जमा कर दिया गया है!")}
-                </p>
+            </div>
+          )}
 
-                <div className="flex gap-3 justify-center">
-                  <Button onClick={downloadCertificate}>
-                    <Download className="h-4 w-4 mr-2" />
-                    {language === "en" ? "Download Certificate" : "प्रमाणपत्र डाउनलोड करें"}
-                  </Button>
-                  <Button variant="outline" onClick={resetScan}>
-                    {language === "en" ? "Scan Another" : "एक और स्कैन करें"}
-                  </Button>
+          {/* STATE: VERIFY FORM */}
+          {state === "verify-form" && (
+            <div className="p-6 space-y-6">
+              <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg flex items-start gap-3">
+                <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                <div>
+                  <h4 className="font-semibold text-blue-900 text-sm">
+                    {language === 'en' ? 'Verification Required' : 'सत्यापन आवश्यक'}
+                  </h4>
+                  <p className="text-blue-700 text-xs mt-1 leading-relaxed">
+                    {language === 'en' ? 'Please enter the Serial Number and 6-digit Authentic Code found on the scratch card.' : 'कृपया स्क्रैच कार्ड पर पाया गया सीरियल नंबर और 6-अंकीय प्रमाणिक कोड दर्ज करें।'}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    {language === 'en' ? 'Serial Number' : 'सीरियल नंबर'}
+                  </label>
+                  <Input
+                    value={serialNumber}
+                    onChange={(e) => setSerialNumber(e.target.value)}
+                    placeholder="e.g. SN12345678"
+                    className="font-mono uppercase"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    {language === 'en' ? 'Authentic Code' : 'प्रमाणिक कोड'}
+                  </label>
+                  <Input
+                    value={authCode}
+                    onChange={(e) => setAuthCode(e.target.value)}
+                    placeholder="e.g. A1B2C3"
+                    maxLength={8}
+                    className="font-mono uppercase tracking-widest"
+                  />
+                </div>
+              </div>
+
+              {errorMessage && (
+                <div className="p-3 bg-red-50 text-red-600 text-sm rounded-md flex items-center gap-2">
+                  <XCircle className="h-4 w-4" /> {errorMessage}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" onClick={resetScan} className="flex-1">
+                  {language === 'en' ? 'Cancel' : 'रद्द करें'}
+                </Button>
+                <Button onClick={handleSubmitVerification} className="flex-1" disabled={!serialNumber || !authCode}>
+                  {language === 'en' ? 'Verify & Claim' : 'सत्यापित करें और दावा करें'}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* STATE: VERIFYING */}
+          {state === "verifying" && (
+            <div className="p-12 flex flex-col items-center justify-center space-y-4 min-h-[300px]">
+              <Loader2 className="h-12 w-12 text-primary animate-spin" />
+              <p className="text-muted-foreground font-medium animate-pulse">
+                {language === 'en' ? 'Verifying Code...' : 'कोड सत्यापित कर रहा है...'}
+              </p>
+            </div>
+          )}
+
+          {/* STATE: SCRATCH */}
+          {state === "scratch" && (
+            <div className="p-6 text-center space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-green-700">
+                  {language === 'en' ? 'Code Verified!' : 'कोड सत्यापित!'}
+                </h3>
+                <p className="text-sm text-gray-500">
+                  {language === 'en' ? 'Scratch the card below to reveal your prize.' : 'अपना पुरस्कार जानने के लिए नीचे कार्ड खुरचें।'}
+                </p>
+              </div>
+
+              <div className="relative mx-auto w-[300px] h-[300px] rounded-xl overflow-hidden shadow-2xl border-4 border-yellow-400 bg-white select-none touch-none">
+                {/* Prize Underneath (Hidden initially) */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-yellow-50 to-orange-50 p-6">
+                  {wonPrize?.type === 'GIFT' && wonPrize.image_url ? (
+                    <img src={wonPrize.image_url} alt="Prize" className="h-32 w-32 object-contain mb-4 drop-shadow-lg" />
+                  ) : (
+                    <div className="h-24 w-24 bg-yellow-100 rounded-full flex items-center justify-center mb-4 text-4xl shadow-inner">🏆</div>
+                  )}
+                  <h4 className="font-bold text-xl text-yellow-800 tabular-nums">
+                    {wonPrize?.type === 'CASHBACK' && '₹'}{wonPrize?.value}
+                  </h4>
+                  <p className="text-sm font-bold text-yellow-600 uppercase tracking-wide mt-1">
+                    {language === 'en' ? wonPrize?.name : wonPrize?.name_hi}
+                  </p>
+                </div>
+
+                {/* Canvas Overlay */}
+                <canvas
+                  ref={canvasRef}
+                  width={300}
+                  height={300}
+                  className="absolute inset-0 w-full h-full cursor-pointer z-10"
+                  onMouseDown={() => setIsDrawing(true)}
+                  onMouseUp={() => setIsDrawing(false)}
+                  onMouseLeave={() => setIsDrawing(false)}
+                  onMouseMove={handleScratch}
+                  onTouchStart={() => setIsDrawing(true)}
+                  onTouchEnd={() => setIsDrawing(false)}
+                  onTouchMove={handleScratch}
+                />
+              </div>
+
+              <p className="text-xs text-gray-400">
+                {Math.round(scratchProgress)}% {language === 'en' ? 'revealed' : 'प्रकट किया'}
+              </p>
+            </div>
+          )}
+
+          {/* STATE: REVEALED */}
+          {state === "revealed" && wonPrize && (
+            <div className="p-8 text-center space-y-8 animate-in zoom-in-90 duration-500">
+              <div className="relative inline-block">
+                <Sparkles className="absolute -top-6 -right-6 h-12 w-12 text-yellow-400 animate-bounce" />
+                <Sparkles className="absolute -bottom-2 -left-6 h-8 w-8 text-yellow-400 animate-pulse delay-75" />
+
+                <div className="h-40 w-40 mx-auto rounded-full bg-gradient-to-br from-yellow-300 to-orange-400 p-1 shadow-2xl">
+                  <div className="h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                    {wonPrize.image_url ? (
+                      <img src={wonPrize.image_url} className="h-28 w-28 object-contain" />
+                    ) : (
+                      <span className="text-5xl">🎁</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-3xl font-black text-gray-900 tracking-tight">
+                  {language === 'en' ? 'Congratulations!' : 'बधाई हो!'}
+                </h2>
+                <p className="text-lg text-gray-600 font-medium max-w-xs mx-auto">
+                  {language === 'en' ? 'You have won' : 'आपने जीता है'} <br />
+                  <span className="text-primary font-bold text-xl">
+                    {language === 'en' ? wonPrize.name : wonPrize.name_hi}
+                  </span>
+                </p>
+              </div>
+
+              <div className="bg-green-50 rounded-lg p-4 border border-green-100 mx-auto max-w-sm">
+                <p className="text-sm text-green-800">
+                  {language === 'en' ? 'Your reward has been added to your wallet. Verification is pending.' : 'आपका पुरस्कार आपके वॉलेट में जोड़ दिया गया है। सत्यापन लंबित है।'}
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <Button onClick={resetScan} className="w-full h-12 text-lg font-bold">
+                  {language === 'en' ? 'Scan Another' : 'दूसरा स्कैन करें'}
+                </Button>
+                <Link href="/dashboard/rewards" className="w-full">
+                  <Button variant="outline" className="w-full">
+                    {language === 'en' ? 'View My Rewards' : 'मेरे पुरस्कार देखें'}
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* STATE: ERROR */}
+          {state === "error" && (
+            <div className="p-8 text-center space-y-6">
+              <div className="mx-auto h-20 w-20 bg-red-100 rounded-full flex items-center justify-center">
+                <XCircle className="h-10 w-10 text-red-600" />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-red-900">
+                  {language === 'en' ? 'Verification Failed' : 'सत्यापन विफल'}
+                </h3>
+                <p className="text-gray-600 max-w-xs mx-auto">
+                  {errorMessage}
+                </p>
+              </div>
+
+              <Button onClick={() => setState("verify-form")} className="w-full">
+                {language === 'en' ? 'Try Again' : 'पुनः प्रयास करें'}
+              </Button>
+              <Button variant="ghost" onClick={resetScan} className="w-full">
+                {language === 'en' ? 'Back to Scanner' : 'स्कैनर पर वापस जाएं'}
+              </Button>
+            </div>
+          )}
+
+        </CardContent>
+      </Card>
+
+      {state === 'idle' && (
+        <p className="text-center text-xs text-muted-foreground mt-8 max-w-xs mx-auto">
+          {language === 'en' ? 'Protected by anti-fraud technology. Each code can only be used once.' : 'एंटी-फ्रॉड तकनीक द्वारा सुरक्षित। प्रत्येक कोड का उपयोग केवल एक बार किया जा सकता है।'}
+        </p>
+      )}
     </div>
   );
 }

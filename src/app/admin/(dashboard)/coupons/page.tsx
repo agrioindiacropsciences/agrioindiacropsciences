@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
@@ -12,12 +14,25 @@ import {
   Gift,
   Sparkles,
   Trash2,
+  Upload,
+  ImagePlus,
+  LayoutGrid,
+  List,
+  Activity,
+  FileSpreadsheet,
+  FileCheck,
+  ArrowRight,
+  Database,
+  History,
+  RefreshCw
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -49,19 +64,17 @@ import type { AdminCoupon, Product, Campaign } from "@/lib/api";
 export default function CouponsPage() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [batchFilter, setBatchFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("used");
+  const [batches, setBatches] = useState<any[]>([]);
+  const [isLoadingBatches, setIsLoadingBatches] = useState(false);
+
   const [createCampaignDialogOpen, setCreateCampaignDialogOpen] = useState(false);
-  const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [coupons, setCoupons] = useState<AdminCoupon[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isCreatingCampaign, setIsCreatingCampaign] = useState(false);
-  const [generateQRCodes, setGenerateQRCodes] = useState(true);
-  const [qrCodesPreview, setQrCodesPreview] = useState<Array<{ code: string; qrUrl: string }>>([]);
-  const [qrBatchInfo, setQrBatchInfo] = useState<{ batchId?: string; generatedCount?: number } | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -69,14 +82,9 @@ export default function CouponsPage() {
   const [selectedCoupon, setSelectedCoupon] = useState<AdminCoupon | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  const [activeTab, setActiveTab] = useState("campaigns");
+  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
 
-  const [generateForm, setGenerateForm] = useState({
-    campaign_id: "",
-    count: "100",
-    product_id: "",
-    prefix: "",
-    expiry_date: "",
-  });
 
   const [campaignForm, setCampaignForm] = useState<{
     name: string;
@@ -85,12 +93,15 @@ export default function CouponsPage() {
     end_date: string;
     distribution_type: "RANDOM" | "SEQUENTIAL" | "FIRST_COME";
     is_active: boolean;
-    tier_name: string;
-    reward_name: string;
-    reward_type: "CASHBACK" | "DISCOUNT" | "GIFT";
-    reward_value: string;
-    probability: string;
-    image_url: string;
+    total_coupons: string;
+    tiers: Array<{
+      id?: string;
+      reward_type: "CASHBACK" | "DISCOUNT" | "GIFT";
+      reward_value: string;
+      max_winners: string;
+      current_winners?: number;
+      image_url: string;
+    }>;
   }>({
     name: "",
     name_hi: "",
@@ -98,18 +109,29 @@ export default function CouponsPage() {
     end_date: "",
     distribution_type: "RANDOM",
     is_active: true,
-    tier_name: "Default Tier",
-    reward_name: "",
-    reward_type: "CASHBACK",
-    reward_value: "100",
-    probability: "1",
-    image_url: "",
+    total_coupons: "100",
+    tiers: [
+      {
+        reward_type: "CASHBACK",
+        reward_value: "10",
+        max_winners: "90",
+        image_url: "",
+      },
+      {
+        reward_type: "CASHBACK",
+        reward_value: "5000",
+        max_winners: "10",
+        image_url: "",
+      }
+    ],
   });
+
+  const [uploadingTierIndex, setUploadingTierIndex] = useState<number | null>(null);
 
   const fetchCoupons = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await api.getAdminCoupons(page, 10, statusFilter !== "all" ? statusFilter : undefined);
+      const response = await api.getAdminCoupons(page, 10, statusFilter !== "all" ? statusFilter : undefined, batchFilter || undefined);
       if (response.success && response.data) {
         setCoupons(response.data.coupons || []);
         if (response.data.pagination) {
@@ -121,7 +143,39 @@ export default function CouponsPage() {
       console.error("Failed to fetch coupons:", error);
     }
     setIsLoading(false);
-  }, [page, statusFilter]);
+  }, [page, statusFilter, batchFilter]);
+
+  const fetchBatches = useCallback(async () => {
+    setIsLoadingBatches(true);
+    try {
+      // Using named export directly
+      const response = await api.getAdminBatches();
+      console.log("[DEBUG] Batches RAW Response:", JSON.stringify(response, null, 2));
+      if (response.success && response.data) {
+        setBatches(response.data);
+      } else {
+        toast({
+          title: "Inventory Alert",
+          description: response.error?.message || "Failed to load upload history.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch batches:", error);
+      toast({
+        title: "Network Error",
+        description: "Could not reach the server to fetch inventory.",
+        variant: "destructive"
+      });
+    }
+    setIsLoadingBatches(false);
+  }, [toast]);
+
+  useEffect(() => {
+    if (activeTab === 'batches') {
+      fetchBatches();
+    }
+  }, [activeTab, fetchBatches]);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -167,99 +221,6 @@ export default function CouponsPage() {
     return `https://quickchart.io/qr?text=${encodeURIComponent(code)}&centerImageUrl=${encodeURIComponent(logoUrl)}&centerImageSize=0.15&size=300&ecLevel=H`;
   };
 
-  const handleGenerateCoupons = async () => {
-    if (!generateForm.campaign_id || !generateForm.count) {
-      toast({
-        title: "Validation Error",
-        description: "Please select a campaign and enter the number of coupons",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsGenerating(true);
-    try {
-      const response = await api.generateCoupons({
-        campaign_id: generateForm.campaign_id,
-        count: parseInt(generateForm.count),
-        product_id: generateForm.product_id || undefined,
-        prefix: generateForm.prefix || undefined,
-        expiry_date: generateForm.expiry_date || undefined,
-      });
-
-      if (response.success) {
-        toast({
-          title: "Success",
-          description: `${generateForm.count} coupons generated successfully`,
-        });
-
-        if (generateQRCodes && response.data?.batch_id) {
-          const batchId = response.data.batch_id;
-          try {
-            const listRes = await api.getAdminCoupons({ page: 1, limit: 1000, status: "unused" });
-            const list = listRes.success ? listRes.data?.coupons || [] : [];
-            const batchCoupons = list.filter((c) => c.batch_number === batchId);
-            const qrItems = batchCoupons.map((c) => ({ code: c.code, qrUrl: getQrUrl(c.code) }));
-            setQrCodesPreview(qrItems);
-            setQrBatchInfo({ batchId, generatedCount: response.data?.generated_count });
-            setQrDialogOpen(true);
-          } catch {
-            // ignore
-          }
-        }
-
-        setGenerateDialogOpen(false);
-        setGenerateForm({ campaign_id: "", count: "100", product_id: "", prefix: "", expiry_date: "" });
-        fetchCoupons();
-      } else {
-        toast({
-          title: "Error",
-          description: response.error?.message || "Failed to generate coupons",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Something went wrong",
-        variant: "destructive",
-      });
-    }
-    setIsGenerating(false);
-  };
-
-  const openPrintableQrSheet = () => {
-    if (qrCodesPreview.length === 0) return;
-    const w = window.open("", "_blank");
-    if (!w) return;
-    const html = `
-      <html>
-        <head>
-          <title>QR Sheet</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 16px; }
-            .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-            .item { border: 1px solid #ddd; padding: 8px; border-radius: 8px; }
-            .code { font-family: monospace; font-size: 10px; margin-top: 6px; word-break: break-all; }
-            img { width: 100%; height: auto; }
-            @media print { body { padding: 0; } }
-          </style>
-        </head>
-        <body>
-          <h2>Coupon QR Sheet</h2>
-          ${qrBatchInfo?.batchId ? `<div>Batch: <span style="font-family: monospace">${qrBatchInfo.batchId}</span></div>` : ""}
-          <div class="grid">
-            ${qrCodesPreview.map((q) => `<div class="item"><img src="${q.qrUrl}" /><div class="code">${q.code}</div></div>`).join("")}
-          </div>
-          <script>window.onload = () => { setTimeout(() => window.print(), 300); };</script>
-        </body>
-      </html>
-    `;
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-  };
-
   const downloadQrPng = (code: string, qrUrl: string) => {
     const a = document.createElement("a");
     a.href = qrUrl;
@@ -269,70 +230,145 @@ export default function CouponsPage() {
     document.body.removeChild(a);
   };
 
-  const downloadAllQrPngs = async () => {
-    for (const item of qrCodesPreview) {
-      downloadQrPng(item.code, item.qrUrl);
-      await new Promise((r) => setTimeout(r, 250));
-    }
-  };
-
-  const handleCreateCampaign = async () => {
-    if (!campaignForm.name || !campaignForm.reward_value) {
+  const handleSubmitCampaign = async () => {
+    if (!campaignForm.name || campaignForm.tiers.length === 0) {
       toast({
         title: "Validation Error",
-        description: "Please enter campaign name and reward value",
+        description: "Please enter campaign name and at least one reward tier",
         variant: "destructive",
       });
       return;
     }
 
+    const totalPrizes = campaignForm.tiers.reduce((acc, t) => acc + parseInt(t.max_winners || "0"), 0);
+    const poolSize = parseInt(campaignForm.total_coupons || "0") || totalPrizes;
+
     setIsCreatingCampaign(true);
     try {
-      const response = await api.createCampaign({
+      const payload = {
         name: campaignForm.name,
         name_hi: campaignForm.name_hi || undefined,
         start_date: campaignForm.start_date || undefined,
         end_date: campaignForm.end_date || undefined,
         distribution_type: campaignForm.distribution_type,
         is_active: campaignForm.is_active,
-        tiers: [{
-          tier_name: campaignForm.tier_name || "Default Tier",
-          reward_name: campaignForm.reward_name || `₹${campaignForm.reward_value} ${campaignForm.reward_type}`,
-          reward_type: campaignForm.reward_type,
-          reward_value: parseInt(campaignForm.reward_value),
-          probability: parseFloat(campaignForm.probability) || 1,
-          priority: 1,
-          image_url: campaignForm.reward_type === "GIFT" ? campaignForm.image_url.trim() : undefined,
-        }],
-      });
+        tiers: campaignForm.tiers.map((t, idx) => ({
+          ...(t.id && { id: t.id }), // Include ID if editing
+          tier_name: `Tier ${idx + 1}`,
+          reward_name: t.reward_type === "GIFT" ? t.reward_value : `₹${t.reward_value} ${t.reward_type}`,
+          reward_type: t.reward_type === "GIFT" ? "GIFT" : t.reward_type as any,
+          reward_value: t.reward_type === "GIFT" ? 0 : parseInt(t.reward_value),
+          probability: poolSize > 0 ? (parseInt(t.max_winners) / poolSize) : 0,
+          priority: idx + 1,
+          max_winners: parseInt(t.max_winners),
+          ...(t.current_winners !== undefined && { current_winners: t.current_winners }),
+          image_url: t.reward_type === "GIFT" ? t.image_url.trim() : undefined,
+        })),
+      };
+
+      const response = editingCampaignId
+        ? await api.updateCampaign(editingCampaignId, payload)
+        : await api.createCampaign(payload);
 
       if (response.success) {
         toast({
           title: "Success",
-          description: "Campaign created successfully!",
+          description: editingCampaignId ? "Campaign updated successfully!" : "Campaign created successfully!",
         });
         setCreateCampaignDialogOpen(false);
+        setEditingCampaignId(null);
         setCampaignForm({
           name: "", name_hi: "", start_date: "", end_date: "",
-          distribution_type: "RANDOM", is_active: true, tier_name: "Default Tier",
-          reward_name: "", reward_type: "CASHBACK", reward_value: "100", probability: "1", image_url: "",
+          distribution_type: "RANDOM", is_active: true, total_coupons: "100",
+          tiers: [
+            { reward_type: "CASHBACK", reward_value: "10", max_winners: "90", image_url: "" },
+            { reward_type: "CASHBACK", reward_value: "5000", max_winners: "10", image_url: "" }
+          ]
         });
         fetchCampaigns();
       } else {
         toast({
           title: "Error",
-          description: response.error?.message || "Failed to create campaign",
+          description: response.error?.message || "Something went wrong",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to save campaign:", error);
+      toast({ title: "Error", description: "Something went wrong", variant: "destructive" });
+    }
+    setIsCreatingCampaign(false);
+  };
+
+  const handleEditCampaign = (camp: Campaign) => {
+    console.log('[DEBUG] Editing campaign:', camp);
+    console.log('[DEBUG] Tiers:', camp.tiers);
+    setEditingCampaignId(camp.id);
+    const mappedTiers = (camp.tiers || []).map(t => ({
+      id: t.id,
+      reward_type: (t.reward_type === 'POINTS' ? 'CASHBACK' : t.reward_type) as "CASHBACK" | "DISCOUNT" | "GIFT",
+      reward_value: t.reward_type === 'GIFT' ? t.reward_name : String(t.reward_value),
+      max_winners: String(t.max_winners || 0),
+      current_winners: t.current_winners || 0,
+      image_url: t.image_url || ""
+    }));
+    console.log('[DEBUG] Mapped tiers:', mappedTiers);
+    setCampaignForm({
+      name: camp.name,
+      name_hi: camp.name_hi || "",
+      start_date: camp.start_date ? new Date(camp.start_date).toISOString().split('T')[0] : "",
+      end_date: camp.end_date ? new Date(camp.end_date).toISOString().split('T')[0] : "",
+      distribution_type: camp.distribution_type || "RANDOM",
+      is_active: camp.is_active,
+      total_coupons: "100", // Fallback
+      tiers: mappedTiers
+    });
+    setCreateCampaignDialogOpen(true);
+  };
+
+  const handleDeleteCampaign = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete campaign "${name}"? This will not work if the campaign has active coupons.`)) return;
+
+    try {
+      const res = await api.deleteCampaign(id);
+      if (res.success) {
+        toast({ title: "Deleted", description: "Campaign removed." });
+        fetchCampaigns();
+      } else {
+        toast({ title: "Error", description: res.error?.message || "Failed to delete", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Error", description: "Network error", variant: "destructive" });
+    }
+  };
+
+  const handleImageUpload = async (index: number, file: File) => {
+    setUploadingTierIndex(index);
+    try {
+      const response = await api.uploadMedia(file, "campaigns");
+      if (response.success && response.data) {
+        const newTiers = [...campaignForm.tiers];
+        newTiers[index].image_url = response.data.url;
+        setCampaignForm({ ...campaignForm, tiers: newTiers });
+        toast({
+          title: "Success",
+          description: "Image uploaded successfully!",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to upload image",
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Something went wrong",
+        description: "Upload failed",
         variant: "destructive",
       });
     }
-    setIsCreatingCampaign(false);
+    setUploadingTierIndex(null);
   };
 
   const handleDeleteCoupon = async (id: string) => {
@@ -376,9 +412,35 @@ export default function CouponsPage() {
     setIsDeleting(false);
   };
 
-  const unusedFiltered = useMemo(() => filteredCoupons.filter((c) => !c.is_used), [filteredCoupons]);
-  const allUnusedSelected = unusedFiltered.length > 0 && unusedFiltered.every((c) => selectedIds.has(c.id));
-  const someUnusedSelected = unusedFiltered.some((c) => selectedIds.has(c.id));
+  const allSelected = filteredCoupons.length > 0 && filteredCoupons.every((c) => selectedIds.has(c.id));
+  const someSelected = filteredCoupons.some((c) => selectedIds.has(c.id));
+
+  const handleClearHistory = async () => {
+    const redeemedIds = coupons.filter(c => c.is_used).map(c => c.id);
+    if (redeemedIds.length === 0) {
+      toast({ title: "No history", description: "There are no redeemed coupons to clear." });
+      return;
+    }
+
+    if (!confirm(`This will delete ALL ${redeemedIds.length} redeemed records in the current set. Continue?`)) return;
+
+    setIsDeleting(true);
+    try {
+      const res = await api.deleteCouponsBulk(redeemedIds);
+      if (res.success) {
+        toast({ title: "History Cleared", description: "Redemption history has been purged." });
+        setSelectedIds(prev => {
+          const n = new Set(prev);
+          redeemedIds.forEach(id => n.delete(id));
+          return n;
+        });
+        fetchCoupons();
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to clear history", variant: "destructive" });
+    }
+    setIsDeleting(false);
+  };
 
   return (
     <div className="space-y-6 pb-8">
@@ -390,7 +452,7 @@ export default function CouponsPage() {
       >
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
-        
+
         <div className="relative">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -399,599 +461,656 @@ export default function CouponsPage() {
               </div>
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold">Coupons Management</h1>
-                <p className="text-white/70 text-sm">Generate and manage promotional coupons</p>
+                <p className="text-white/70 text-sm">Design rewards and manage QR code inventory</p>
               </div>
             </div>
             <div className="flex gap-2">
-              <Button 
+              <Button
                 variant="outline"
-                onClick={() => setCreateCampaignDialogOpen(true)}
+                onClick={() => {
+                  setEditingCampaignId(null);
+                  setCampaignForm({
+                    name: "", name_hi: "", start_date: "", end_date: "",
+                    distribution_type: "RANDOM", is_active: true, total_coupons: "100",
+                    tiers: [
+                      { reward_type: "CASHBACK", reward_value: "10", max_winners: "90", image_url: "" },
+                      { reward_type: "CASHBACK", reward_value: "5000", max_winners: "10", image_url: "" }
+                    ]
+                  });
+                  setCreateCampaignDialogOpen(true);
+                }}
                 className="bg-white/20 border-white/30 hover:bg-white/30 text-white"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Campaign
+                New Campaign
               </Button>
-              <Button 
-                onClick={() => setGenerateDialogOpen(true)}
-                className="bg-white text-orange-600 hover:bg-white/90 shadow-lg"
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                Generate Coupons
-              </Button>
-              {someUnusedSelected && (
-                <Button
-                  variant="outline"
-                  onClick={handleDeleteSelected}
-                  disabled={isDeleting}
-                  className="bg-red-500/20 border-red-400/50 hover:bg-red-500/30 text-white"
-                >
-                  {isDeleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
-                  Delete Selected ({selectedIds.size})
+              <Link href="/admin/coupons/bulk">
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg border-0">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Bulk Upload
                 </Button>
-              )}
+              </Link>
             </div>
           </div>
-          
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
-              <p className="text-2xl sm:text-3xl font-bold">{total}</p>
-              <p className="text-xs text-white/70">Total Coupons</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
-              <p className="text-2xl sm:text-3xl font-bold">{unusedCount}</p>
-              <p className="text-xs text-white/70">Unused</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
-              <p className="text-2xl sm:text-3xl font-bold">{usedCount}</p>
-              <p className="text-xs text-white/70">Used</p>
-            </div>
-          </div>
+
+
         </div>
       </motion.div>
 
-      {/* Search and Filters */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <Card className="border-0 shadow-md">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search coupons..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-11 h-11 bg-gray-50 border-gray-200"
-                />
-              </div>
-              <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPage(1); }}>
-                <SelectTrigger className="w-32 h-11">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="unused">Unused</SelectItem>
-                  <SelectItem value="used">Used</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={() => fetchCoupons()} variant="secondary" className="h-11">
-                Apply
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      {/* Main Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="bg-white/50 backdrop-blur border border-gray-100 p-1 rounded-xl h-auto self-start">
+          <TabsTrigger
+            value="campaigns"
+            className="rounded-lg px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          >
+            Reward Campaigns
+          </TabsTrigger>
+          <TabsTrigger
+            value="history"
+            className="rounded-lg px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          >
+            <QrCode className="h-4 w-4 mr-2" />
+            QR Scan History
+          </TabsTrigger>
+          <TabsTrigger
+            value="batches"
+            className="rounded-lg px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Inventory
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Coupons Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <Card className="border-0 shadow-md overflow-hidden">
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="p-6 space-y-4">
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <div key={index} className="flex items-center gap-4">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-6 w-16" />
-                  </div>
-                ))}
-              </div>
-            ) : (
+        <TabsContent value="campaigns" className="mt-0">
+          <Card className="border-0 shadow-md overflow-hidden">
+            <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50/50">
-                    <TableHead className="w-12">
-                      <Checkbox
-                        checked={allUnusedSelected}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedIds(new Set(unusedFiltered.map((c) => c.id)));
-                          } else {
-                            setSelectedIds(new Set());
-                          }
-                        }}
-                        aria-label="Select all"
-                      />
-                    </TableHead>
-                    <TableHead className="font-semibold">Coupon Code</TableHead>
-                    <TableHead className="font-semibold">Product</TableHead>
-                    <TableHead className="font-semibold">Reward</TableHead>
+                    <TableHead className="font-semibold">Campaign</TableHead>
+                    <TableHead className="font-semibold">Structure</TableHead>
                     <TableHead className="font-semibold">Status</TableHead>
-                    <TableHead className="font-semibold">User</TableHead>
-                    <TableHead className="font-semibold">Actions</TableHead>
+                    <TableHead className="font-semibold">Dates</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCoupons.length > 0 ? (
-                    filteredCoupons.map((coupon, index) => (
-                      <motion.tr
-                        key={coupon.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.03 }}
-                        className="hover:bg-gray-50/50 transition-colors"
-                      >
+                  {campaigns.length > 0 ? (
+                    campaigns.map((camp) => (
+                      <TableRow key={camp.id} className="hover:bg-gray-50/50">
                         <TableCell>
-                          {!coupon.is_used && (
-                            <Checkbox
-                              checked={selectedIds.has(coupon.id)}
-                              onCheckedChange={(checked) => {
-                                setSelectedIds((prev) => {
-                                  const n = new Set(prev);
-                                  if (checked) n.add(coupon.id);
-                                  else n.delete(coupon.id);
-                                  return n;
-                                });
-                              }}
-                              aria-label={`Select ${coupon.code}`}
-                            />
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <QrCode className="h-4 w-4 text-gray-400" />
-                            <span className="font-mono font-semibold text-gray-900">{coupon.code}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-gray-600">{coupon.product?.name || "-"}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Gift className="h-4 w-4 text-amber-500" />
-                            <span className="text-sm font-medium">
-                              {coupon.reward_type === "CASHBACK" && `₹${coupon.reward_value}`}
-                              {coupon.reward_type === "DISCOUNT" && `${coupon.reward_value}%`}
-                              {coupon.reward_type === "GIFT" && "Gift"}
-                            </span>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-gray-900">{camp.name}</span>
+                            <span className="text-[10px] text-gray-400 font-mono tracking-tight uppercase">{camp.id.slice(0, 8)}...</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={coupon.is_used ? "secondary" : "success"}>
-                            {coupon.is_used ? "Used" : "Unused"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-gray-600">{coupon.redeemed_by?.name || "-"}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button 
-                              variant="link" 
-                              size="sm" 
-                              className="text-primary p-0"
-                              onClick={async () => {
-                                try {
-                                  const response = await api.getAdminCoupon(coupon.id);
-                                  if (response.success && response.data) {
-                                    setSelectedCoupon(response.data as AdminCoupon);
-                                    setViewCouponDialogOpen(true);
-                                  } else {
-                                    toast({
-                                      title: "Error",
-                                      description: "Failed to load coupon details",
-                                      variant: "destructive",
-                                    });
-                                  }
-                                } catch (error) {
-                                  toast({
-                                    title: "Error",
-                                    description: "Failed to load coupon details",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }}
-                            >
-                              View
-                            </Button>
-                            {!coupon.is_used && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => handleDeleteCoupon(coupon.id)}
-                                disabled={isDeleting}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                          <div className="flex flex-wrap gap-1">
+                            {camp.tiers?.slice(0, 2).map((t, i) => (
+                              <Badge key={i} variant="secondary" className="bg-orange-50 text-orange-700 text-[10px] scale-90 origin-left">
+                                {t.reward_name}
+                              </Badge>
+                            ))}
+                            {(camp.tiers?.length || 0) > 2 && (
+                              <span className="text-[10px] text-gray-400">+{camp.tiers!.length - 2}</span>
                             )}
                           </div>
                         </TableCell>
-                      </motion.tr>
+                        <TableCell>
+                          <Badge variant={camp.is_active ? "success" : "secondary"} className="rounded-full text-[10px]">
+                            {camp.is_active ? "Active" : "Draft"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-[11px] text-gray-500">
+                          {camp.start_date ? new Date(camp.start_date).toLocaleDateString() : 'N/A'} - {camp.end_date ? new Date(camp.end_date).toLocaleDateString() : 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-orange-600 text-xs"
+                              onClick={() => handleEditCampaign(camp)}
+                            >
+                              Manage
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 text-xs hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleDeleteCampaign(camp.id, camp.name)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-12">
-                        <div className="h-16 w-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                          <Ticket className="h-8 w-8 text-gray-400" />
-                        </div>
-                        <p className="text-gray-500">No coupons found</p>
+                      <TableCell colSpan={5} className="text-center py-16">
+                        <Sparkles className="h-10 w-10 text-gray-200 mx-auto mb-2" />
+                        <p className="text-gray-400 text-sm font-medium">No campaigns created yet</p>
                       </TableCell>
                     </TableRow>
                   )}
                 </TableBody>
               </Table>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Pagination */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="flex items-center justify-between"
-      >
-        <p className="text-sm text-gray-500">
-          Showing {filteredCoupons.length} of {total} results
-        </p>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
-            Previous
-          </Button>
-          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((p) => (
-            <Button key={p} variant={page === p ? "default" : "outline"} size="sm" onClick={() => setPage(p)}>
-              {p}
-            </Button>
-          ))}
-          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
-            Next
-          </Button>
-        </div>
-      </motion.div>
+        <TabsContent value="history" className="mt-0 space-y-6">
+          <Card className="border-0 shadow-md">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search codes..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-11 h-11 bg-gray-50 border-gray-200"
+                  />
+                </div>
+                <div className="relative w-40">
+                  <Input
+                    placeholder="Batch #"
+                    value={batchFilter}
+                    onChange={(e) => { setBatchFilter(e.target.value); setPage(1); }}
+                    className="h-11 bg-gray-50 border-gray-200"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPage(1); }}>
+                  <SelectTrigger className="w-32 h-11">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="used">Scanned Only</SelectItem>
+                    <SelectItem value="unused">Waitlist (Unscanned)</SelectItem>
+                    <SelectItem value="all">View All (Admin)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {someSelected && (
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteSelected}
+                    disabled={isDeleting}
+                    className="h-11 px-6 rounded-xl shadow-sm"
+                  >
+                    {isDeleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                    Delete Selected ({selectedIds.size})
+                  </Button>
+                )}
+                {statusFilter === 'used' && usedCount > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={handleClearHistory}
+                    disabled={isDeleting}
+                    className="h-11 px-6 rounded-xl border-red-100 text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear All Redeemed
+                  </Button>
+                )}
+                <Button onClick={() => fetchCoupons()} variant="secondary" className="h-11 px-8 rounded-xl font-semibold">
+                  Update List
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* View Coupon Details Dialog */}
+          <Card className="border-0 shadow-md overflow-hidden">
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="p-12 flex flex-col items-center justify-center gap-3">
+                  <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+                  <p className="text-gray-400 text-sm">Loading activity data...</p>
+                </div>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50/50">
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={allSelected}
+                            onCheckedChange={(checked) => {
+                              if (checked) setSelectedIds(new Set(filteredCoupons.map((c) => c.id)));
+                              else setSelectedIds(new Set());
+                            }}
+                          />
+                        </TableHead>
+                        <TableHead className="font-semibold">Code</TableHead>
+                        <TableHead className="font-semibold">Batch</TableHead>
+                        <TableHead className="font-semibold">Product</TableHead>
+                        <TableHead className="font-semibold">Win Reward</TableHead>
+                        <TableHead className="font-semibold">Status</TableHead>
+                        <TableHead className="font-semibold">User</TableHead>
+                        <TableHead className="text-right">Detail</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredCoupons.length > 0 ? (
+                        filteredCoupons.map((coupon, idx) => (
+                          <TableRow key={coupon.id} className="group hover:bg-gray-50/50 transition-colors">
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedIds.has(coupon.id)}
+                                onCheckedChange={(checked) => {
+                                  setSelectedIds((prev) => {
+                                    const n = new Set(prev);
+                                    if (checked) n.add(coupon.id);
+                                    else n.delete(coupon.id);
+                                    return n;
+                                  });
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <QrCode className="h-3.5 w-3.5 text-gray-400" />
+                                <span className="font-mono font-bold text-gray-800 text-xs">{coupon.code}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-[10px] font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                                {coupon.batch_number || "GEN-001"}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-xs text-gray-500 truncate max-w-[120px]">{coupon.product?.name || "-"}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1.5">
+                                <Gift className="h-3.5 w-3.5 text-amber-500" />
+                                <span className="text-xs font-bold text-gray-700">
+                                  {coupon.reward_type === 'CASHBACK' ? `₹${coupon.reward_value}` :
+                                    coupon.reward_type === 'DISCOUNT' ? `${coupon.reward_value}%` :
+                                      coupon.reward_type === 'GIFT' ? 'Gift' : '-'}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={coupon.is_used ? "secondary" : "success"} className="text-[10px] px-2 py-0">
+                                {coupon.is_used ? "Redeemed" : "Available"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs font-medium text-gray-600">{coupon.redeemed_by?.name || "-"}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 text-[11px] font-bold text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                  onClick={async () => {
+                                    const resp = await api.getAdminCoupon(coupon.id);
+                                    if (resp.success) { setSelectedCoupon(resp.data as AdminCoupon); setViewCouponDialogOpen(true); }
+                                  }}
+                                >View</Button>
+                                {!coupon.is_used && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => handleDeleteCoupon(coupon.id)}
+                                  ><Trash2 className="h-3.5 w-3.5" /></Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-20 grayscale opacity-50">
+                            <Ticket className="h-12 w-12 mx-auto mb-2" />
+                            <p>No scans matching your filter</p>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+
+                  {/* Pagination Inside Tab */}
+                  <div className="p-4 border-t flex items-center justify-between bg-gray-50/30">
+                    <p className="text-xs text-gray-400 font-medium">Page {page} of {totalPages}</p>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="h-8 text-xs font-bold" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Prev</Button>
+                      <Button variant="outline" size="sm" className="h-8 text-xs font-bold" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="batches" className="mt-6">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-2xl font-black text-gray-900 tracking-tight">Bulk Upload Inventory</h2>
+              <p className="text-sm text-gray-500 font-medium">Manage and track your Excel data batches</p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchBatches}
+                disabled={isLoadingBatches}
+                className="h-11 px-5 rounded-2xl border-gray-200 bg-white hover:bg-gray-50 shadow-sm"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingBatches ? 'animate-spin' : ''}`} />
+                Scan for Inventory
+              </Button>
+              <Link href="/admin/coupons/bulk">
+                <Button className="h-11 px-6 rounded-2xl bg-gray-900 hover:bg-black text-white shadow-lg shadow-gray-200">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload New File
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {isLoadingBatches ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[1, 2, 3].map(i => (
+                <Card key={i} className="border-0 shadow-sm animate-pulse bg-gray-50/10 rounded-3xl h-64" />
+              ))}
+            </div>
+          ) : batches.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {batches.map((batch) => {
+                const total = batch.total_count;
+                const used = batch.redeemed_count;
+                const left = total - used;
+                const percentageUsed = Math.round((used / total) * 100);
+                const isUncategorized = batch.batch_number === 'UNCATEGORIZED';
+
+                return (
+                  <Card key={batch.batch_number} className="group border-0 shadow-lg hover:shadow-2xl transition-all duration-500 rounded-[2.5rem] overflow-hidden bg-white flex flex-col">
+                    <div className={`h-3 w-full ${isUncategorized ? 'bg-amber-400' : 'bg-orange-500'}`} />
+                    <CardHeader className="pb-4 pt-8 px-8">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className={`h-16 w-16 rounded-3xl flex items-center justify-center shadow-inner ${isUncategorized ? 'bg-amber-50 text-amber-600' : 'bg-orange-50 text-orange-600'}`}>
+                          {isUncategorized ? <Database className="h-8 w-8" /> : <FileSpreadsheet className="h-8 w-8" />}
+                        </div>
+                        <div className="flex flex-col items-end gap-1.5">
+                          <Badge variant="outline" className="text-[11px] font-black border-2 border-gray-100 rounded-full px-3 py-1">
+                            {total.toLocaleString()} CODES
+                          </Badge>
+                          <div className="flex items-center gap-1.5 text-[9px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
+                            <FileCheck className="h-3 w-3" />
+                            S.No + Auth Verified
+                          </div>
+                        </div>
+                      </div>
+                      <CardTitle className="text-xl font-black text-gray-900 tracking-tight truncate pr-4">
+                        {isUncategorized ? 'Legacy Uploads' : batch.batch_number}
+                      </CardTitle>
+                      <CardDescription className="flex items-center text-xs font-bold text-gray-400 uppercase tracking-widest mt-2">
+                        <History className="h-3.5 w-3.5 mr-1.5 text-orange-500/50" />
+                        {new Date(batch.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </CardDescription>
+                    </CardHeader>
+
+                    <CardContent className="flex-1 px-8 pb-8 flex flex-col justify-between space-y-8">
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-end">
+                          <div className="space-y-1">
+                            <p className="text-[10px] uppercase font-black text-gray-400 tracking-[0.2em] mb-1">Consumption</p>
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-3xl font-black text-gray-900">{used}</span>
+                              <span className="text-sm font-bold text-gray-400 italic">used</span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-black text-gray-700">{left}</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Remaining</p>
+                          </div>
+                        </div>
+
+                        <div className="relative pt-1">
+                          <Progress value={percentageUsed} className="h-4 bg-gray-50 rounded-full border border-gray-100" />
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span className={`text-[9px] font-black tracking-widest ${percentageUsed > 50 ? 'text-white' : 'text-gray-400'}`}>
+                              {percentageUsed}% EXHAUSTED
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 pt-4">
+                        <Button
+                          className="flex-1 bg-gray-900 hover:bg-black text-white rounded-[1.25rem] h-12 text-sm font-bold shadow-lg shadow-gray-200 group-hover:translate-x-1 transition-transform"
+                          onClick={() => {
+                            setBatchFilter(batch.batch_number === 'UNCATEGORIZED' ? "" : batch.batch_number);
+                            setActiveTab('history');
+                          }}
+                        >
+                          Manage codes
+                          <ArrowRight className="h-4 w-4 ml-2 opacity-50" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          disabled={used > 0}
+                          className="h-12 w-12 shrink-0 border-2 border-gray-100 hover:border-red-100 hover:bg-red-50 hover:text-red-500 transition-all rounded-[1.25rem] text-gray-300"
+                          onClick={async () => {
+                            if (confirm(`CRITICAL: This will permanently delete ${left} unused QR codes. This action cannot be undone. Proceed?`)) {
+                              try {
+                                const res = await api.deleteAdminBatch(batch.batch_number);
+                                if (res.success) {
+                                  toast({ title: "Inventory Updated", description: "File successfully removed." });
+                                  fetchBatches();
+                                }
+                              } catch (err) { }
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+
+              {/* Add a blank card to encourage adding more? */}
+              <Link href="/admin/coupons/bulk" className="group">
+                <div className="h-full border-4 border-dashed border-gray-100 rounded-[2.5rem] flex flex-col items-center justify-center py-20 px-10 hover:border-orange-200 hover:bg-orange-50/30 transition-all duration-500">
+                  <div className="h-20 w-20 bg-gray-50 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Plus className="h-10 w-10 text-gray-200 group-hover:text-orange-300" />
+                  </div>
+                  <p className="text-gray-400 font-bold group-hover:text-orange-400">Add another batch</p>
+                </div>
+              </Link>
+            </div>
+          ) : (
+            <div className="bg-white rounded-[3rem] border-4 border-dashed border-gray-100 py-32 text-center shadow-sm">
+              <div className="h-24 w-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <FileCheck className="h-12 w-12 text-gray-200" />
+              </div>
+              <h3 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">Your Inventory is Empty</h3>
+              <p className="text-gray-400 max-w-sm mx-auto mb-10 font-medium">Connect your spreadsheet data to start generating QR codes for your reward campaigns.</p>
+              <Link href="/admin/coupons/bulk">
+                <Button className="px-12 h-14 rounded-2xl font-black text-lg bg-orange-500 hover:bg-orange-600 text-white shadow-xl shadow-orange-200 transition-all hover:scale-105">
+                  <Upload className="h-6 w-6 mr-3" />
+                  Upload Your First XLS
+                </Button>
+              </Link>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Details Dialog */}
       <Dialog open={viewCouponDialogOpen} onOpenChange={setViewCouponDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <QrCode className="h-5 w-5 text-primary" />
-              Coupon Details
+              Coupon Detail View
             </DialogTitle>
           </DialogHeader>
           {selectedCoupon && (
             <div className="space-y-6">
-              {/* QR Code */}
-              <div className="flex justify-center p-4 bg-gray-50 rounded-xl">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={getQrUrl(selectedCoupon.code)}
-                  alt={`QR for ${selectedCoupon.code}`}
-                  className="w-48 h-48"
-                />
+              <div className="flex justify-center p-6 bg-gray-50 rounded-2xl border border-gray-100">
+                <img src={getQrUrl(selectedCoupon.code)} alt="QR" className="w-44 h-44 shadow-sm" />
               </div>
-              {/* Details */}
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-gray-500">Coupon Code</span>
-                  <span className="font-mono font-semibold">{selectedCoupon.code}</span>
+              <div className="grid grid-cols-2 gap-4 text-xs font-medium">
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <span className="text-gray-400 block mb-1 uppercase tracking-widest text-[9px]">Coupon Code</span>
+                  <span className="text-sm font-mono font-bold tracking-wider">{selectedCoupon.code}</span>
                 </div>
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-gray-500">Generated</span>
-                  <span>
-                    {selectedCoupon.created_at
-                      ? new Date(selectedCoupon.created_at).toLocaleString("en-IN", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })
-                      : "-"}
-                  </span>
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <span className="text-gray-400 block mb-1 uppercase tracking-widest text-[9px]">Current Status</span>
+                  <Badge variant={selectedCoupon.is_used ? "secondary" : "success"}>{selectedCoupon.is_used ? "Redeemed" : "Available"}</Badge>
                 </div>
-                {selectedCoupon.batch_number && (
-                  <div className="flex justify-between py-2 border-b">
-                    <span className="text-gray-500">Batch No.</span>
-                    <span className="font-mono text-xs">{selectedCoupon.batch_number}</span>
+                <div className="p-3 bg-gray-100/50 rounded-lg col-span-2">
+                  <span className="text-gray-400 block mb-1 uppercase tracking-widest text-[9px]">Linked Reward</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold">{selectedCoupon.reward_name || "Campaign Tier Reward"}</span>
+                    <span className="px-2 py-0.5 bg-white rounded border uppercase text-[9px] font-black">{selectedCoupon.reward_type}</span>
                   </div>
-                )}
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-gray-500">Product</span>
-                  <span>{selectedCoupon.product?.name || selectedCoupon.product_name || "-"}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-gray-500">Reward</span>
-                  <span>
-                    {selectedCoupon.reward_type === "CASHBACK" && `₹${selectedCoupon.reward_value}`}
-                    {selectedCoupon.reward_type === "DISCOUNT" && `${selectedCoupon.reward_value}% off`}
-                    {selectedCoupon.reward_type === "GIFT" && "Gift"}
-                    {!selectedCoupon.reward_type && "-"}
-                  </span>
-                </div>
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-gray-500">Status</span>
-                  <Badge variant={selectedCoupon.is_used ? "secondary" : "success"}>
-                    {selectedCoupon.is_used ? "Used" : "Unused"}
-                  </Badge>
                 </div>
                 {selectedCoupon.redeemed_by && (
-                  <div className="flex justify-between py-2 border-b">
-                    <span className="text-gray-500">Redeemed By</span>
-                    <span>{selectedCoupon.redeemed_by.name || selectedCoupon.redeemed_by.phone_number || "-"}</span>
-                  </div>
-                )}
-                {selectedCoupon.scanned_at && (
-                  <div className="flex justify-between py-2 border-b">
-                    <span className="text-gray-500">Scanned At</span>
-                    <span>{new Date(selectedCoupon.scanned_at).toLocaleString()}</span>
-                  </div>
-                )}
-                {(() => {
-                  const expiry = selectedCoupon.expires_at || selectedCoupon.expiry_date;
-                  return expiry ? (
-                    <div className="flex justify-between py-2 border-b">
-                      <span className="text-gray-500">Expires</span>
-                      <span>{new Date(expiry).toLocaleDateString()}</span>
+                  <div className="p-3 bg-blue-50/50 rounded-lg col-span-2 flex items-center justify-between border border-blue-100">
+                    <div>
+                      <span className="text-blue-400 block mb-1 uppercase tracking-widest text-[9px]">Claimed By</span>
+                      <span className="text-sm font-bold text-blue-900">{selectedCoupon.redeemed_by.name}</span>
                     </div>
-                  ) : null;
-                })()}
-                <div className="flex justify-between py-2">
-                  <span className="text-gray-500">Created</span>
-                  <span>{new Date(selectedCoupon.created_at).toLocaleDateString()}</span>
-                </div>
+                    <span className="text-[10px] text-blue-400 font-mono tracking-tighter">{new Date(selectedCoupon.scanned_at!).toLocaleDateString()}</span>
+                  </div>
+                )}
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setViewCouponDialogOpen(false)}>Close</Button>
-                <Button onClick={() => downloadQrPng(selectedCoupon.code, getQrUrl(selectedCoupon.code))}>
-                  Download QR
-                </Button>
+              <DialogFooter className="gap-2">
+                <Button variant="outline" onClick={() => setViewCouponDialogOpen(false)} className="flex-1 rounded-xl">Dismiss</Button>
+                <Button onClick={() => downloadQrPng(selectedCoupon.code, getQrUrl(selectedCoupon.code))} className="flex-1 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold">Save QR Code</Button>
               </DialogFooter>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Generate Coupon Dialog */}
-      <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              Generate New Coupons
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Campaign *</Label>
-              <Select 
-                value={generateForm.campaign_id || "none"}
-                onValueChange={(value) => setGenerateForm({ ...generateForm, campaign_id: value === "none" ? "" : value })}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select a campaign" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Select a campaign</SelectItem>
-                  {campaigns.length > 0 ? (
-                    campaigns.map((campaign) => (
-                      <SelectItem key={campaign.id} value={campaign.id}>
-                        {campaign.name} {campaign.is_active ? '' : '(Inactive)'}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-campaigns" disabled>No campaigns - Create one first</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Number of Coupons *</Label>
-              <Input 
-                type="number" 
-                placeholder="100" 
-                className="mt-1"
-                value={generateForm.count}
-                onChange={(e) => setGenerateForm({ ...generateForm, count: e.target.value })}
-              />
-            </div>
-            <div className="flex items-center gap-2 pt-2">
-              <input
-                id="generate-qr"
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300"
-                checked={generateQRCodes}
-                onChange={(e) => setGenerateQRCodes(e.target.checked)}
-              />
-              <Label htmlFor="generate-qr" className="cursor-pointer text-sm">Generate QR codes</Label>
-            </div>
-            <div>
-              <Label>Linked Product (For Free Product coupons)</Label>
-              <Select 
-                value={generateForm.product_id || "none"}
-                onValueChange={(value) => setGenerateForm({ ...generateForm, product_id: value === "none" ? "" : value })}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select product" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No specific product</SelectItem>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-1">Product photo & details will show on coupon. User gets this product when redeemed.</p>
-            </div>
-            <div>
-              <Label>Expiry Date (Optional)</Label>
-              <Input 
-                type="date"
-                className="mt-1"
-                value={generateForm.expiry_date}
-                onChange={(e) => setGenerateForm({ ...generateForm, expiry_date: e.target.value })}
-              />
-              <p className="text-xs text-muted-foreground mt-1">Coupons will expire on this date</p>
-            </div>
-            <div>
-              <Label>Code Prefix (Optional)</Label>
-              <Input 
-                placeholder="e.g., AGRI" 
-                className="mt-1"
-                value={generateForm.prefix}
-                onChange={(e) => setGenerateForm({ ...generateForm, prefix: e.target.value.toUpperCase() })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleGenerateCoupons} disabled={isGenerating || !generateForm.campaign_id}>
-              {isGenerating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Generate
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Create Campaign Dialog */}
       <Dialog open={createCampaignDialogOpen} onOpenChange={setCreateCampaignDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto shadow-2xl border-0 rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Gift className="h-5 w-5 text-primary" />
-              Create New Campaign
+            <DialogTitle className="flex items-center gap-3 text-xl font-black text-gray-900">
+              <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
+                <Sparkles className="h-5 w-5 text-orange-600" />
+              </div>
+              Launch Reward Campaign
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-            <div>
-              <Label>Campaign Name *</Label>
-              <Input 
-                placeholder="e.g., Summer Sale 2026" 
-                className="mt-1"
-                value={campaignForm.name}
-                onChange={(e) => setCampaignForm({ ...campaignForm, name: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Campaign Name (Hindi)</Label>
-              <Input 
-                placeholder="e.g., गर्मी की बिक्री" 
-                className="mt-1"
-                value={campaignForm.name_hi}
-                onChange={(e) => setCampaignForm({ ...campaignForm, name_hi: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Start Date</Label>
-                <Input type="date" className="mt-1" value={campaignForm.start_date} onChange={(e) => setCampaignForm({ ...campaignForm, start_date: e.target.value })} />
+          <div className="space-y-8 mt-6">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="col-span-2 space-y-2">
+                <Label className="text-xs font-black text-gray-400 uppercase tracking-widest">Internal Campaign Name *</Label>
+                <Input className="h-12 rounded-xl bg-gray-50 border-gray-100 focus:bg-white transition-all shadow-sm" placeholder="e.g., Diwali Monsoon Rewards 2026" value={campaignForm.name} onChange={(e) => setCampaignForm({ ...campaignForm, name: e.target.value })} />
               </div>
-              <div>
-                <Label>End Date</Label>
-                <Input type="date" className="mt-1" value={campaignForm.end_date} onChange={(e) => setCampaignForm({ ...campaignForm, end_date: e.target.value })} />
+              <div className="space-y-2">
+                <Label className="text-xs font-black text-gray-400 uppercase tracking-widest">Starts On</Label>
+                <Input type="date" className="h-12 rounded-xl bg-gray-50 border-gray-100" value={campaignForm.start_date} onChange={(e) => setCampaignForm({ ...campaignForm, start_date: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-black text-gray-400 uppercase tracking-widest">Expires On</Label>
+                <Input type="date" className="h-12 rounded-xl bg-gray-50 border-gray-100" value={campaignForm.end_date} onChange={(e) => setCampaignForm({ ...campaignForm, end_date: e.target.value })} />
               </div>
             </div>
-            
-            <div className="border-t pt-4 mt-4">
-              <h4 className="font-medium mb-3">Reward Tier</h4>
-              <div className="space-y-3">
-                <div>
-                  <Label>Reward Type *</Label>
-                  <Select value={campaignForm.reward_type} onValueChange={(value: "CASHBACK" | "DISCOUNT" | "GIFT") => setCampaignForm({ ...campaignForm, reward_type: value })}>
-                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CASHBACK">Cashback</SelectItem>
-                      <SelectItem value="DISCOUNT">Discount</SelectItem>
-                      <SelectItem value="GIFT">Free Gift</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Reward Value (₹) *</Label>
-                  <Input type="number" placeholder="e.g., 100" className="mt-1" value={campaignForm.reward_value} onChange={(e) => setCampaignForm({ ...campaignForm, reward_value: e.target.value })} />
-                </div>
-                {campaignForm.reward_type === "GIFT" && (
-                  <div>
-                    <Label>Gift Image URL * <span className="text-red-500">(Required for Gift - shows after scratch)</span></Label>
-                    <Input 
-                      type="url" 
-                      placeholder="https://..." 
-                      className="mt-1" 
-                      value={campaignForm.image_url} 
-                      onChange={(e) => setCampaignForm({ ...campaignForm, image_url: e.target.value })} 
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">This image will be shown to user after they scratch the coupon</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateCampaignDialogOpen(false)}>Cancel</Button>
-            <Button 
-              onClick={handleCreateCampaign} 
-              disabled={isCreatingCampaign || !campaignForm.name || (campaignForm.reward_type === "GIFT" && !campaignForm.image_url.trim())}
-            >
-              {isCreatingCampaign && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Create
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      {/* QR Codes Preview Dialog */}
-      <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <QrCode className="h-5 w-5 text-primary" />
-              Generated QR Codes
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            {qrBatchInfo?.generatedCount && (
-              <p className="text-sm text-gray-500">
-                Generated: <span className="font-medium">{qrBatchInfo.generatedCount}</span>
-              </p>
-            )}
-            <div className="flex gap-2">
-              <Button onClick={openPrintableQrSheet} disabled={qrCodesPreview.length === 0}>Print Sheet</Button>
-              <Button variant="outline" onClick={downloadAllQrPngs} disabled={qrCodesPreview.length === 0}>Download PNGs</Button>
-              <Button variant="outline" onClick={() => { setQrCodesPreview([]); setQrBatchInfo(null); setQrDialogOpen(false); }}>Close</Button>
+            <div className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl relative overflow-hidden group">
+              <div className="absolute -right-4 -top-4 h-24 w-24 bg-blue-200/20 rounded-full blur-2xl group-hover:bg-blue-300/30 transition-all duration-500" />
+              <Label className="text-xs font-black text-blue-900 uppercase tracking-widest relative z-10">Inventory Size (Planned Scans) *</Label>
+              <Input type="number" className="h-12 mt-2 bg-white border-blue-200 rounded-xl font-black text-blue-900 placeholder:text-blue-200" placeholder="1000" value={campaignForm.total_coupons} onChange={(e) => setCampaignForm({ ...campaignForm, total_coupons: e.target.value })} />
+              <p className="text-[10px] text-blue-400 mt-3 italic font-medium leading-relaxed">Probability of winning a prize is weight-balanced against this number across all generated codes.</p>
             </div>
-            {qrCodesPreview.length === 0 ? (
-              <p className="text-sm text-gray-500">No QR preview available.</p>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-2">
-                {qrCodesPreview.map((item) => (
-                  <div key={item.code} className="border rounded-xl p-3 bg-gray-50">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={item.qrUrl} alt={`QR ${item.code}`} className="w-full h-auto rounded-lg" />
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs break-all">{item.code}</span>
-                      <Button size="sm" variant="secondary" onClick={() => downloadQrPng(item.code, item.qrUrl)}>
-                        Download
-                      </Button>
+
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b pb-4">
+                <h4 className="text-sm font-black uppercase text-gray-900 tracking-tighter">Prize Distribution</h4>
+                <Button variant="outline" size="sm" className="rounded-full border-orange-200 text-orange-600 hover:bg-orange-50 font-bold h-8 px-4" onClick={() => setCampaignForm({ ...campaignForm, tiers: [...campaignForm.tiers, { reward_type: "CASHBACK", reward_value: "0", max_winners: "0", image_url: "" }] })}>+ Add Level</Button>
+              </div>
+              {campaignForm.tiers.map((t, i) => (
+                <div key={i} className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm relative group hover:border-orange-200 transition-all duration-300">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-black uppercase text-gray-400">Reward Type</Label>
+                      <Select value={t.reward_type} onValueChange={(v: any) => { const n = [...campaignForm.tiers]; n[i].reward_type = v; setCampaignForm({ ...campaignForm, tiers: n }); }}>
+                        <SelectTrigger className="h-10 text-xs font-bold rounded-lg bg-gray-50 border-0"><SelectValue /></SelectTrigger>
+                        <SelectContent className="rounded-xl border-gray-100 shadow-xl">
+                          <SelectItem value="CASHBACK">💰 Instant Cashback</SelectItem>
+                          <SelectItem value="GIFT">🎁 Physical Gift</SelectItem>
+                          <SelectItem value="DISCOUNT">🏷️ Reward Discount</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-black uppercase text-gray-400">{t.reward_type === 'GIFT' ? 'Item Name' : 'Reward Value (₹)'}</Label>
+                      <Input className="h-10 text-xs font-bold rounded-lg bg-gray-50 border-0" value={t.reward_value} onChange={(e) => { const n = [...campaignForm.tiers]; n[i].reward_value = e.target.value; setCampaignForm({ ...campaignForm, tiers: n }); }} />
+                    </div>
+                    <div className="col-span-2 space-y-1.5">
+                      <Label className="text-[10px] font-black uppercase text-gray-400">Total Available Prizes (Winners Limit)</Label>
+                      <Input type="number" className="h-10 text-xs font-bold rounded-lg bg-gray-50 border-0" value={t.max_winners} onChange={(e) => { const n = [...campaignForm.tiers]; n[i].max_winners = e.target.value; setCampaignForm({ ...campaignForm, tiers: n }); }} />
                     </div>
                   </div>
-                ))}
+
+                  {t.reward_type === 'GIFT' && (
+                    <div className="mt-4 flex items-center gap-4 p-3 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
+                      <div
+                        className="h-14 w-14 rounded-xl bg-white border border-gray-100 flex items-center justify-center cursor-pointer shadow-sm relative group/img overflow-hidden"
+                        onClick={() => (document.getElementById(`up-${i}`) as any)?.click()}
+                      >
+                        {t.image_url ? (
+                          <>
+                            <img src={t.image_url} className="h-full w-full object-cover" />
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
+                              <Trash2 className="h-4 w-4 text-white" />
+                            </div>
+                          </>
+                        ) : (
+                          uploadingTierIndex === i ? <Loader2 className="h-5 w-5 animate-spin text-orange-400" /> : <ImagePlus className="h-6 w-6 text-gray-200 group-hover:text-orange-300 transition-colors" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Visual Asset</p>
+                        <p className="text-[9px] text-gray-300 font-medium">Shown to the user when they scratch-win this gift.</p>
+                      </div>
+                      <input type="file" id={`up-${i}`} className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handleImageUpload(i, e.target.files[0])} />
+                    </div>
+                  )}
+
+                  {campaignForm.tiers.length > 1 && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6 absolute -top-2 -right-2 bg-white border border-gray-100 shadow-md rounded-full text-gray-300 hover:text-red-500 hover:scale-110 active:scale-[0.95] transition-all" onClick={() => { const n = [...campaignForm.tiers]; n.splice(i, 1); setCampaignForm({ ...campaignForm, tiers: n }); }}><Trash2 className="h-3 w-3" /></Button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-4 p-5 bg-orange-50/70 rounded-3xl border border-orange-100 relative overflow-hidden">
+              <div className="absolute right-0 bottom-0 opacity-10">
+                <Activity className="h-20 w-20 text-orange-900" />
               </div>
-            )}
+              <div className="h-12 w-12 rounded-2xl bg-orange-100 flex items-center justify-center shadow-inner shadow-orange-200/50"><Activity className="h-6 w-6 text-orange-600" /></div>
+              <div className="flex-1 relative z-10">
+                <p className="text-[10px] font-black text-orange-900/50 uppercase tracking-widest">Winning Probability</p>
+                <p className="text-2xl font-black text-orange-600 tracking-tighter">
+                  {((campaignForm.tiers.reduce((acc, t) => acc + (parseInt(t.max_winners) || 0), 0) / (parseInt(campaignForm.total_coupons) || 1)) * 100).toFixed(1)}%
+                  <span className="text-[10px] font-bold text-orange-800/40 ml-2 uppercase tracking-tight italic">Effective Hit Rate</span>
+                </p>
+              </div>
+            </div>
           </div>
+          <DialogFooter className="mt-10 flex gap-3">
+            <Button variant="ghost" className="rounded-2xl h-14 font-black text-gray-400 hover:text-gray-900 px-8" onClick={() => setCreateCampaignDialogOpen(false)}>Close</Button>
+            <Button
+              className="bg-orange-600 hover:bg-orange-700 text-white rounded-2xl flex-1 h-14 font-black shadow-[0_10px_30px_-10px_rgba(234,88,12,0.5)] transition-all hover:-translate-y-1 active:scale-[0.98]"
+              onClick={handleSubmitCampaign}
+              disabled={isCreatingCampaign || !campaignForm.name}
+            >
+              {isCreatingCampaign ? <Loader2 className="h-5 w-5 animate-spin mr-3" /> : <Sparkles className="h-5 w-5 mr-3" />}
+              {editingCampaignId ? "Update Campaign" : "Deploy Campaign"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

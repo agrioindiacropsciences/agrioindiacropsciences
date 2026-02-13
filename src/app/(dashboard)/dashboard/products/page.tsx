@@ -169,9 +169,25 @@ export default function DashboardProductsPage() {
                   <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
                     {language === "en" ? product.name : product.name_hi}
                   </h3>
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
                     {language === "en" ? product.description : product.description_hi}
                   </p>
+                  {product.dosage && (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      <span className="font-medium">{language === "en" ? "Dosage:" : "खुराक:"}</span> {product.dosage}
+                    </p>
+                  )}
+                  {product.pack_sizes && product.pack_sizes.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mb-3">
+                      <span className="font-medium">{language === "en" ? "Pack / Rate:" : "पैक / दर:"}</span>
+                      {product.pack_sizes.slice(0, 3).map((p: { size?: string; mrp?: number; selling_price?: number }, i: number) => (
+                        <span key={i}>
+                          {p.size} — ₹{p.selling_price ?? p.mrp ?? "—"}
+                        </span>
+                      ))}
+                      {product.pack_sizes.length > 3 && <span>+{product.pack_sizes.length - 3} more</span>}
+                    </div>
+                  )}
                   <Button asChild size="sm" variant="outline" className="w-full">
                     <Link href={`/products/${product.slug}`}>
                       {language === "en" ? "View Details" : "विवरण देखें"}

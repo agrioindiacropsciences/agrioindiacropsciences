@@ -75,6 +75,7 @@ export default function ProductsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
+  const defaultPackSize = (): { size: string; sku: string; mrp: number; selling_price: number; customSize?: string } => ({ size: "100 ml", sku: "", mrp: 0, selling_price: 0 });
   const [formData, setFormData] = useState({
     name: "",
     name_hi: "",
@@ -87,7 +88,7 @@ export default function ProductsPage() {
     suitable_crops: [] as string[],
     target_pests: [] as string[],
     safety_precautions: [] as string[],
-    pack_sizes: [] as { size: string; sku: string; mrp: number; selling_price: number }[],
+    pack_sizes: [defaultPackSize()] as { size: string; sku: string; mrp: number; selling_price: number; customSize?: string }[],
     is_active: true,
     is_best_seller: false,
     best_seller_rank: null as number | null,
@@ -173,7 +174,7 @@ export default function ProductsPage() {
       suitable_crops: [],
       target_pests: [],
       safety_precautions: [],
-      pack_sizes: [],
+      pack_sizes: [defaultPackSize()],
       is_active: true,
       is_best_seller: false,
       best_seller_rank: null,
@@ -201,7 +202,7 @@ export default function ProductsPage() {
       suitable_crops: product.suitable_crops || [],
       target_pests: product.target_pests || [],
       safety_precautions: product.safety_precautions || [],
-      pack_sizes: product.pack_sizes || [],
+      pack_sizes: (product.pack_sizes && product.pack_sizes.length > 0) ? product.pack_sizes.map((p: any) => ({ size: p.size || "", sku: p.sku || "", mrp: p.mrp ?? 0, selling_price: p.selling_price ?? 0 })) : [defaultPackSize()],
       is_active: product.is_active ?? true,
       is_best_seller: product.is_best_seller ?? false,
       best_seller_rank: (product as any).best_seller_rank || (product as any).sales_rank || null,
@@ -214,7 +215,27 @@ export default function ProductsPage() {
     if (!editingProduct || !formData.name || !formData.category_id) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields",
+        description: "Please fill in Product name and Category",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!formData.dosage || !formData.dosage.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Dosage is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    const validPacks = formData.pack_sizes.filter((p) => {
+      const sz = (p as any).customSize?.trim() || p.size;
+      return sz && ((p.mrp != null && p.mrp > 0) || (p.selling_price != null && p.selling_price > 0));
+    });
+    if (validPacks.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Add at least one pack size with MRP or Selling price (rate)",
         variant: "destructive",
       });
       return;
@@ -246,8 +267,13 @@ export default function ProductsPage() {
       if (formData.safety_precautions.length > 0) {
         formDataToSend.append('safety_precautions', JSON.stringify(formData.safety_precautions));
       }
-      if (formData.pack_sizes.length > 0) {
-        formDataToSend.append('pack_sizes', JSON.stringify(formData.pack_sizes));
+      formDataToSend.append('dosage', formData.dosage || '');
+      const updatePacks = formData.pack_sizes.filter((p) => {
+        const sz = (p as any).customSize?.trim() || p.size;
+        return sz && ((p.mrp != null && p.mrp > 0) || (p.selling_price != null && p.selling_price > 0));
+      }).map((p) => ({ size: (p as any).customSize?.trim() || p.size, sku: p.sku || "", mrp: p.mrp ?? 0, selling_price: p.selling_price ?? 0 }));
+      if (updatePacks.length > 0) {
+        formDataToSend.append('pack_sizes', JSON.stringify(updatePacks));
       }
 
       if (existingImageUrls.length > 0) {
@@ -288,7 +314,27 @@ export default function ProductsPage() {
     if (!formData.name || !formData.category_id) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields",
+        description: "Please fill in Product name and Category",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!formData.dosage || !formData.dosage.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Dosage is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    const validPacks = formData.pack_sizes.filter((p) => {
+      const sz = (p as any).customSize?.trim() || p.size;
+      return sz && ((p.mrp != null && p.mrp > 0) || (p.selling_price != null && p.selling_price > 0));
+    });
+    if (validPacks.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Add at least one pack size with MRP or Selling price (rate)",
         variant: "destructive",
       });
       return;
@@ -302,7 +348,7 @@ export default function ProductsPage() {
       if (formData.description) formDataToSend.append('description', formData.description);
       if (formData.description_hi) formDataToSend.append('description_hi', formData.description_hi);
       if (formData.composition) formDataToSend.append('composition', formData.composition);
-      if (formData.dosage) formDataToSend.append('dosage', formData.dosage);
+      formDataToSend.append('dosage', formData.dosage || '');
       if (formData.application_method) formDataToSend.append('application_method', formData.application_method);
       formDataToSend.append('category_id', formData.category_id);
       formDataToSend.append('is_active', String(formData.is_active));
@@ -320,8 +366,12 @@ export default function ProductsPage() {
       if (formData.safety_precautions.length > 0) {
         formDataToSend.append('safety_precautions', JSON.stringify(formData.safety_precautions));
       }
-      if (formData.pack_sizes.length > 0) {
-        formDataToSend.append('pack_sizes', JSON.stringify(formData.pack_sizes));
+      const packsToSend = formData.pack_sizes.filter((p) => {
+        const sz = (p as any).customSize?.trim() || p.size;
+        return sz && ((p.mrp != null && p.mrp > 0) || (p.selling_price != null && p.selling_price > 0));
+      }).map((p) => ({ size: (p as any).customSize?.trim() || p.size, sku: p.sku || "", mrp: p.mrp ?? 0, selling_price: p.selling_price ?? 0 }));
+      if (packsToSend.length > 0) {
+        formDataToSend.append('pack_sizes', JSON.stringify(packsToSend));
       }
 
       selectedImages.forEach(image => {
@@ -741,6 +791,16 @@ export default function ProductsPage() {
                 />
               </div>
               <div>
+                <Label htmlFor="dosage">Dosage *</Label>
+                <Input 
+                  id="dosage" 
+                  placeholder="e.g., 2-3 ml per liter of water" 
+                  className="mt-1"
+                  value={formData.dosage}
+                  onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
+                />
+              </div>
+              <div>
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
@@ -749,6 +809,103 @@ export default function ProductsPage() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
+              </div>
+              {/* Pack Sizes & Rate (required) */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Pack Sizes & Rate *
+                </Label>
+                <p className="text-xs text-muted-foreground">Add at least one pack size with MRP or Selling price.</p>
+                {formData.pack_sizes.map((pack, index) => (
+                  <div key={index} className="flex flex-wrap items-end gap-2 p-3 rounded-lg border bg-muted/30">
+                    <div className="flex-1 min-w-[100px]">
+                      <label className="text-xs text-muted-foreground">Size</label>
+                      <Select
+                        value={(pack as any).customSize ? "" : (pack.size || "100 ml")}
+                        onValueChange={(value) => {
+                          const next = [...formData.pack_sizes];
+                          next[index] = { ...next[index], size: value, customSize: undefined };
+                          setFormData({ ...formData, pack_sizes: next });
+                        }}
+                      >
+                        <SelectTrigger className="mt-0.5 h-9">
+                          <SelectValue placeholder="Select size" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {["100 ml", "200 ml", "500 ml", "1 L", "250 g", "500 g", "1 kg", "5 L", "10 kg"].map((s) => (
+                            <SelectItem key={s} value={s}>{s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-20">
+                      <label className="text-xs text-muted-foreground">Or custom</label>
+                      <Input
+                        placeholder="e.g. 2 L"
+                        className="mt-0.5 h-9"
+                        value={(pack as any).customSize ?? ""}
+                        onChange={(e) => {
+                          const next = [...formData.pack_sizes];
+                          next[index] = { ...next[index], customSize: e.target.value };
+                          setFormData({ ...formData, pack_sizes: next });
+                        }}
+                      />
+                    </div>
+                    <div className="w-24">
+                      <label className="text-xs text-muted-foreground">MRP (₹)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="MRP"
+                        className="mt-0.5 h-9"
+                        value={pack.mrp !== undefined && pack.mrp !== null ? pack.mrp : ""}
+                        onChange={(e) => {
+                          const v = e.target.value ? parseFloat(e.target.value) : 0;
+                          const next = [...formData.pack_sizes];
+                          next[index] = { ...next[index], mrp: v, selling_price: next[index].selling_price ?? 0 };
+                          setFormData({ ...formData, pack_sizes: next });
+                        }}
+                      />
+                    </div>
+                    <div className="w-24">
+                      <label className="text-xs text-muted-foreground">Rate (₹)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Selling"
+                        className="mt-0.5 h-9"
+                        value={pack.selling_price !== undefined && pack.selling_price !== null ? pack.selling_price : ""}
+                        onChange={(e) => {
+                          const v = e.target.value ? parseFloat(e.target.value) : 0;
+                          const next = [...formData.pack_sizes];
+                          next[index] = { ...next[index], selling_price: v, mrp: next[index].mrp ?? 0 };
+                          setFormData({ ...formData, pack_sizes: next });
+                        }}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => setFormData({ ...formData, pack_sizes: formData.pack_sizes.filter((_, i) => i !== index) })}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData({ ...formData, pack_sizes: [...formData.pack_sizes, { size: "100 ml", sku: "", mrp: 0, selling_price: 0 }] })}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add pack size
+                </Button>
               </div>
               <div>
                 <Label htmlFor="category">Category *</Label>
@@ -937,6 +1094,16 @@ export default function ProductsPage() {
                 />
               </div>
               <div>
+                <Label htmlFor="edit-dosage">Dosage *</Label>
+                <Input 
+                  id="edit-dosage" 
+                  placeholder="e.g., 2-3 ml per liter of water" 
+                  className="mt-1"
+                  value={formData.dosage}
+                  onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
+                />
+              </div>
+              <div>
                 <Label htmlFor="edit-description">Description</Label>
                 <Textarea
                   id="edit-description"
@@ -945,6 +1112,101 @@ export default function ProductsPage() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
+              </div>
+              {/* Pack Sizes & Rate (Edit) */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Pack Sizes & Rate *
+                </Label>
+                <p className="text-xs text-muted-foreground">At least one pack size with MRP or Selling price.</p>
+                {formData.pack_sizes.map((pack, index) => (
+                  <div key={index} className="flex flex-wrap items-end gap-2 p-3 rounded-lg border bg-muted/30">
+                    <div className="flex-1 min-w-[100px]">
+                      <label className="text-xs text-muted-foreground">Size</label>
+                      <Select
+                        value={(pack as any).customSize ? "" : (pack.size || "100 ml")}
+                        onValueChange={(value) => {
+                          const next = [...formData.pack_sizes];
+                          next[index] = { ...next[index], size: value, customSize: undefined };
+                          setFormData({ ...formData, pack_sizes: next });
+                        }}
+                      >
+                        <SelectTrigger className="mt-0.5 h-9">
+                          <SelectValue placeholder="Select size" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {["100 ml", "200 ml", "500 ml", "1 L", "250 g", "500 g", "1 kg", "5 L", "10 kg"].map((s) => (
+                            <SelectItem key={s} value={s}>{s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-20">
+                      <label className="text-xs text-muted-foreground">Or custom</label>
+                      <Input
+                        placeholder="e.g. 2 L"
+                        className="mt-0.5 h-9"
+                        value={(pack as any).customSize ?? ""}
+                        onChange={(e) => {
+                          const next = [...formData.pack_sizes];
+                          next[index] = { ...next[index], customSize: e.target.value };
+                          setFormData({ ...formData, pack_sizes: next });
+                        }}
+                      />
+                    </div>
+                    <div className="w-24">
+                      <label className="text-xs text-muted-foreground">MRP (₹)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="mt-0.5 h-9"
+                        value={pack.mrp !== undefined && pack.mrp !== null ? pack.mrp : ""}
+                        onChange={(e) => {
+                          const v = e.target.value ? parseFloat(e.target.value) : 0;
+                          const next = [...formData.pack_sizes];
+                          next[index] = { ...next[index], mrp: v, selling_price: next[index].selling_price ?? 0 };
+                          setFormData({ ...formData, pack_sizes: next });
+                        }}
+                      />
+                    </div>
+                    <div className="w-24">
+                      <label className="text-xs text-muted-foreground">Rate (₹)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="mt-0.5 h-9"
+                        value={pack.selling_price !== undefined && pack.selling_price !== null ? pack.selling_price : ""}
+                        onChange={(e) => {
+                          const v = e.target.value ? parseFloat(e.target.value) : 0;
+                          const next = [...formData.pack_sizes];
+                          next[index] = { ...next[index], selling_price: v, mrp: next[index].mrp ?? 0 };
+                          setFormData({ ...formData, pack_sizes: next });
+                        }}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => setFormData({ ...formData, pack_sizes: formData.pack_sizes.filter((_, i) => i !== index) })}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData({ ...formData, pack_sizes: [...formData.pack_sizes, { size: "100 ml", sku: "", mrp: 0, selling_price: 0 }] })}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add pack size
+                </Button>
               </div>
               <div>
                 <Label htmlFor="edit-category">Category *</Label>

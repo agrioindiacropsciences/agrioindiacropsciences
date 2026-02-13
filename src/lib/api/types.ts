@@ -205,6 +205,7 @@ export interface DistributorsResponse {
 
 export interface DistributorsQuery {
   pincode?: string;
+  q?: string;
   lat?: number;
   lng?: number;
   page?: number;

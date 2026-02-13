@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   MapPin,
   Search,
@@ -20,6 +20,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useStore } from "@/store/useStore";
 import * as api from "@/lib/api";
 import type { Distributor } from "@/lib/api";
+
+const SEARCH_DEBOUNCE_MS = 400;
+const isPincode = (s: string) => /^[1-9][0-9]{5}$/.test(s.replace(/\s/g, ""));
 
 function DistributorSkeleton() {
   return (
@@ -45,27 +48,31 @@ function DistributorSkeleton() {
 export default function DistributorsPage() {
   const { language, user } = useStore();
   const { toast } = useToast();
-  
-  const [pincode, setPincode] = useState(user?.pincode || "");
-  const [searchedPincode, setSearchedPincode] = useState("");
+  const [searchQuery, setSearchQuery] = useState(user?.pincode || "");
+  const [searchedFor, setSearchedFor] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [distributors, setDistributors] = useState<Distributor[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const searchDistributors = useCallback(async (searchPincode: string) => {
-    if (!searchPincode || searchPincode.length !== 6) return;
-    
+  const runSearch = useCallback(async (query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setDistributors([]);
+      setSearchedFor("");
+      setHasSearched(false);
+      return;
+    }
     setIsSearching(true);
     setHasSearched(true);
-    
     try {
-      const response = await api.getDistributors({ pincode: searchPincode });
-      
+      const params = isPincode(trimmed) ? { pincode: trimmed.replace(/\s/g, "") } : { q: trimmed };
+      const response = await api.getDistributors({ ...params, limit: 50 });
       if (response.success && response.data) {
         setDistributors(response.data);
-        setSearchedPincode(searchPincode);
+        setSearchedFor(trimmed);
       } else {
         setDistributors([]);
         toast({
@@ -78,31 +85,54 @@ export default function DistributorsPage() {
       }
     } catch (error) {
       setDistributors([]);
+    } finally {
+      setIsSearching(false);
     }
-    
-    setIsSearching(false);
   }, [language, toast]);
 
-  // Auto-search on load if user has pincode
   useEffect(() => {
-    if (user?.pincode) {
-      searchDistributors(user.pincode);
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
     }
-  }, [user?.pincode, searchDistributors]);
-
-  const handleSearch = () => {
-    if (!pincode || pincode.length !== 6) {
-      toast({
-        title: language === "en" ? "Invalid Pincode" : "अमान्य पिनकोड",
-        description: language === "en" 
-          ? "Please enter a valid 6-digit pincode"
-          : "कृपया एक वैध 6 अंकों का पिनकोड दर्ज करें",
-        variant: "destructive",
-      });
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      setDistributors([]);
+      setSearchedFor("");
+      setHasSearched(false);
       return;
     }
-    searchDistributors(pincode);
-  };
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
+      runSearch(searchQuery);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchQuery, runSearch]);
+
+  const handleSearchWithPincode = useCallback(async (pincodeToSearch: string) => {
+    if (!pincodeToSearch || !isPincode(pincodeToSearch)) return;
+    setSearchQuery(pincodeToSearch);
+    setHasSearched(true);
+    setIsSearching(true);
+    try {
+      const response = await api.getDistributors({ pincode: pincodeToSearch });
+      if (response.success && response.data) {
+        setDistributors(response.data);
+        setSearchedFor(pincodeToSearch);
+      } else setDistributors([]);
+    } catch (error) {
+      setDistributors([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user?.pincode && isPincode(user.pincode)) {
+      setSearchQuery(user.pincode);
+      handleSearchWithPincode(user.pincode);
+    }
+  }, [user?.pincode, handleSearchWithPincode]);
 
   const handleUseLocation = async () => {
     setIsLocating(true);
@@ -122,7 +152,7 @@ export default function DistributorsPage() {
             
             if (response.success && response.data) {
               setDistributors(response.data);
-              setSearchedPincode(language === "en" ? "Your Location" : "आपका स्थान");
+              setSearchedFor(language === "en" ? "Your Location" : "आपका स्थान");
             } else {
               setDistributors([]);
             }
@@ -191,24 +221,18 @@ export default function DistributorsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
-                placeholder={language === "en" ? "Enter Your Pincode" : "अपना पिनकोड दर्ज करें"}
-                value={pincode}
-                onChange={(e) => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                placeholder={
+                  language === "en"
+                    ? "Pincode, area, or distributor name..."
+                    : "पिनकोड, क्षेत्र या वितरक का नाम..."
+                }
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && searchQuery.trim() && runSearch(searchQuery)}
                 className="pl-10 h-12"
               />
             </div>
-            <Button onClick={handleSearch} disabled={isSearching || pincode.length !== 6} className="h-12">
-              {isSearching ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <>
-                  <Search className="h-5 w-5 mr-2" />
-                  {language === "en" ? "Search" : "खोजें"}
-                </>
-              )}
-            </Button>
-            <span className="flex items-center justify-center text-gray-500">
+            <span className="flex items-center justify-center text-gray-500 sm:order-none order-first">
               {language === "en" ? "or" : "या"}
             </span>
             <Button
@@ -225,15 +249,20 @@ export default function DistributorsPage() {
               {language === "en" ? "Use My Location" : "मेरा स्थान"}
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            {language === "en"
+              ? "Results update as you type."
+              : "टाइप करते ही परिणाम दिखेंगे।"}
+          </p>
         </CardContent>
       </Card>
 
       {/* Results */}
-      {searchedPincode && (
+      {searchedFor && (
         <div className="text-sm text-muted-foreground">
           {language === "en"
-            ? `Showing distributors near: ${searchedPincode}`
-            : `${searchedPincode} के पास वितरक दिखा रहे हैं`}
+            ? `Showing results for: ${searchedFor}`
+            : `परिणाम: ${searchedFor}`}
         </div>
       )}
 
@@ -346,8 +375,8 @@ export default function DistributorsPage() {
             </h3>
             <p className="text-muted-foreground max-w-md mx-auto">
               {language === "en"
-                ? "We couldn't find any distributors in your area. Please try another pincode or contact our support for assistance."
-                : "हमें आपके क्षेत्र में कोई वितरक नहीं मिला। कृपया दूसरा पिनकोड आज़माएं या सहायता के लिए हमारे सपोर्ट से संपर्क करें।"}
+                ? "No distributors found. Try a different pincode, area, or name, or contact support."
+                : "कोई वितरक नहीं मिला। दूसरा पिनकोड, क्षेत्र या नाम आज़माएं या सपोर्ट से संपर्क करें।"}
             </p>
           </CardContent>
         </Card>

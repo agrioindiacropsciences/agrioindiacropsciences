@@ -365,6 +365,7 @@ export async function deleteAdminCategory(id: string): Promise<ApiResponse<{ mes
 export async function getDistributors(params: T.DistributorsQuery): Promise<ApiResponse<T.Distributor[]>> {
   const searchParams = new URLSearchParams();
   if (params.pincode) searchParams.append('pincode', params.pincode);
+  if (params.q?.trim()) searchParams.append('q', params.q.trim());
   if (params.lat !== undefined) searchParams.append('lat', String(params.lat));
   if (params.lng !== undefined) searchParams.append('lng', String(params.lng));
   if (params.page) searchParams.append('page', String(params.page));

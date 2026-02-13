@@ -185,6 +185,16 @@ export default function ProductDetailPage() {
               </div>
             )}
 
+            {/* Dosage (required field - always show if present) */}
+            {product.dosage && (
+              <div>
+                <h3 className="text-sm font-medium text-primary mb-1">
+                  {language === "en" ? "Dosage" : "खुराक"}
+                </h3>
+                <p className="text-gray-700">{product.dosage}</p>
+              </div>
+            )}
+
             {/* Uses / Application */}
             <div>
               <h3 className="text-sm font-medium text-primary mb-1">
@@ -211,18 +221,21 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* Pack Sizes with Prices */}
+            {/* Pack Sizes with MRP & Rate */}
             {product.pack_sizes && product.pack_sizes.length > 0 && (
               <div>
                 <h3 className="text-sm font-medium text-primary mb-2">
-                  {language === "en" ? "Available Pack Sizes" : "उपलब्ध पैक आकार"}
+                  {language === "en" ? "Pack Sizes & Rate" : "पैक आकार और दर"}
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {product.pack_sizes.map((pack, index) => (
-                    <Badge key={index} variant="outline" className="px-3 py-2">
+                    <Badge key={index} variant="outline" className="px-3 py-2 text-sm">
                       <span className="font-medium">{pack.size}</span>
-                      {pack.selling_price && (
-                        <span className="ml-2 text-primary">₹{pack.selling_price}</span>
+                      {pack.mrp != null && pack.mrp > 0 && (
+                        <span className="ml-2 text-muted-foreground">{language === "en" ? "MRP" : "MRP"} ₹{pack.mrp}</span>
+                      )}
+                      {(pack.selling_price != null && pack.selling_price > 0) && (
+                        <span className="ml-2 text-primary font-semibold">₹{pack.selling_price}</span>
                       )}
                     </Badge>
                   ))}

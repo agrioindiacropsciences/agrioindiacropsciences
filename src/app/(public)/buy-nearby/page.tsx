@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -31,6 +31,9 @@ import {
 } from "@/components/ui/animated-section";
 import { TractorLoader } from "@/components/ui/tractor-loader";
 
+const SEARCH_DEBOUNCE_MS = 400;
+const isPincode = (s: string) => /^[1-9][0-9]{5}$/.test(s.replace(/\s/g, ""));
+
 function DistributorSkeleton() {
   return (
     <Card className="h-full border-0 shadow-lg">
@@ -51,28 +54,32 @@ function DistributorSkeleton() {
 export default function BuyNearbyPage() {
   const { language, user } = useStore();
   const { toast } = useToast();
-  const [pincode, setPincode] = useState("");
-  const [searchedPincode, setSearchedPincode] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchedFor, setSearchedFor] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [distributors, setDistributors] = useState<Distributor[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Search function that can be called with pincode parameter
-  const handleSearchWithPincode = async (pincodeToSearch: string) => {
-    if (!pincodeToSearch || pincodeToSearch.length !== 6) {
+  const runSearch = useCallback(async (query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setDistributors([]);
+      setSearchedFor("");
+      setHasSearched(false);
       return;
     }
-    
     setIsSearching(true);
     setHasSearched(true);
-    
     try {
-      const response = await api.getDistributors({ pincode: pincodeToSearch });
-      
+      const params = isPincode(trimmed)
+        ? { pincode: trimmed.replace(/\s/g, "") }
+        : { q: trimmed };
+      const response = await api.getDistributors({ ...params, limit: 50 });
       if (response.success && response.data) {
         setDistributors(response.data);
-        setSearchedPincode(pincodeToSearch);
+        setSearchedFor(trimmed);
       } else {
         setDistributors([]);
         toast({
@@ -95,75 +102,66 @@ export default function BuyNearbyPage() {
     } finally {
       setIsSearching(false);
     }
-  };
+  }, [language, toast]);
 
-  const handleSearch = async () => {
-    if (!pincode || pincode.length !== 6) {
-      toast({
-        title: language === "en" ? "Invalid Pincode" : "अमान्य पिनकोड",
-        description: language === "en" 
-          ? "Please enter a valid 6-digit pincode"
-          : "कृपया एक वैध 6 अंकों का पिनकोड दर्ज करें",
-        variant: "destructive",
-      });
+  // Debounced search: as user types, search after SEARCH_DEBOUNCE_MS
+  useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      setDistributors([]);
+      setSearchedFor("");
+      setHasSearched(false);
       return;
     }
-    
-    setIsSearching(true);
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
+      runSearch(searchQuery);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchQuery, runSearch]);
+
+  // Search function for initial user pincode (no debounce)
+  const handleSearchWithPincode = useCallback(async (pincodeToSearch: string) => {
+    if (!pincodeToSearch || !isPincode(pincodeToSearch)) return;
+    setSearchQuery(pincodeToSearch);
     setHasSearched(true);
-    
+    setIsSearching(true);
     try {
-      const response = await api.getDistributors({ pincode });
-      
+      const response = await api.getDistributors({ pincode: pincodeToSearch });
       if (response.success && response.data) {
         setDistributors(response.data);
-        setSearchedPincode(pincode);
-      } else {
-        setDistributors([]);
-        toast({
-          title: language === "en" ? "Error" : "त्रुटि",
-          description: response.error?.message || (language === "en"
-            ? "Failed to search distributors"
-            : "वितरकों की खोज विफल रही"),
-          variant: "destructive",
-        });
-      }
+        setSearchedFor(pincodeToSearch);
+      } else setDistributors([]);
     } catch (error) {
       setDistributors([]);
-      toast({
-        title: language === "en" ? "Error" : "त्रुटि",
-        description: language === "en"
-          ? "Something went wrong. Please try again."
-          : "कुछ गलत हो गया। कृपया पुनः प्रयास करें।",
-        variant: "destructive",
-      });
+    } finally {
+      setIsSearching(false);
     }
-    
-    setIsSearching(false);
-  };
+  }, []);
 
   const handleUseLocation = async () => {
     setIsLocating(true);
-    
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           setHasSearched(true);
           const { latitude, longitude } = position.coords;
-          
           try {
             const response = await api.getDistributors({
               lat: latitude,
               lng: longitude,
               limit: 20,
             });
-            
             if (response.success && response.data) {
               setDistributors(response.data);
-              setSearchedPincode(language === "en" ? "Your Location" : "आपका स्थान");
-            } else {
-              setDistributors([]);
-            }
+              setSearchedFor(language === "en" ? "Your Location" : "आपका स्थान");
+            } else setDistributors([]);
           } catch (error) {
             toast({
               title: language === "en" ? "Error" : "त्रुटि",
@@ -173,15 +171,14 @@ export default function BuyNearbyPage() {
               variant: "destructive",
             });
           }
-          
           setIsLocating(false);
         },
         () => {
           toast({
             title: language === "en" ? "Location Error" : "स्थान त्रुटि",
             description: language === "en"
-              ? "Unable to get your location. Please allow location access or enter pincode manually."
-              : "आपका स्थान प्राप्त करने में असमर्थ। कृपया लोकेशन एक्सेस दें या पिनकोड मैन्युअल रूप से दर्ज करें।",
+              ? "Unable to get your location. Please allow location access or search by pincode/area/name."
+              : "आपका स्थान प्राप्त करने में असमर्थ। कृपया लोकेशन दें या पिनकोड/क्षेत्र/नाम से खोजें।",
             variant: "destructive",
           });
           setIsLocating(false);
@@ -199,31 +196,27 @@ export default function BuyNearbyPage() {
     }
   };
 
-  // Fetch user pincode and auto-search on mount if user is logged in
+  // Auto-search with user pincode on mount if logged in
   useEffect(() => {
     const fetchUserPincodeAndSearch = async () => {
-      if (user?.pincode && user.pincode.length === 6) {
-        setPincode(user.pincode);
+      if (user?.pincode && isPincode(user.pincode)) {
+        setSearchQuery(user.pincode);
         handleSearchWithPincode(user.pincode);
       } else if (user?.id) {
         try {
           const response = await api.getProfile();
-          if (response.success && response.data?.pin_code) {
-            const userPincode = response.data.pin_code;
-            if (userPincode && userPincode.length === 6) {
-              setPincode(userPincode);
-              handleSearchWithPincode(userPincode);
-            }
+          const userPincode = response.success && response.data?.pin_code ? response.data.pin_code : null;
+          if (userPincode && isPincode(userPincode)) {
+            setSearchQuery(userPincode);
+            handleSearchWithPincode(userPincode);
           }
         } catch (error) {
           console.error("Failed to fetch user profile:", error);
         }
       }
     };
-
     fetchUserPincodeAndSearch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, user?.pincode]);
+  }, [user?.id, user?.pincode, handleSearchWithPincode]);
 
   return (
     <div className="min-h-screen overflow-hidden">
@@ -266,8 +259,8 @@ export default function BuyNearbyPage() {
             </h1>
             <p className="text-xl text-white/90 mb-10">
               {language === "en"
-                ? "Enter your pincode or use your current location to find Agrio products available in your area."
-                : "अपने क्षेत्र में उपलब्ध एग्रियो उत्पादों को खोजने के लिए अपना पिनकोड दर्ज करें या अपने वर्तमान स्थान का उपयोग करें।"}
+                ? "Search by pincode, area name, or distributor name. Results update as you type."
+                : "पिनकोड, क्षेत्र का नाम या वितरक का नाम से खोजें। टाइप करते ही परिणाम दिखेंगे।"}
             </p>
 
             {/* Search Box */}
@@ -279,51 +272,37 @@ export default function BuyNearbyPage() {
             >
               <div className="flex flex-col sm:flex-row items-center gap-4">
                 <div className="relative w-full sm:flex-1">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
                   <Input
-                    placeholder={language === "en" ? "Enter Your 6-Digit Pincode" : "अपना 6 अंकों का पिनकोड दर्ज करें"}
-                    value={pincode}
-                    onChange={(e) => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    placeholder={
+                      language === "en"
+                        ? "Pincode, area, or distributor name..."
+                        : "पिनकोड, क्षेत्र या वितरक का नाम..."
+                    }
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && searchQuery.trim() && runSearch(searchQuery)}
                     className="pl-12 h-14 text-lg rounded-xl border-2 focus:border-primary"
                   />
                 </div>
-                <div className="flex gap-3 w-full sm:w-auto">
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1 sm:flex-none">
-                    <Button
-                      onClick={handleSearch}
-                      disabled={isSearching || pincode.length !== 6}
-                      className="w-full h-14 px-6 rounded-xl shadow-lg shadow-primary/20"
-                    >
-                      {isSearching ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : (
-                        <>
-                          <Search className="h-5 w-5 mr-2" />
-                          {language === "en" ? "Search" : "खोजें"}
-                        </>
-                      )}
-                    </Button>
-                  </motion.div>
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1 sm:flex-none">
-                    <Button
-                      variant="outline"
-                      onClick={handleUseLocation}
-                      disabled={isLocating}
-                      className="w-full h-14 px-6 rounded-xl border-2"
-                    >
-                      {isLocating ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : (
-                        <>
-                          <Navigation className="h-5 w-5 mr-2" />
-                          <span className="hidden sm:inline">{language === "en" ? "Use Location" : "स्थान"}</span>
-                          <span className="sm:hidden">{language === "en" ? "GPS" : "GPS"}</span>
-                        </>
-                      )}
-                    </Button>
-                  </motion.div>
-                </div>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    onClick={handleUseLocation}
+                    disabled={isLocating}
+                    className="w-full h-14 px-6 rounded-xl border-2"
+                  >
+                    {isLocating ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Navigation className="h-5 w-5 mr-2" />
+                        <span className="hidden sm:inline">{language === "en" ? "Use Location" : "स्थान"}</span>
+                        <span className="sm:hidden">{language === "en" ? "GPS" : "GPS"}</span>
+                      </>
+                    )}
+                  </Button>
+                </motion.div>
               </div>
             </motion.div>
           </motion.div>
@@ -340,7 +319,7 @@ export default function BuyNearbyPage() {
       {/* Results Section */}
       <section className="py-16 bg-slate-50">
         <div className="container mx-auto px-4 lg:px-8">
-          {searchedPincode && (
+          {searchedFor && (
             <AnimatedSection className="mb-8">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-3">
@@ -351,7 +330,7 @@ export default function BuyNearbyPage() {
                     <p className="text-sm text-gray-600">
                       {language === "en" ? "Showing results for" : "परिणाम दिखा रहे हैं"}
                     </p>
-                    <p className="text-xl font-bold text-primary">{searchedPincode}</p>
+                    <p className="text-xl font-bold text-primary">{searchedFor}</p>
                   </div>
                 </div>
                 <Badge variant="outline" className="px-4 py-2">
@@ -491,8 +470,8 @@ export default function BuyNearbyPage() {
                       ? "We couldn't find any distributors in your area. Please try another pincode or contact our support for assistance."
                       : "हमें आपके क्षेत्र में कोई वितरक नहीं मिला। कृपया दूसरा पिनकोड आज़माएं या सहायता के लिए हमारे सपोर्ट से संपर्क करें।"}
                   </p>
-                  <Button variant="outline" onClick={() => setPincode("")} size="lg" className="rounded-xl">
-                    {language === "en" ? "Try Another Pincode" : "दूसरा पिनकोड आज़माएं"}
+                  <Button variant="outline" onClick={() => setSearchQuery("")} size="lg" className="rounded-xl">
+                    {language === "en" ? "Search Again" : "दोबारा खोजें"}
                   </Button>
                 </Card>
               </motion.div>
@@ -516,8 +495,8 @@ export default function BuyNearbyPage() {
                   </h3>
                   <p className="text-gray-600">
                     {language === "en"
-                      ? "Enter your pincode above to find authorized Agrio India distributors near you."
-                      : "अपने पास अधिकृत एग्रियो इंडिया वितरकों को खोजने के लिए ऊपर अपना पिनकोड दर्ज करें।"}
+                      ? "Search by pincode, area name, or distributor name above. Results appear as you type."
+                      : "ऊपर पिनकोड, क्षेत्र या वितरक का नाम खोजें। टाइप करते ही परिणाम दिखेंगे।"}
                   </p>
                 </div>
               </motion.div>

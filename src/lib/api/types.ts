@@ -280,11 +280,16 @@ export interface ScanRedeemResponse {
 
 export interface Reward {
   id: string;
+  name?: string;
+  name_hi?: string;
   type: string;
   amount: number;
   status: 'PENDING' | 'PENDING_VERIFICATION' | 'VERIFIED' | 'CLAIMED';
   won_at: string;
   product_name: string;
+  image_url?: string;
+  coupon_code?: string;
+  acknowledgment_file_url?: string;
 }
 
 export interface RewardsResponse {
@@ -597,6 +602,8 @@ export interface Campaign {
   is_active: boolean;
   start_date?: string;
   end_date?: string;
+  total_qr_codes?: number;
+  coupon_count?: number;
   created_at?: string;
   tiers?: CampaignTierConfig[];
 }

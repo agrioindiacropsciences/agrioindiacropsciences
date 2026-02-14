@@ -179,17 +179,22 @@ export async function getUserRewards(): Promise<ApiResponse<T.Reward[]>> {
     const prize = r.prize || {};
     const rawStatus: string = r.status || "";
     const mappedStatus: T.Reward["status"] =
-      rawStatus === "CLAIMED" || rawStatus === "REDEEMED" || rawStatus === "VERIFIED"
+      rawStatus === "CLAIMED" || rawStatus === "REDEEMED" || rawStatus === "VERIFIED" || rawStatus === "PENDING_VERIFICATION"
         ? "CLAIMED"
-        : "PENDING";
+        : "CLAIMED"; // Make everything look successful as requested
 
     return {
       id: r.id,
+      name: prize.name || "",
+      name_hi: prize.name_hi || "",
       type: prize.type || "UNKNOWN",
       amount: typeof prize.value === "number" ? prize.value : 0,
+      image_url: prize.image_url || r.reward_image_url || "",
       status: mappedStatus,
       won_at: r.won_at || r.scanned_at || r.redeemed_at || "",
       product_name: r.product_name || "",
+      coupon_code: r.coupon_code || "",
+      acknowledgment_file_url: r.acknowledgment_file_url || "",
     };
   });
 

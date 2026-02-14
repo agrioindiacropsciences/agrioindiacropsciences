@@ -252,6 +252,7 @@ export default function CouponsPage() {
         end_date: campaignForm.end_date || undefined,
         distribution_type: campaignForm.distribution_type,
         is_active: campaignForm.is_active,
+        total_qr_codes: poolSize,
         tiers: campaignForm.tiers.map((t, idx) => ({
           ...(t.id && { id: t.id }), // Include ID if editing
           tier_name: `Tier ${idx + 1}`,
@@ -301,8 +302,6 @@ export default function CouponsPage() {
   };
 
   const handleEditCampaign = (camp: Campaign) => {
-    console.log('[DEBUG] Editing campaign:', camp);
-    console.log('[DEBUG] Tiers:', camp.tiers);
     setEditingCampaignId(camp.id);
     const mappedTiers = (camp.tiers || []).map(t => ({
       id: t.id,
@@ -312,7 +311,6 @@ export default function CouponsPage() {
       current_winners: t.current_winners || 0,
       image_url: t.image_url || ""
     }));
-    console.log('[DEBUG] Mapped tiers:', mappedTiers);
     setCampaignForm({
       name: camp.name,
       name_hi: camp.name_hi || "",
@@ -320,7 +318,7 @@ export default function CouponsPage() {
       end_date: camp.end_date ? new Date(camp.end_date).toISOString().split('T')[0] : "",
       distribution_type: camp.distribution_type || "RANDOM",
       is_active: camp.is_active,
-      total_coupons: "100", // Fallback
+      total_coupons: String(camp.total_qr_codes || 0),
       tiers: mappedTiers
     });
     setCreateCampaignDialogOpen(true);

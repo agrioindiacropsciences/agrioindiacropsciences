@@ -12,12 +12,23 @@ import {
   Trophy,
   Sparkles,
   ArrowRight,
+  ExternalLink,
+  Calendar,
+  Hash,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useStore } from "@/store/useStore";
 import * as api from "@/lib/api";
@@ -52,6 +63,8 @@ export default function RewardsPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   useEffect(() => {
     const fetchRewards = async () => {
@@ -199,12 +212,8 @@ export default function RewardsPage() {
               <p className="text-xs text-white/70">{language === "en" ? "Total Earned" : "कुल कमाई"}</p>
             </div>
             <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
-              <p className="text-2xl sm:text-3xl font-bold">{claimedCount}</p>
-              <p className="text-xs text-white/70">{language === "en" ? "Claimed" : "प्राप्त"}</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
-              <p className="text-2xl sm:text-3xl font-bold">{pendingCount}</p>
-              <p className="text-xs text-white/70">{language === "en" ? "Pending" : "लंबित"}</p>
+              <p className="text-2xl sm:text-3xl font-bold">{rewards.length}</p>
+              <p className="text-xs text-white/70">{language === "en" ? "Rewards Won" : "जीते गए पुरस्कार"}</p>
             </div>
           </div>
         </div>
@@ -223,11 +232,7 @@ export default function RewardsPage() {
             </TabsTrigger>
             <TabsTrigger value="claimed" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
               <CheckCircle className="h-4 w-4 mr-1" />
-              {language === "en" ? "Claimed" : "प्राप्त"} ({claimedCount})
-            </TabsTrigger>
-            <TabsTrigger value="pending" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              <Clock className="h-4 w-4 mr-1" />
-              {language === "en" ? "Pending" : "लंबित"} ({pendingCount})
+              {language === "en" ? "Claimed" : "प्राप्त"} ({rewards.length})
             </TabsTrigger>
           </TabsList>
 
@@ -246,24 +251,36 @@ export default function RewardsPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
+                    onClick={() => {
+                      setSelectedReward(reward);
+                      setIsDetailOpen(true);
+                    }}
+                    className="cursor-pointer"
                   >
-                    <Card className="border-0 shadow-md hover:shadow-lg transition-all overflow-hidden">
+                    <Card className="border-0 shadow-md hover:shadow-lg transition-all overflow-hidden group">
                       <CardContent className="p-0">
-                        <div className={`h-1 ${reward.status === "CLAIMED" ? "bg-gradient-to-r from-green-500 to-emerald-600" : "bg-gradient-to-r from-amber-500 to-orange-600"}`} />
+                        <div className="h-1 bg-gradient-to-r from-green-500 to-emerald-600" />
                         <div className="p-5">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             {/* Reward Info */}
                             <div className="flex items-center gap-4">
-                              <div className={`h-14 w-14 rounded-xl flex items-center justify-center shrink-0 ${reward.status === "CLAIMED" ? "bg-green-50" : "bg-amber-50"}`}>
-                                <Gift className={`h-7 w-7 ${reward.status === "CLAIMED" ? "text-green-600" : "text-amber-600"}`} />
+                              <div className="h-14 w-14 rounded-xl flex items-center justify-center shrink-0 overflow-hidden bg-green-50">
+                                {reward.image_url ? (
+                                  <img src={reward.image_url} alt={reward.name} className="h-full w-full object-cover" />
+                                ) : (
+                                  <Gift className="h-7 w-7 text-green-600" />
+                                )}
                               </div>
                               <div>
                                 <div className="flex items-center gap-2 mb-1">
-                                  <h3 className="font-bold text-xl text-gray-900">
-                                    ₹{reward.amount || 0}
+                                  <h3 className="font-bold text-xl text-gray-900 leading-tight">
+                                    {reward.type === 'GIFT' ? (language === 'hi' && reward.name_hi ? reward.name_hi : (reward.name || 'Physical Gift')) : `₹${reward.amount || 0}`}
                                   </h3>
-                                  <Badge variant="outline" className="text-xs">
-                                    {reward.type}
+                                  <Badge variant="outline" className="text-[10px] h-5 py-0 font-black uppercase tracking-wider">
+                                    {language === 'en' ? reward.type :
+                                      reward.type === 'GIFT' ? 'उपहार' :
+                                        reward.type === 'CASHBACK' ? 'कैशबैक' :
+                                          reward.type === 'DISCOUNT' ? 'छूट' : reward.type}
                                   </Badge>
                                 </div>
                                 <p className="text-sm text-gray-500">
@@ -275,26 +292,17 @@ export default function RewardsPage() {
                             {/* Status & Actions */}
                             <div className="flex items-center gap-3">
                               <Badge
-                                variant={reward.status === "CLAIMED" ? "success" : "warning"}
+                                variant="success"
                                 className="shrink-0"
                               >
-                                {reward.status === "CLAIMED" ? (
-                                  <>
-                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                    {language === "en" ? "Claimed" : "प्राप्त"}
-                                  </>
-                                ) : (
-                                  <>
-                                    <Clock className="h-3 w-3 mr-1" />
-                                    {language === "en" ? "Pending" : "लंबित"}
-                                  </>
-                                )}
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                {language === "en" ? "Claimed" : "प्राप्त"}
                               </Badge>
                               <Button
-                                variant={reward.status === "CLAIMED" ? "default" : "outline"}
+                                variant="default"
                                 size="sm"
                                 onClick={() => downloadCertificate(reward.id)}
-                                disabled={!reward.id}
+                                disabled={false}
                                 className="shrink-0"
                               >
                                 <Download className="h-4 w-4 mr-1" />
@@ -369,6 +377,106 @@ export default function RewardsPage() {
           </Card>
         </motion.div>
       )}
+
+      {/* Reward Detail Dialog */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="sm:max-w-md bg-white p-0 overflow-hidden border-0 shadow-2xl">
+          {selectedReward && (
+            <div className="flex flex-col">
+              {/* Image Section */}
+              <div className="relative h-56 w-full">
+                {selectedReward.image_url ? (
+                  <img
+                    src={selectedReward.image_url}
+                    alt={selectedReward.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center">
+                    <Gift className="h-20 w-20 text-primary animate-pulse" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between">
+                  <div className="text-white">
+                    <h2 className="text-2xl font-black leading-tight">
+                      {selectedReward.type === 'GIFT'
+                        ? (language === 'hi' && selectedReward.name_hi ? selectedReward.name_hi : (selectedReward.name || 'Physical Gift'))
+                        : `₹${selectedReward.amount || 0} Cashback`}
+                    </h2>
+                    <p className="text-white/80 text-xs font-medium uppercase tracking-widest mt-1">
+                      {selectedReward.type} REWARD
+                    </p>
+                  </div>
+                  <Badge className="bg-green-500 hover:bg-green-600 text-white border-0">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    {language === 'en' ? 'Verified' : 'सत्यापित'}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Content Section */}
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center text-xs text-gray-500 font-medium">
+                      <Package className="h-3.5 w-3.5 mr-1.5" />
+                      {language === 'en' ? 'Product' : 'उत्पाद'}
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900">{selectedReward.product_name}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center text-xs text-gray-500 font-medium">
+                      <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                      {language === 'en' ? 'Won On' : 'जीता गया'}
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900">{formatDate(selectedReward.won_at)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center text-xs text-gray-500 font-medium">
+                      <Hash className="h-3.5 w-3.5 mr-1.5" />
+                      {language === 'en' ? 'Coupon Code' : 'कूपन कोड'}
+                    </div>
+                    <p className="text-sm font-mono font-bold text-primary uppercase">{selectedReward.coupon_code || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center text-xs text-gray-500 font-medium">
+                      <Trophy className="h-3.5 w-3.5 mr-1.5" />
+                      {language === 'en' ? 'ID' : 'आईडी'}
+                    </div>
+                    <p className="text-sm font-mono text-gray-600 text-[10px] truncate max-w-[120px]">{selectedReward.id}</p>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex flex-col gap-3">
+                  <Button
+                    className="w-full h-12 text-md font-bold shadow-lg"
+                    onClick={() => downloadCertificate(selectedReward.id)}
+                  >
+                    <Download className="h-5 w-5 mr-2" />
+                    {language === 'en' ? 'Download Certificate' : 'प्रमाणपत्र डाउनलोड करें'}
+                  </Button>
+
+                  {selectedReward.acknowledgment_file_url && (
+                    <Button variant="outline" className="w-full h-12" asChild>
+                      <a href={selectedReward.acknowledgment_file_url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        {language === 'en' ? 'View Document' : 'दस्तावेज़ देखें'}
+                      </a>
+                    </Button>
+                  )}
+                </div>
+
+                <p className="text-[10px] text-center text-gray-400 italic">
+                  {language === 'en'
+                    ? 'Congratulations from Agrio India Crop Science! Keep scanning to win more.'
+                    : 'एग्रियो इंडिया क्रॉप साइंस की ओर से बधाई! अधिक जीतने के लिए स्कैन करते रहें।'}
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

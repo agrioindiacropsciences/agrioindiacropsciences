@@ -257,7 +257,7 @@ export default function ProductsPage() {
       if (formData.is_best_seller && formData.best_seller_rank !== null) {
         formDataToSend.append('best_seller_rank', String(formData.best_seller_rank));
       }
-      
+
       if (formData.suitable_crops.length > 0) {
         formDataToSend.append('suitable_crops', JSON.stringify(formData.suitable_crops));
       }
@@ -356,7 +356,7 @@ export default function ProductsPage() {
       if (formData.is_best_seller && formData.best_seller_rank !== null) {
         formDataToSend.append('best_seller_rank', String(formData.best_seller_rank));
       }
-      
+
       if (formData.suitable_crops.length > 0) {
         formDataToSend.append('suitable_crops', JSON.stringify(formData.suitable_crops));
       }
@@ -443,7 +443,7 @@ export default function ProductsPage() {
       >
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
-        
+
         <div className="relative">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -455,7 +455,7 @@ export default function ProductsPage() {
                 <p className="text-white/70 text-sm">Manage your product catalog</p>
               </div>
             </div>
-            <Button 
+            <Button
               onClick={() => setCreateDialogOpen(true)}
               className="bg-white text-purple-600 hover:bg-white/90 shadow-lg"
             >
@@ -463,7 +463,7 @@ export default function ProductsPage() {
               Add Product
             </Button>
           </div>
-          
+
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mt-6">
             <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
@@ -632,7 +632,7 @@ export default function ProductsPage() {
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit Product
                               </DropdownMenuItem>
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 className="text-red-600"
                                 onClick={() => handleDeleteProduct(product.id)}
                               >
@@ -672,26 +672,26 @@ export default function ProductsPage() {
           Showing {filteredProducts.length} of {total}
         </p>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             disabled={page <= 1}
             onClick={() => setPage(p => Math.max(1, p - 1))}
           >
             Previous
           </Button>
           {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((p) => (
-            <Button 
+            <Button
               key={p}
               variant={page === p ? "default" : "outline"}
-              size="sm" 
+              size="sm"
               onClick={() => setPage(p)}
             >
               {p}
             </Button>
           ))}
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             disabled={page >= totalPages}
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
@@ -762,9 +762,9 @@ export default function ProductsPage() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="productName">Product Name *</Label>
-                <Input 
-                  id="productName" 
-                  placeholder="e.g., Agrio Boost" 
+                <Input
+                  id="productName"
+                  placeholder="e.g., Agrio Boost"
                   className="mt-1"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -772,9 +772,9 @@ export default function ProductsPage() {
               </div>
               <div>
                 <Label htmlFor="productNameHi">Product Name (Hindi)</Label>
-                <Input 
-                  id="productNameHi" 
-                  placeholder="e.g., एग्रियो बूस्ट" 
+                <Input
+                  id="productNameHi"
+                  placeholder="e.g., एग्रियो बूस्ट"
                   className="mt-1"
                   value={formData.name_hi}
                   onChange={(e) => setFormData({ ...formData, name_hi: e.target.value })}
@@ -782,9 +782,9 @@ export default function ProductsPage() {
               </div>
               <div>
                 <Label htmlFor="composition">Technical Composition</Label>
-                <Input 
-                  id="composition" 
-                  placeholder="e.g., NPK 20:20:20" 
+                <Input
+                  id="composition"
+                  placeholder="e.g., NPK 20:20:20"
                   className="mt-1"
                   value={formData.composition}
                   onChange={(e) => setFormData({ ...formData, composition: e.target.value })}
@@ -792,9 +792,9 @@ export default function ProductsPage() {
               </div>
               <div>
                 <Label htmlFor="dosage">Dosage *</Label>
-                <Input 
-                  id="dosage" 
-                  placeholder="e.g., 2-3 ml per liter of water" 
+                <Input
+                  id="dosage"
+                  placeholder="e.g., 2-3 ml per liter of water"
                   className="mt-1"
                   value={formData.dosage}
                   onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
@@ -833,7 +833,10 @@ export default function ProductsPage() {
                           <SelectValue placeholder="Select size" />
                         </SelectTrigger>
                         <SelectContent>
-                          {["100 ml", "200 ml", "500 ml", "1 L", "250 g", "500 g", "1 kg", "5 L", "10 kg"].map((s) => (
+                          {[
+                            "100 ml", "200 ml", "250 ml", "300 ml", "400 ml", "500 ml", "600 ml", "750 ml", "800 ml", "1 L", "2 L", "5 L",
+                            "100 g", "200 g", "250 g", "500 g", "800 g", "1 kg", "2 kg", "4 kg", "5 kg", "8 kg", "10 kg"
+                          ].map((s) => (
                             <SelectItem key={s} value={s}>{s}</SelectItem>
                           ))}
                         </SelectContent>
@@ -860,7 +863,7 @@ export default function ProductsPage() {
                         step="0.01"
                         placeholder="MRP"
                         className="mt-0.5 h-9"
-                        value={pack.mrp !== undefined && pack.mrp !== null ? pack.mrp : ""}
+                        value={pack.mrp === 0 ? "" : (pack.mrp ?? "")}
                         onChange={(e) => {
                           const v = e.target.value ? parseFloat(e.target.value) : 0;
                           const next = [...formData.pack_sizes];
@@ -877,7 +880,7 @@ export default function ProductsPage() {
                         step="0.01"
                         placeholder="Selling"
                         className="mt-0.5 h-9"
-                        value={pack.selling_price !== undefined && pack.selling_price !== null ? pack.selling_price : ""}
+                        value={pack.selling_price === 0 ? "" : (pack.selling_price ?? "")}
                         onChange={(e) => {
                           const v = e.target.value ? parseFloat(e.target.value) : 0;
                           const next = [...formData.pack_sizes];
@@ -909,7 +912,7 @@ export default function ProductsPage() {
               </div>
               <div>
                 <Label htmlFor="category">Category *</Label>
-                <Select 
+                <Select
                   value={formData.category_id}
                   onValueChange={(value) => setFormData({ ...formData, category_id: value })}
                 >
@@ -939,15 +942,15 @@ export default function ProductsPage() {
                     id="isBestSeller"
                     checked={formData.is_best_seller}
                     onCheckedChange={(checked) => {
-                      setFormData({ 
-                        ...formData, 
+                      setFormData({
+                        ...formData,
                         is_best_seller: checked,
                         best_seller_rank: checked ? (formData.best_seller_rank || 1) : null
                       });
                     }}
                   />
                 </div>
-                
+
                 {formData.is_best_seller && (
                   <div className="mt-4 space-y-2">
                     <Label htmlFor="bestSellerRank" className="flex items-center gap-2">
@@ -963,9 +966,9 @@ export default function ProductsPage() {
                       value={formData.best_seller_rank || ""}
                       onChange={(e) => {
                         const value = e.target.value ? parseInt(e.target.value, 10) : null;
-                        setFormData({ 
-                          ...formData, 
-                          best_seller_rank: value && value > 0 ? value : null 
+                        setFormData({
+                          ...formData,
+                          best_seller_rank: value && value > 0 ? value : null
                         });
                       }}
                     />
@@ -1065,9 +1068,9 @@ export default function ProductsPage() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="edit-productName">Product Name *</Label>
-                <Input 
-                  id="edit-productName" 
-                  placeholder="e.g., Agrio Boost" 
+                <Input
+                  id="edit-productName"
+                  placeholder="e.g., Agrio Boost"
                   className="mt-1"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -1075,9 +1078,9 @@ export default function ProductsPage() {
               </div>
               <div>
                 <Label htmlFor="edit-productNameHi">Product Name (Hindi)</Label>
-                <Input 
-                  id="edit-productNameHi" 
-                  placeholder="e.g., एग्रियो बूस्ट" 
+                <Input
+                  id="edit-productNameHi"
+                  placeholder="e.g., एग्रियो बूस्ट"
                   className="mt-1"
                   value={formData.name_hi}
                   onChange={(e) => setFormData({ ...formData, name_hi: e.target.value })}
@@ -1085,9 +1088,9 @@ export default function ProductsPage() {
               </div>
               <div>
                 <Label htmlFor="edit-composition">Technical Composition</Label>
-                <Input 
-                  id="edit-composition" 
-                  placeholder="e.g., NPK 20:20:20" 
+                <Input
+                  id="edit-composition"
+                  placeholder="e.g., NPK 20:20:20"
                   className="mt-1"
                   value={formData.composition}
                   onChange={(e) => setFormData({ ...formData, composition: e.target.value })}
@@ -1095,9 +1098,9 @@ export default function ProductsPage() {
               </div>
               <div>
                 <Label htmlFor="edit-dosage">Dosage *</Label>
-                <Input 
-                  id="edit-dosage" 
-                  placeholder="e.g., 2-3 ml per liter of water" 
+                <Input
+                  id="edit-dosage"
+                  placeholder="e.g., 2-3 ml per liter of water"
                   className="mt-1"
                   value={formData.dosage}
                   onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
@@ -1136,7 +1139,10 @@ export default function ProductsPage() {
                           <SelectValue placeholder="Select size" />
                         </SelectTrigger>
                         <SelectContent>
-                          {["100 ml", "200 ml", "500 ml", "1 L", "250 g", "500 g", "1 kg", "5 L", "10 kg"].map((s) => (
+                          {[
+                            "100 ml", "200 ml", "250 ml", "300 ml", "400 ml", "500 ml", "600 ml", "750 ml", "800 ml", "1 L", "2 L", "5 L",
+                            "100 g", "200 g", "250 g", "500 g", "800 g", "1 kg", "2 kg", "4 kg", "5 kg", "8 kg", "10 kg"
+                          ].map((s) => (
                             <SelectItem key={s} value={s}>{s}</SelectItem>
                           ))}
                         </SelectContent>
@@ -1162,7 +1168,7 @@ export default function ProductsPage() {
                         min="0"
                         step="0.01"
                         className="mt-0.5 h-9"
-                        value={pack.mrp !== undefined && pack.mrp !== null ? pack.mrp : ""}
+                        value={pack.mrp === 0 ? "" : (pack.mrp ?? "")}
                         onChange={(e) => {
                           const v = e.target.value ? parseFloat(e.target.value) : 0;
                           const next = [...formData.pack_sizes];
@@ -1178,7 +1184,7 @@ export default function ProductsPage() {
                         min="0"
                         step="0.01"
                         className="mt-0.5 h-9"
-                        value={pack.selling_price !== undefined && pack.selling_price !== null ? pack.selling_price : ""}
+                        value={pack.selling_price === 0 ? "" : (pack.selling_price ?? "")}
                         onChange={(e) => {
                           const v = e.target.value ? parseFloat(e.target.value) : 0;
                           const next = [...formData.pack_sizes];
@@ -1210,7 +1216,7 @@ export default function ProductsPage() {
               </div>
               <div>
                 <Label htmlFor="edit-category">Category *</Label>
-                <Select 
+                <Select
                   value={formData.category_id}
                   onValueChange={(value) => setFormData({ ...formData, category_id: value })}
                 >
@@ -1240,15 +1246,15 @@ export default function ProductsPage() {
                     id="edit-isBestSeller"
                     checked={formData.is_best_seller}
                     onCheckedChange={(checked) => {
-                      setFormData({ 
-                        ...formData, 
+                      setFormData({
+                        ...formData,
                         is_best_seller: checked,
                         best_seller_rank: checked ? (formData.best_seller_rank || 1) : null
                       });
                     }}
                   />
                 </div>
-                
+
                 {formData.is_best_seller && (
                   <div className="mt-4 space-y-2">
                     <Label htmlFor="edit-bestSellerRank" className="flex items-center gap-2">
@@ -1264,9 +1270,9 @@ export default function ProductsPage() {
                       value={formData.best_seller_rank || ""}
                       onChange={(e) => {
                         const value = e.target.value ? parseInt(e.target.value, 10) : null;
-                        setFormData({ 
-                          ...formData, 
-                          best_seller_rank: value && value > 0 ? value : null 
+                        setFormData({
+                          ...formData,
+                          best_seller_rank: value && value > 0 ? value : null
                         });
                       }}
                     />

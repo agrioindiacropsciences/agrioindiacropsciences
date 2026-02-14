@@ -145,7 +145,7 @@ export default function BuyNearbyPage() {
     }
   }, []);
 
-  const handleUseLocation = async () => {
+  const handleUseLocation = useCallback(async (isAuto = false) => {
     setIsLocating(true);
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -163,50 +163,64 @@ export default function BuyNearbyPage() {
               setSearchedFor(language === "en" ? "Your Location" : "आपका स्थान");
             } else setDistributors([]);
           } catch (error) {
-            toast({
-              title: language === "en" ? "Error" : "त्रुटि",
-              description: language === "en"
-                ? "Failed to search by location"
-                : "स्थान द्वारा खोज विफल रही",
-              variant: "destructive",
-            });
+            if (!isAuto) {
+              toast({
+                title: language === "en" ? "Error" : "त्रुटि",
+                description: language === "en"
+                  ? "Failed to search by location"
+                  : "स्थान द्वारा खोज विफल रही",
+                variant: "destructive",
+              });
+            }
           }
           setIsLocating(false);
         },
         () => {
-          toast({
-            title: language === "en" ? "Location Error" : "स्थान त्रुटि",
-            description: language === "en"
-              ? "Unable to get your location. Please allow location access or search by pincode/area/name."
-              : "आपका स्थान प्राप्त करने में असमर्थ। कृपया लोकेशन दें या पिनकोड/क्षेत्र/नाम से खोजें।",
-            variant: "destructive",
-          });
+          if (!isAuto) {
+            toast({
+              title: language === "en" ? "Location Error" : "स्थान त्रुटि",
+              description: language === "en"
+                ? "Unable to get your location. Please allow location access or search by pincode/area/name."
+                : "आपका स्थान प्राप्त करने में असमर्थ। कृपया लोकेशन दें या पिनकोड/क्षेत्र/नाम से खोजें।",
+              variant: "destructive",
+            });
+          }
           setIsLocating(false);
         }
       );
     } else {
-      toast({
-        title: language === "en" ? "Not Supported" : "समर्थित नहीं",
-        description: language === "en"
-          ? "Geolocation is not supported by your browser"
-          : "आपके ब्राउज़र द्वारा जियोलोकेशन समर्थित नहीं है",
-        variant: "destructive",
-      });
+      if (!isAuto) {
+        toast({
+          title: language === "en" ? "Not Supported" : "समर्थित नहीं",
+          description: language === "en"
+            ? "Geolocation is not supported by your browser"
+            : "आपके ब्राउज़र द्वारा जियोलोकेशन समर्थित नहीं है",
+          variant: "destructive",
+        });
+      }
       setIsLocating(false);
     }
-  };
+  }, [language, toast]);
 
-  // Auto-search with user pincode on mount if logged in
+  // Auto-search with user pincode on mount or current location
   useEffect(() => {
-    const fetchUserPincodeAndSearch = async () => {
+    const initPage = async () => {
+      // 1. Try to get current location automatically
+      if ("geolocation" in navigator) {
+        handleUseLocation(true);
+      }
+
+      // 2. Also try user pincode as a parallel fallback/enhancement if they are logged in
       if (user?.pincode && isPincode(user.pincode)) {
-        setSearchQuery(user.pincode);
-        handleSearchWithPincode(user.pincode);
+        if (!distributors.length) { // Only if location hasn't loaded yet
+          setSearchQuery(user.pincode);
+          handleSearchWithPincode(user.pincode);
+        }
       } else if (user?.id) {
         try {
           const response = await api.getProfile();
           const userPincode = response.success && response.data?.pin_code ? response.data.pin_code : null;
-          if (userPincode && isPincode(userPincode)) {
+          if (userPincode && isPincode(userPincode) && !distributors.length) {
             setSearchQuery(userPincode);
             handleSearchWithPincode(userPincode);
           }
@@ -215,8 +229,8 @@ export default function BuyNearbyPage() {
         }
       }
     };
-    fetchUserPincodeAndSearch();
-  }, [user?.id, user?.pincode, handleSearchWithPincode]);
+    initPage();
+  }, [user?.id, user?.pincode, handleSearchWithPincode, handleUseLocation]);
 
   return (
     <div className="min-h-screen overflow-hidden">
@@ -288,7 +302,7 @@ export default function BuyNearbyPage() {
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-full sm:w-auto">
                   <Button
                     variant="outline"
-                    onClick={handleUseLocation}
+                    onClick={() => handleUseLocation()}
                     disabled={isLocating}
                     className="w-full h-14 px-6 rounded-xl border-2"
                   >
@@ -311,7 +325,7 @@ export default function BuyNearbyPage() {
         {/* Wave divider */}
         <div className="absolute bottom-0 left-0 right-0">
           <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0V120Z" fill="#f8fafc"/>
+            <path d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0V120Z" fill="#f8fafc" />
           </svg>
         </div>
       </section>

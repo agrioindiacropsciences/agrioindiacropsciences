@@ -11,6 +11,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import LocationPicker from "@/components/LocationPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -90,7 +91,7 @@ export default function DistributorsPage() {
     setIsLoading(true);
     try {
       const response = await api.getAdminDistributors({ page, limit: 10 });
-      
+
       if (response.success && response.data) {
         setDistributors(response.data.distributors || []);
         if (response.data.pagination) {
@@ -114,7 +115,7 @@ export default function DistributorsPage() {
         dist.owner_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         dist.city?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus =
-        statusFilter === "all" || 
+        statusFilter === "all" ||
         (statusFilter === "active" && dist.is_active) ||
         (statusFilter === "inactive" && !dist.is_active);
       return matchesSearch && matchesStatus;
@@ -369,16 +370,16 @@ export default function DistributorsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => handleEditDistributor(dist)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="text-red-600"
                             onClick={() => handleDeleteDistributor(dist.id)}
                           >
@@ -407,27 +408,27 @@ export default function DistributorsPage() {
           Showing {filteredDistributors.length} of {total}
         </p>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             disabled={page <= 1}
             onClick={() => setPage(p => Math.max(1, p - 1))}
           >
             &lt;
           </Button>
           {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((p) => (
-            <Button 
+            <Button
               key={p}
-              variant="outline" 
-              size="sm" 
+              variant="outline"
+              size="sm"
               className={page === p ? "bg-primary text-white" : ""}
               onClick={() => setPage(p)}
             >
               {p}
             </Button>
           ))}
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             disabled={page >= totalPages}
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
@@ -439,15 +440,15 @@ export default function DistributorsPage() {
 
       {/* Add Distributor Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Distributor</DialogTitle>
           </DialogHeader>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <Label>Distributor Name *</Label>
-              <Input 
-                placeholder="Business name" 
+              <Input
+                placeholder="Business name"
                 className="mt-1"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -455,8 +456,8 @@ export default function DistributorsPage() {
             </div>
             <div>
               <Label>Owner/Contact Person</Label>
-              <Input 
-                placeholder="Contact person name" 
+              <Input
+                placeholder="Contact person name"
                 className="mt-1"
                 value={formData.owner_name}
                 onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
@@ -464,8 +465,8 @@ export default function DistributorsPage() {
             </div>
             <div>
               <Label>Phone Number *</Label>
-              <Input 
-                placeholder="+91 XXXXX XXXXX" 
+              <Input
+                placeholder="+91 XXXXX XXXXX"
                 className="mt-1"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -473,18 +474,37 @@ export default function DistributorsPage() {
             </div>
             <div>
               <Label>Email</Label>
-              <Input 
-                type="email" 
-                placeholder="email@example.com" 
+              <Input
+                type="email"
+                placeholder="email@example.com"
                 className="mt-1"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
+            <div className="md:col-span-2 space-y-2">
+              <Label className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" />
+                Pick Location on Map
+              </Label>
+              <LocationPicker
+                onLocationSelect={(loc) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    address: loc.address,
+                    city: loc.city,
+                    state: loc.state,
+                    pincode: loc.pincode,
+                    latitude: loc.lat.toString(),
+                    longitude: loc.lng.toString(),
+                  }));
+                }}
+              />
+            </div>
             <div className="md:col-span-2">
               <Label>Address</Label>
-              <Input 
-                placeholder="Full address" 
+              <Input
+                placeholder="Full address"
                 className="mt-1"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
@@ -492,8 +512,8 @@ export default function DistributorsPage() {
             </div>
             <div>
               <Label>City</Label>
-              <Input 
-                placeholder="City name" 
+              <Input
+                placeholder="City name"
                 className="mt-1"
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
@@ -501,8 +521,8 @@ export default function DistributorsPage() {
             </div>
             <div>
               <Label>State</Label>
-              <Input 
-                placeholder="State name" 
+              <Input
+                placeholder="State name"
                 className="mt-1"
                 value={formData.state}
                 onChange={(e) => setFormData({ ...formData, state: e.target.value })}
@@ -510,26 +530,26 @@ export default function DistributorsPage() {
             </div>
             <div>
               <Label>Pincode *</Label>
-              <Input 
-                placeholder="6-digit pincode" 
+              <Input
+                placeholder="6-digit pincode"
                 className="mt-1"
                 value={formData.pincode}
                 onChange={(e) => setFormData({ ...formData, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })}
               />
             </div>
             <div>
-              <Label>Latitude (optional)</Label>
-              <Input 
-                placeholder="e.g., 19.0760" 
+              <Label>Latitude</Label>
+              <Input
+                placeholder="e.g., 19.0760"
                 className="mt-1"
                 value={formData.latitude}
                 onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
               />
             </div>
             <div>
-              <Label>Longitude (optional)</Label>
-              <Input 
-                placeholder="e.g., 72.8777" 
+              <Label>Longitude</Label>
+              <Input
+                placeholder="e.g., 72.8777"
                 className="mt-1"
                 value={formData.longitude}
                 onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
@@ -551,15 +571,15 @@ export default function DistributorsPage() {
 
       {/* Edit Distributor Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={(o) => { setEditDialogOpen(o); if (!o) resetForm(); }}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Distributor</DialogTitle>
           </DialogHeader>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <Label>Distributor Name *</Label>
-              <Input 
-                placeholder="Business name" 
+              <Input
+                placeholder="Business name"
                 className="mt-1"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -567,8 +587,8 @@ export default function DistributorsPage() {
             </div>
             <div>
               <Label>Owner/Contact Person</Label>
-              <Input 
-                placeholder="Contact person name" 
+              <Input
+                placeholder="Contact person name"
                 className="mt-1"
                 value={formData.owner_name}
                 onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
@@ -576,8 +596,8 @@ export default function DistributorsPage() {
             </div>
             <div>
               <Label>Phone Number *</Label>
-              <Input 
-                placeholder="+91 XXXXX XXXXX" 
+              <Input
+                placeholder="+91 XXXXX XXXXX"
                 className="mt-1"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -585,18 +605,39 @@ export default function DistributorsPage() {
             </div>
             <div>
               <Label>Email</Label>
-              <Input 
-                type="email" 
-                placeholder="email@example.com" 
+              <Input
+                type="email"
+                placeholder="email@example.com"
                 className="mt-1"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
+            <div className="md:col-span-2 space-y-2">
+              <Label className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" />
+                Pick Location on Map
+              </Label>
+              <LocationPicker
+                initialLat={formData.latitude ? parseFloat(formData.latitude) : undefined}
+                initialLng={formData.longitude ? parseFloat(formData.longitude) : undefined}
+                onLocationSelect={(loc) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    address: loc.address,
+                    city: loc.city,
+                    state: loc.state,
+                    pincode: loc.pincode,
+                    latitude: loc.lat.toString(),
+                    longitude: loc.lng.toString(),
+                  }));
+                }}
+              />
+            </div>
             <div className="md:col-span-2">
               <Label>Address</Label>
-              <Input 
-                placeholder="Full address" 
+              <Input
+                placeholder="Full address"
                 className="mt-1"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
@@ -604,8 +645,8 @@ export default function DistributorsPage() {
             </div>
             <div>
               <Label>City</Label>
-              <Input 
-                placeholder="City name" 
+              <Input
+                placeholder="City name"
                 className="mt-1"
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
@@ -613,8 +654,8 @@ export default function DistributorsPage() {
             </div>
             <div>
               <Label>State</Label>
-              <Input 
-                placeholder="State name" 
+              <Input
+                placeholder="State name"
                 className="mt-1"
                 value={formData.state}
                 onChange={(e) => setFormData({ ...formData, state: e.target.value })}
@@ -622,26 +663,26 @@ export default function DistributorsPage() {
             </div>
             <div>
               <Label>Pincode *</Label>
-              <Input 
-                placeholder="6-digit pincode" 
+              <Input
+                placeholder="6-digit pincode"
                 className="mt-1"
                 value={formData.pincode}
                 onChange={(e) => setFormData({ ...formData, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })}
               />
             </div>
             <div>
-              <Label>Latitude (optional)</Label>
-              <Input 
-                placeholder="e.g., 19.0760" 
+              <Label>Latitude</Label>
+              <Input
+                placeholder="e.g., 19.0760"
                 className="mt-1"
                 value={formData.latitude}
                 onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
               />
             </div>
             <div>
-              <Label>Longitude (optional)</Label>
-              <Input 
-                placeholder="e.g., 72.8777" 
+              <Label>Longitude</Label>
+              <Input
+                placeholder="e.g., 72.8777"
                 className="mt-1"
                 value={formData.longitude}
                 onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}

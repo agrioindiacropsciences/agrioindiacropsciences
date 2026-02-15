@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import Link from "next/link";
 import {
@@ -141,57 +141,106 @@ export default function ScanPage() {
   };
 
   // 1. Start QR Scanner
-  const startQRScanner = async () => {
+  const startQRScanner = () => {
     if (isScanning) return;
     setState("scanning");
-
-    try {
-      setIsScanning(true);
-      const scanner = new Html5Qrcode(qrCodeRegionId);
-      qrCodeScannerRef.current = scanner;
-
-      await scanner.start(
-        { facingMode: facingMode },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
-        },
-        (decodedText) => {
-          handleQRScanSuccess(decodedText);
-        },
-        (errorMessage) => {
-          // console.log("Scan error", errorMessage);
-        }
-      );
-    } catch (error) {
-      console.error("QR Scanner error:", error);
-      setIsScanning(false);
-      setState("idle");
-      toast({
-        title: language === "en" ? "Camera Error" : "कैमरा त्रुटि",
-        description: language === "en"
-          ? "Unable to access camera. Please check permissions."
-          : "कैमरा तक पहुंचने में असमर्थ। कृपया अनुमतियां जांचें।",
-        variant: "destructive",
-      });
-    }
+    setIsScanning(true);
   };
 
   // Stop QR Scanner
-  const stopQRScanner = async () => {
-    if (qrCodeScannerRef.current && isScanning) {
+  const stopQRScanner = useCallback(async () => {
+    if (qrCodeScannerRef.current) {
       try {
-        await qrCodeScannerRef.current.stop();
+        if (qrCodeScannerRef.current.isScanning) {
+          await qrCodeScannerRef.current.stop();
+        }
         await qrCodeScannerRef.current.clear();
         qrCodeScannerRef.current = null;
-        setIsScanning(false);
       } catch (error) {
         console.error("Error stopping scanner:", error);
-        setIsScanning(false);
       }
     }
-  };
+    setIsScanning(false);
+  }, []);
+
+  // Effect to manage scanner lifecycle
+  useEffect(() => {
+    let isMounted = true;
+
+    const initScanner = async () => {
+      // Small delay to ensure the DOM element is rendered and ready
+      await new Promise(resolve => setTimeout(resolve, 400));
+
+      if (!isMounted || state !== "scanning" || !isScanning) return;
+
+      const element = document.getElementById(qrCodeRegionId);
+      if (!element) {
+        console.error("Scanner element not found");
+        return;
+      }
+
+      try {
+        // Ensure any existing instance is cleaned up
+        if (qrCodeScannerRef.current) {
+          try {
+            if (qrCodeScannerRef.current.isScanning) {
+              await qrCodeScannerRef.current.stop();
+            }
+            qrCodeScannerRef.current.clear();
+          } catch (e) {
+            console.error("Error during cleanup of old scanner:", e);
+          }
+        }
+
+        const scanner = new Html5Qrcode(qrCodeRegionId);
+        qrCodeScannerRef.current = scanner;
+
+        await scanner.start(
+          { facingMode: facingMode },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0,
+          },
+          (decodedText) => {
+            if (isMounted) handleQRScanSuccess(decodedText);
+          },
+          () => { } // Ignore frame-level scan failures
+        );
+      } catch (error) {
+        console.error("QR Scanner error:", error);
+        if (isMounted) {
+          setIsScanning(false);
+          setState("idle");
+
+          let errorMsg = language === "en"
+            ? "Unable to access camera. Please check permissions."
+            : "कैमरा तक पहुंचने में असमर्थ। कृपया अनुमतियां जांचें।";
+
+          // Contextual error for non-secure contexts (HTTP)
+          if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost') {
+            errorMsg = language === "en"
+              ? "Camera access requires a secure connection (HTTPS). Please use a secure site."
+              : "कैमरा एक्सेस के लिए एक सुरक्षित कनेक्शन (HTTPS) की आवश्यकता है। कृपया एक सुरक्षित साइट का उपयोग करें।";
+          }
+
+          toast({
+            title: language === "en" ? "Camera Error" : "कैमरा त्रुटि",
+            description: errorMsg,
+            variant: "destructive",
+          });
+        }
+      }
+    };
+
+    if (state === "scanning" && isScanning) {
+      initScanner();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [state, isScanning, facingMode, language, toast]);
 
   // 2. Handle QR Scan -> Go to Form
   const handleQRScanSuccess = async (rawCode: string) => {
@@ -315,15 +364,8 @@ export default function ScanPage() {
 
 
   // Toggle camera
-  const toggleCamera = async () => {
-    await stopQRScanner();
-    setFacingMode(facingMode === "environment" ? "user" : "environment");
-    // Restart scanner with new facing mode
-    setTimeout(() => {
-      if (isMobile) {
-        startQRScanner();
-      }
-    }, 100);
+  const toggleCamera = () => {
+    setFacingMode(prev => (prev === "environment" ? "user" : "environment"));
   };
 
   // Reset

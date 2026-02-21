@@ -195,6 +195,7 @@ export async function getUserRewards(): Promise<ApiResponse<T.Reward[]>> {
       product_name: r.product_name || "",
       coupon_code: r.coupon_code || "",
       acknowledgment_file_url: r.acknowledgment_file_url || "",
+      is_scratched: r.is_scratched || false,
     };
   });
 
@@ -202,6 +203,13 @@ export async function getUserRewards(): Promise<ApiResponse<T.Reward[]>> {
     success: true,
     data: mapped,
   };
+}
+
+/**
+ * Mark a reward as scratched
+ */
+export async function scratchReward(reward_id: string): Promise<ApiResponse<{ is_scratched: boolean }>> {
+  return post<{ is_scratched: boolean }>(`/user/rewards/${reward_id}/scratch`, {}, true);
 }
 
 // ==================== Crops APIs ====================

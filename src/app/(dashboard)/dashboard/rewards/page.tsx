@@ -57,6 +57,150 @@ function RewardSkeleton() {
   );
 }
 
+function ScratchDialog({
+  reward,
+  open,
+  onClose,
+  onScratched
+}: {
+  reward: Reward | null;
+  open: boolean;
+  onClose: () => void;
+  onScratched: () => void;
+}) {
+  const { language } = useStore();
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [isRevealed, setIsRevealed] = useState(false);
+
+  useEffect(() => {
+    if (open && canvasRef.current && !isRevealed) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = "#16a34a";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 20px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(
+          language === "en" ? "SCRATCH HERE" : "यहाँ खुरचें",
+          canvas.width / 2,
+          canvas.height / 2 - 10
+        );
+      }
+      setProgress(0);
+    }
+  }, [open, isRevealed, language]);
+
+  const handleScratch = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isDrawing || !canvasRef.current || isRevealed) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    let x, y;
+
+    if ("touches" in e) {
+      x = e.touches[0].clientX - rect.left;
+      y = e.touches[0].clientY - rect.top;
+    } else {
+      x = (e as React.MouseEvent).clientX - rect.left;
+      y = (e as React.MouseEvent).clientY - rect.top;
+    }
+
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.beginPath();
+    ctx.arc(x, y, 25, 0, Math.PI * 2);
+    ctx.fill();
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let scratchedPixels = 0;
+    for (let i = 3; i < imageData.data.length; i += 4) {
+      if (imageData.data[i] === 0) scratchedPixels++;
+    }
+    const currentProgress = (scratchedPixels / (canvas.width * canvas.height)) * 100;
+    setProgress(currentProgress);
+
+    if (currentProgress > 50) {
+      setIsRevealed(true);
+      if (reward?.id) {
+        api.scratchReward(reward.id).then(() => {
+          onScratched();
+        }).catch(console.error);
+      }
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(val) => {
+      if (!val) {
+        onClose();
+        setIsRevealed(false);
+      }
+    }}>
+      <DialogContent className="sm:max-w-md bg-white p-6 text-center">
+        <DialogHeader>
+          <DialogTitle className="text-center text-xl font-bold text-green-700">
+            {language === 'en' ? 'Unscratched Reward!' : 'खुरचा नहीं गया पुरस्कार!'}
+          </DialogTitle>
+        </DialogHeader>
+        {!isRevealed ? (
+          <div className="relative mx-auto w-[250px] h-[250px] rounded-xl overflow-hidden shadow-2xl border-4 border-yellow-400 bg-white select-none touch-none mt-4">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-yellow-50 to-orange-50 p-6">
+              <span className="text-4xl text-gray-300">?</span>
+            </div>
+            <canvas
+              ref={canvasRef}
+              width={250}
+              height={250}
+              className="absolute inset-0 w-full h-full cursor-pointer z-10"
+              onMouseDown={() => setIsDrawing(true)}
+              onMouseUp={() => setIsDrawing(false)}
+              onMouseLeave={() => setIsDrawing(false)}
+              onMouseMove={handleScratch}
+              onTouchStart={() => setIsDrawing(true)}
+              onTouchEnd={() => setIsDrawing(false)}
+              onTouchMove={handleScratch}
+            />
+          </div>
+        ) : (
+          <div className="mt-4 space-y-4">
+            <div className="h-32 w-32 mx-auto rounded-full bg-gradient-to-br from-yellow-300 to-orange-400 p-1 shadow-2xl">
+              <div className="h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                {reward?.image_url ? (
+                  <img src={reward.image_url} alt="Prize" className="h-24 w-24 object-contain" />
+                ) : (
+                  <span className="text-5xl">🎁</span>
+                )}
+              </div>
+            </div>
+            <h2 className="text-2xl font-black text-gray-900">
+              {language === 'en' ? 'Congratulations!' : 'बधाई हो!'}
+            </h2>
+            <p className="text-lg text-gray-600 font-medium">
+              {language === 'en' ? 'You revealed' : 'आपने प्रकट किया'} <br />
+              <span className="text-primary font-bold text-xl">
+                {reward?.type === 'GIFT'
+                  ? (language === 'hi' && reward.name_hi ? reward.name_hi : (reward.name || 'Gift'))
+                  : `₹${reward?.amount || 0} ${reward?.type}`}
+              </span>
+            </p>
+            <Button onClick={() => { onClose(); setIsRevealed(false); }} className="w-full">
+              {language === 'en' ? 'View Details' : 'विवरण देखें'}
+            </Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function RewardsPage() {
   const { language } = useStore();
   const { toast } = useToast();
@@ -65,6 +209,7 @@ export default function RewardsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isScratchOpen, setIsScratchOpen] = useState(false);
 
   useEffect(() => {
     const fetchRewards = async () => {
@@ -253,7 +398,12 @@ export default function RewardsPage() {
                     transition={{ delay: index * 0.05 }}
                     onClick={() => {
                       setSelectedReward(reward);
-                      setIsDetailOpen(true);
+                      // If it's explicitly strictly unscratched
+                      if (reward.is_scratched === false) {
+                        setIsScratchOpen(true);
+                      } else {
+                        setIsDetailOpen(true);
+                      }
                     }}
                     className="cursor-pointer"
                   >
@@ -477,6 +627,19 @@ export default function RewardsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ScratchDialog
+        reward={selectedReward}
+        open={isScratchOpen}
+        onClose={() => {
+          setIsScratchOpen(false);
+          // After closing scratch, open details
+          setIsDetailOpen(true);
+        }}
+        onScratched={() => {
+          setRewards(prev => prev.map(r => r.id === selectedReward?.id ? { ...r, is_scratched: true } : r));
+        }}
+      />
     </div>
   );
 }

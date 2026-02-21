@@ -137,6 +137,9 @@ export default function ScanPage() {
 
     if (progress > 50 && state === "scratch") {
       setState("revealed");
+      if (redemptionId) {
+        api.scratchReward(redemptionId).catch(console.error);
+      }
     }
   };
 

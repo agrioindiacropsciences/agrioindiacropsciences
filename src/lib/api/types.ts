@@ -290,6 +290,7 @@ export interface Reward {
   image_url?: string;
   coupon_code?: string;
   acknowledgment_file_url?: string;
+  is_scratched?: boolean;
 }
 
 export interface RewardsResponse {

@@ -162,8 +162,6 @@ const stats = [
   { value: 500, suffix: "+", label: "Distributors", labelHi: "वितरक", icon: Users },
 ];
 
-import type { Product } from "@/lib/api/types";
-
 const ICON_MAP: Record<string, any> = {
 
   QrCode, MapPin, Leaf, Languages, ArrowRight, TrendingUp, Users, Package, Phone, MessageCircle, Star, Award, Shield, Sparkles, ChevronRight, Beaker

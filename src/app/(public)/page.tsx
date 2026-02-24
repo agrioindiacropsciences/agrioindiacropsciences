@@ -21,6 +21,7 @@ import {
   Sparkles,
   ChevronRight,
   Beaker,
+  Navigation,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,6 +34,9 @@ import {
   CountUp,
 } from "@/components/ui/animated-section";
 import { TractorLoader } from "@/components/ui/tractor-loader";
+import { getBestSellers, getAppConfig, getDistributors } from "@/lib/api";
+import type { Product, Distributor } from "@/lib/api/types";
+import { DistributorCard } from "@/components/distributors/DistributorCard";
 
 const features = [
   {
@@ -158,10 +162,10 @@ const stats = [
   { value: 500, suffix: "+", label: "Distributors", labelHi: "वितरक", icon: Users },
 ];
 
-import { getBestSellers, getAppConfig } from "@/lib/api";
 import type { Product } from "@/lib/api/types";
 
 const ICON_MAP: Record<string, any> = {
+
   QrCode, MapPin, Leaf, Languages, ArrowRight, TrendingUp, Users, Package, Phone, MessageCircle, Star, Award, Shield, Sparkles, ChevronRight, Beaker
 };
 
@@ -174,6 +178,9 @@ export default function HomePage() {
   const [homeFeatures, setHomeFeatures] = React.useState<any[]>(features);
   const [homeWhyChooseUs, setHomeWhyChooseUs] = React.useState<any[]>(whyChooseUs);
   const [heroImage, setHeroImage] = React.useState<string>("https://res.cloudinary.com/dyumjsohc/image/upload/v1770294230/agrio_india/static_assets/ggmj1s5khjkrfaqiiyf4.png");
+  const [nearbyDistributors, setNearbyDistributors] = React.useState<Distributor[]>([]);
+  const [loadingDistributors, setLoadingDistributors] = React.useState(false);
+
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -212,6 +219,42 @@ export default function HomePage() {
           });
           setBestSellingProducts(sortedProducts);
         }
+
+        // Fetch Nearby Distributors automatically if possible
+        if ("geolocation" in navigator) {
+          setLoadingDistributors(true);
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              try {
+                const distRes = await getDistributors({
+                  lat: position.coords.latitude,
+                  lng: position.coords.longitude,
+                  limit: 3
+                });
+                if (distRes.success && distRes.data) {
+                  setNearbyDistributors(distRes.data);
+                }
+              } catch (e) {
+                console.error("Failed to fetch nearby distributors:", e);
+              } finally {
+                setLoadingDistributors(false);
+              }
+            },
+            async () => {
+              // Fallback: fetch without location (just some distributors)
+              try {
+                const distRes = await getDistributors({ limit: 3 });
+                if (distRes.success && distRes.data) {
+                  setNearbyDistributors(distRes.data);
+                }
+              } catch (e) {
+                console.error("Failed to fetch distributors fallback:", e);
+              } finally {
+                setLoadingDistributors(false);
+              }
+            }
+          );
+        }
       } catch (error) {
         console.error("Failed to fetch home data:", error);
       } finally {
@@ -221,6 +264,7 @@ export default function HomePage() {
 
     fetchData();
   }, []);
+
 
 
   return (
@@ -801,6 +845,69 @@ export default function HomePage() {
           </AnimatedSection>
         </div>
       </section>
+
+      {/* Nearby Distributors Section */}
+      <section className="py-24 bg-slate-50 relative overflow-hidden">
+        {/* Background Decorations */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -ml-32 -mb-32" />
+
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="flex flex-col md:flex-row items-end justify-between mb-12 gap-6">
+            <AnimatedSection className="text-left flex-1">
+              <Badge variant="outline" className="mb-4 px-4 py-1 border-primary/20 text-primary bg-primary/5">
+                <MapPin className="h-4 w-4 mr-2" />
+                {language === "en" ? "Locate Us" : "हमें खोजें"}
+              </Badge>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+                {language === "en" ? "Our Distributors" : "हमारे वितरक"}
+                <span className="gradient-text block">{language === "en" ? "Near You" : "आपके पास"}</span>
+              </h2>
+              <p className="text-gray-600 max-w-xl text-lg">
+                {language === "en"
+                  ? "Find authorized Agrio India distributors in your area for genuine products and expert advice."
+                  : "प्रामाणिक उत्पादों और विशेषज्ञ सलाह के लिए अपने क्षेत्र में अधिकृत एग्रियो इंडिया वितरकों को खोजें।"}
+              </p>
+            </AnimatedSection>
+
+            <AnimatedSection delay={0.2}>
+              <Button asChild size="lg" className="rounded-full px-8 shadow-xl shadow-primary/20 bg-primary group">
+                <Link href="/buy-nearby">
+                  {language === "en" ? "View All on Map" : "मैप पर सभी देखें"}
+                  <Navigation className="ml-2 h-5 w-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                </Link>
+              </Button>
+            </AnimatedSection>
+          </div>
+
+          {loadingDistributors ? (
+            <div className="py-20 flex justify-center">
+              <TractorLoader size="lg" />
+            </div>
+          ) : nearbyDistributors.length > 0 ? (
+            <AnimatedContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-8" staggerDelay={0.1}>
+              {nearbyDistributors.map((distributor) => (
+                <AnimatedItem key={distributor.id}>
+                  <DistributorCard distributor={distributor} />
+                </AnimatedItem>
+              ))}
+            </AnimatedContainer>
+          ) : (
+            <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
+              <MapPin className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 font-medium">
+                {language === "en" ? "No distributors found nearby." : "पास में कोई वितरक नहीं मिला।"}
+              </p>
+              <Button variant="link" asChild className="mt-2 text-primary">
+                <Link href="/buy-nearby">
+                  {language === "en" ? "Search manually by pincode" : "पिनकोड द्वारा मैन्युअल रूप से खोजें"}
+                </Link>
+              </Button>
+            </div>
+          )}
+        </div>
+      </section>
+
 
       {/* How It Works - Scan & Win */}
       <section className="py-24 relative overflow-hidden">

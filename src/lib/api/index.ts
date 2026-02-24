@@ -3,12 +3,23 @@
  * Updated to match Backend API v2.1
  */
 
-import { get, post, put, del, patch, patchFormData, setTokens, clearTokens, getAccessToken, ApiResponse, API_BASE_URL } from './client';
+import {
+  get, post, put, del, patch, patchFormData,
+  setTokens, clearTokens, getAccessToken,
+  API_BASE_URL,
+  ApiResponse
+} from './client';
+
+export {
+  get, post, put, del, patch, patchFormData,
+  setTokens, clearTokens, getAccessToken,
+  API_BASE_URL
+};
+export type { ApiResponse };
 import type * as T from './types';
 
 // Re-export types and utilities
 export * from './types';
-export { getAccessToken, setTokens, clearTokens } from './client';
 
 // ==================== Auth APIs ====================
 

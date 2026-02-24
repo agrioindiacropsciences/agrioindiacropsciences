@@ -30,6 +30,8 @@ import {
   FloatingElement,
 } from "@/components/ui/animated-section";
 import { TractorLoader } from "@/components/ui/tractor-loader";
+import { DistributorCard } from "@/components/distributors/DistributorCard";
+
 
 const SEARCH_DEBOUNCE_MS = 400;
 const isPincode = (s: string) => /^[1-9][0-9]{5}$/.test(s.replace(/\s/g, ""));
@@ -373,94 +375,13 @@ export default function BuyNearbyPage() {
                 exit={{ opacity: 0 }}
               >
                 <AnimatedContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-6" staggerDelay={0.1}>
-                  {distributors.map((distributor, index) => (
+                  {distributors.map((distributor) => (
                     <AnimatedItem key={distributor.id}>
-                      <motion.div
-                        whileHover={{ y: -10 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <Card className="h-full border-0 shadow-lg hover:shadow-xl transition-all overflow-hidden">
-                          <div className="h-2 bg-gradient-to-r from-primary to-emerald-500" />
-                          <CardContent className="p-6">
-                            <div className="flex items-start justify-between mb-4">
-                              <div className="flex items-start gap-3">
-                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-emerald-500 flex items-center justify-center shadow-lg">
-                                  <Store className="h-6 w-6 text-white" />
-                                </div>
-                                <div>
-                                  <h3 className="font-bold text-lg">
-                                    {distributor.name}
-                                  </h3>
-                                  <p className="text-sm text-gray-600 line-clamp-2">
-                                    {distributor.address}, {distributor.city}
-                                  </p>
-                                </div>
-                              </div>
-                              {distributor.is_active && (
-                                <Badge className="bg-green-100 text-green-700 border-0">
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  {language === "en" ? "Active" : "सक्रिय"}
-                                </Badge>
-                              )}
-                            </div>
-
-                            {/* Distance */}
-                            {distributor.distance_km && (
-                              <div className="flex items-center gap-2 text-sm text-primary mb-4 bg-primary/5 rounded-lg px-3 py-2">
-                                <Navigation className="h-4 w-4" />
-                                <span className="font-medium">
-                                  {distributor.distance_km.toFixed(1)} {language === "en" ? "km away" : "किमी दूर"}
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Phone */}
-                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
-                              <Phone className="h-4 w-4 text-primary" />
-                              <a href={`tel:${distributor.phone}`} className="hover:text-primary font-medium">
-                                {distributor.phone}
-                              </a>
-                            </div>
-
-                            {/* Owner */}
-                            {distributor.owner_name && (
-                              <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-                                <User className="h-4 w-4 text-primary" />
-                                <span>{language === "en" ? "Owner:" : "मालिक:"} {distributor.owner_name}</span>
-                              </div>
-                            )}
-
-                            {/* Action Buttons */}
-                            <div className="flex gap-3 mt-4">
-                              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
-                                <Button asChild className="w-full h-12 rounded-xl shadow-lg shadow-primary/20">
-                                  <a href={`tel:${distributor.phone}`}>
-                                    <Phone className="h-4 w-4 mr-2" />
-                                    {language === "en" ? "Call Now" : "कॉल करें"}
-                                  </a>
-                                </Button>
-                              </motion.div>
-                              {distributor.latitude && distributor.longitude && (
-                                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
-                                  <Button variant="outline" asChild className="w-full h-12 rounded-xl border-2">
-                                    <a
-                                      href={`https://www.google.com/maps/dir/?api=1&origin=current+location&destination=${distributor.latitude},${distributor.longitude}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                    >
-                                      <Navigation className="h-4 w-4 mr-2" />
-                                      {language === "en" ? "Navigate" : "नेविगेट"}
-                                    </a>
-                                  </Button>
-                                </motion.div>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
+                      <DistributorCard distributor={distributor} />
                     </AnimatedItem>
                   ))}
                 </AnimatedContainer>
+
               </motion.div>
             ) : hasSearched ? (
               <motion.div

@@ -247,10 +247,16 @@ export default function RewardsPage() {
       const response = await api.getRewardCertificate(id);
 
       if (response.success && response.data) {
-        if (response.data.download_url) {
-          window.open(response.data.download_url, "_blank");
-        } else if (response.data.certificate_url) {
-          window.open(response.data.certificate_url, "_blank");
+        let pdfUrl = response.data.download_url || response.data.certificate_url;
+        if (pdfUrl) {
+          if (pdfUrl.startsWith('/')) {
+            const token = api.getAccessToken();
+            const baseUrl = api.API_BASE_URL.split('/api/')[0];
+            const fullUrl = `${baseUrl}${pdfUrl}${pdfUrl.includes('?') ? '&' : '?'}token=${token}`;
+            window.open(fullUrl, "_blank");
+          } else {
+            window.open(pdfUrl, "_blank");
+          }
         } else if (response.data.certificate_data) {
           const d = response.data.certificate_data;
           const w = window.open("", "_blank");
@@ -607,12 +613,10 @@ export default function RewardsPage() {
                     {language === 'en' ? 'Download Certificate' : 'प्रमाणपत्र डाउनलोड करें'}
                   </Button>
 
-                  {selectedReward.acknowledgment_file_url && (
-                    <Button variant="outline" className="w-full h-12" asChild>
-                      <a href={selectedReward.acknowledgment_file_url} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        {language === 'en' ? 'View Document' : 'दस्तावेज़ देखें'}
-                      </a>
+                  {selectedReward.id && (
+                    <Button variant="outline" className="w-full h-12" onClick={() => downloadCertificate(selectedReward.id)}>
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      {language === 'en' ? 'View Document' : 'दस्तावेज़ देखें'}
                     </Button>
                   )}
                 </div>

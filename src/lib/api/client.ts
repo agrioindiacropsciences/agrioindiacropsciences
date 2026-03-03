@@ -60,9 +60,14 @@ async function request<T>(
 
   if (requireAuth) {
     const token = getAccessToken();
-    if (token) {
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+    if (!token) {
+      // No token available — don't send the request at all
+      return {
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required. Please login first.' },
+      };
     }
+    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   }
 
   try {
@@ -148,9 +153,13 @@ export async function postFormData<T>(endpoint: string, formData: FormData, auth
 
   if (auth) {
     const token = getAccessToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    if (!token) {
+      return {
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required. Please login first.' },
+      };
     }
+    headers['Authorization'] = `Bearer ${token}`;
   }
   // Don't set Content-Type - browser will set it with boundary for FormData
 
@@ -198,9 +207,13 @@ export async function patchFormData<T>(endpoint: string, formData: FormData, aut
 
   if (auth) {
     const token = getAccessToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    if (!token) {
+      return {
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required. Please login first.' },
+      };
     }
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
   try {

@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   QrCode,
   Keyboard,
@@ -16,6 +17,8 @@ import {
   XCircle,
   StopCircle,
   CheckCircle,
+  LogIn,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,8 +40,9 @@ interface WonPrize {
 }
 
 export default function ScanPage() {
-  const { language, addReward } = useStore();
+  const { language, addReward, isAuthenticated } = useStore();
   const { toast } = useToast();
+  const router = useRouter();
 
   const [state, setState] = useState<ScanState>("idle");
 
@@ -58,6 +62,10 @@ export default function ScanPage() {
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const qrCodeScannerRef = useRef<Html5Qrcode | null>(null);
   const qrCodeRegionId = "qr-reader";
+
+  // ─── Auth Guard: Block scan page for unauthenticated users ───
+  const hasToken = typeof window !== 'undefined' ? !!api.getAccessToken() : false;
+  const isLoggedIn = isAuthenticated && hasToken;
 
   // Detect mobile device
   useEffect(() => {
@@ -302,6 +310,18 @@ export default function ScanPage() {
       return;
     }
 
+    // Pre-flight auth check — never attempt verification without a valid token
+    const token = api.getAccessToken();
+    if (!token) {
+      toast({
+        title: language === 'en' ? 'Session Expired' : 'सत्र समाप्त',
+        description: language === 'en' ? 'Please login again to continue.' : 'जारी रखने के लिए कृपया पुनः लॉगिन करें।',
+        variant: 'destructive',
+      });
+      router.push('/auth');
+      return;
+    }
+
     setState("verifying");
     setErrorMessage("");
 
@@ -309,6 +329,16 @@ export default function ScanPage() {
       const res = await api.verifyProductCoupon(serialNumber, authCode);
 
       if (!res.success || !res.data) {
+        // Handle auth failures gracefully
+        if (res.error?.code === 'UNAUTHORIZED') {
+          toast({
+            title: language === 'en' ? 'Session Expired' : 'सत्र समाप्त',
+            description: language === 'en' ? 'Please login again to continue.' : 'जारी रखने के लिए कृपया पुनः लॉगिन करें।',
+            variant: 'destructive',
+          });
+          router.push('/auth');
+          return;
+        }
         throw new Error(res.error?.message || "Verification failed");
       }
 
@@ -382,6 +412,44 @@ export default function ScanPage() {
     setWonPrize(null);
     setRedemptionId(null);
   };
+
+  // ─── Auth Guard: Show login prompt if not authenticated ───
+  if (!isLoggedIn) {
+    return (
+      <div className="max-w-md mx-auto py-16 px-4">
+        <Card className="overflow-hidden border-2 border-orange-200 shadow-xl">
+          <CardContent className="p-8 flex flex-col items-center text-center space-y-6">
+            <div className="h-24 w-24 bg-orange-50 rounded-full flex items-center justify-center">
+              <ShieldAlert className="h-12 w-12 text-orange-500" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {language === 'en' ? 'Login Required' : 'लॉगिन आवश्यक'}
+              </h2>
+              <p className="text-gray-500 text-sm leading-relaxed max-w-xs mx-auto">
+                {language === 'en'
+                  ? 'You must be logged in to scan product codes and win rewards. Please login or create an account first.'
+                  : 'उत्पाद कोड स्कैन करने और पुरस्कार जीतने के लिए आपको लॉगिन करना होगा। कृपया पहले लॉगिन करें या खाता बनाएं।'}
+              </p>
+            </div>
+            <Button
+              size="lg"
+              className="w-full h-14 text-lg font-bold shadow-lg shadow-primary/25"
+              onClick={() => router.push('/auth')}
+            >
+              <LogIn className="mr-2 h-5 w-5" />
+              {language === 'en' ? 'Login to Continue' : 'जारी रखने के लिए लॉगिन करें'}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              {language === 'en'
+                ? 'Your rewards will be safely stored in your account after scanning.'
+                : 'स्कैन करने के बाद आपके पुरस्कार सुरक्षित रूप से आपके खाते में संग्रहीत होंगे।'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-md mx-auto py-8 px-4">

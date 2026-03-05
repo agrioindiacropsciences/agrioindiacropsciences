@@ -253,7 +253,7 @@ export default function ProductsPage() {
       if (formData.description) formDataToSend.append('description', formData.description);
       if (formData.description_hi) formDataToSend.append('description_hi', formData.description_hi);
       if (formData.composition) formDataToSend.append('composition', formData.composition);
-      if (formData.dosage) formDataToSend.append('dosage', formData.dosage);
+      formDataToSend.append('dosage', formData.dosage || '');
       if (formData.application_method) formDataToSend.append('application_method', formData.application_method);
       formDataToSend.append('category_id', formData.category_id);
       formDataToSend.append('is_active', String(formData.is_active));
@@ -271,7 +271,6 @@ export default function ProductsPage() {
       if (formData.safety_precautions.length > 0) {
         formDataToSend.append('safety_precautions', JSON.stringify(formData.safety_precautions));
       }
-      formDataToSend.append('dosage', formData.dosage || '');
       const updatePacks = formData.pack_sizes.filter((p) => {
         const sz = (p as any).customSize?.trim() || p.size;
         return sz && ((p.mrp != null && p.mrp > 0) || (p.selling_price != null && p.selling_price > 0));

@@ -60,7 +60,7 @@ import type { AiKnowledgeCategory, AiKnowledgeEntry } from "@/lib/api";
 
 export default function AiKnowledgePage() {
     const { toast } = useToast();
-    const [activeTab, setActiveTab] = useState("entries");
+    const [activeTab, setActiveTab] = useState("files");
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -385,30 +385,16 @@ export default function AiKnowledgePage() {
                             {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
                             Upload PDF
                         </Button>
-                        <Button
-                            className="bg-white text-indigo-600 hover:bg-white/90"
-                            onClick={() => handleOpenEntryDialog()}
-                        >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Knowledge
-                        </Button>
+
                     </div>
                 </div>
             </motion.div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
                 <TabsList className="bg-white p-1 rounded-xl shadow-sm border h-12">
-                    <TabsTrigger value="entries" className="rounded-lg px-6 data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-600">
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        Knowledge Entries
-                    </TabsTrigger>
                     <TabsTrigger value="files" className="rounded-lg px-6 data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-600">
                         <FileText className="h-4 w-4 mr-2" />
                         PDF Knowledge
-                    </TabsTrigger>
-                    <TabsTrigger value="categories" className="rounded-lg px-6 data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-600">
-                        <LayoutGrid className="h-4 w-4 mr-2" />
-                        Categories
                     </TabsTrigger>
                 </TabsList>
 

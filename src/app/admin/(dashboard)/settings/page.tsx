@@ -425,21 +425,9 @@ export default function SettingsPage() {
               <Users className="h-4 w-4 mr-2" />
               Admins
             </TabsTrigger>
-            <TabsTrigger value="system" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              <Database className="h-4 w-4 mr-2" />
-              System
-            </TabsTrigger>
             <TabsTrigger value="content" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
               <FileText className="h-4 w-4 mr-2" />
               Content
-            </TabsTrigger>
-            <TabsTrigger value="maintenance" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              <Wrench className="h-4 w-4 mr-2" />
-              Maintenance
-            </TabsTrigger>
-            <TabsTrigger value="security" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              <Shield className="h-4 w-4 mr-2" />
-              Security
             </TabsTrigger>
           </TabsList>
 
@@ -596,60 +584,6 @@ export default function SettingsPage() {
                 <Button variant="outline" className="w-full mt-4">
                   + Add New Admin
                 </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* System Configuration - Feature Flags */}
-          <TabsContent value="system">
-            <Card className="border-0 shadow-md">
-              <CardHeader className="border-b bg-gray-50/50">
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="h-5 w-5 text-primary" />
-                  Feature Flags
-                </CardTitle>
-                <CardDescription>Enable or disable app features.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                    <div>
-                      <p className="font-medium text-gray-900">Scan & Win</p>
-                      <p className="text-sm text-gray-500">Allow users to scan QR codes and win rewards</p>
-                    </div>
-                    <Switch
-                      checked={formData.scan_enabled}
-                      onCheckedChange={(v) => setFormData((p) => ({ ...p, scan_enabled: v }))}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                    <div>
-                      <p className="font-medium text-gray-900">Shop</p>
-                      <p className="text-sm text-gray-500">Enable in-app shopping</p>
-                    </div>
-                    <Switch
-                      checked={formData.shop_enabled}
-                      onCheckedChange={(v) => setFormData((p) => ({ ...p, shop_enabled: v }))}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                    <div>
-                      <p className="font-medium text-gray-900">Referral</p>
-                      <p className="text-sm text-gray-500">Enable referral rewards program</p>
-                    </div>
-                    <Switch
-                      checked={formData.referral_enabled}
-                      onCheckedChange={(v) => setFormData((p) => ({ ...p, referral_enabled: v }))}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-4">
-                  <Button className="shadow-lg" onClick={handleSaveFeatureFlags} disabled={saving}>
-                    {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                    Save Changes
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -912,81 +846,6 @@ export default function SettingsPage() {
                     </div>
                   </>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Maintenance */}
-          <TabsContent value="maintenance">
-            <Card className="border-0 shadow-md">
-              <CardHeader className="border-b bg-gray-50/50">
-                <CardTitle className="flex items-center gap-2">
-                  <Wrench className="h-5 w-5 text-primary" />
-                  Maintenance
-                </CardTitle>
-                <CardDescription>System maintenance and utilities.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-6 space-y-4">
-                {[
-                  { title: "Clear Cache", desc: "Clear all cached data", btn: "Clear Cache" },
-                  { title: "Database Backup", desc: "Download database backup", btn: "Download Backup" },
-                  { title: "View System Logs", desc: "View error and activity logs", btn: "View Logs" },
-                ].map((item, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex items-center justify-between p-4 border rounded-xl bg-gray-50/50"
-                  >
-                    <div>
-                      <p className="font-medium text-gray-900">{item.title}</p>
-                      <p className="text-sm text-gray-500">{item.desc}</p>
-                    </div>
-                    <Button variant="outline">{item.btn}</Button>
-                  </motion.div>
-                ))}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Security */}
-          <TabsContent value="security">
-            <Card className="border-0 shadow-md">
-              <CardHeader className="border-b bg-gray-50/50">
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-primary" />
-                  Security Settings
-                </CardTitle>
-                <CardDescription>Manage security and authentication settings.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                  <div>
-                    <p className="font-medium text-gray-900">Two-Factor Authentication</p>
-                    <p className="text-sm text-gray-500">Add an extra layer of security</p>
-                  </div>
-                  <Switch />
-                </div>
-                <Separator />
-                <div>
-                  <Label>Session Timeout (minutes)</Label>
-                  <Input defaultValue="30" className="mt-1 max-w-xs" />
-                </div>
-                <Separator />
-                <div>
-                  <Label>IP Whitelist (one per line)</Label>
-                  <Textarea
-                    className="mt-1"
-                    placeholder="192.168.1.1&#10;10.0.0.1"
-                  />
-                </div>
-                <div className="flex justify-end pt-4">
-                  <Button className="shadow-lg">
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Changes
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>

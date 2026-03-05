@@ -16,6 +16,8 @@ import {
   Filter,
   LayoutGrid,
   Trophy,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,8 +108,10 @@ export default function ProductsPage() {
       if (productsRes.success && productsRes.data) {
         setProducts(productsRes.data.products || []);
         if (productsRes.data.pagination) {
-          setTotalPages(productsRes.data.pagination.totalPages);
-          setTotal(productsRes.data.pagination.total);
+          const pag = productsRes.data.pagination as unknown as Record<string, number>;
+          const pages = pag.totalPages ?? pag.total_pages ?? 1;
+          setTotalPages(pages);
+          setTotal(pag.total ?? 0);
         }
       }
 
@@ -662,44 +666,70 @@ export default function ProductsPage() {
       </motion.div>
 
       {/* Pagination */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="flex items-center justify-between"
-      >
-        <p className="text-sm text-gray-500">
-          Showing {filteredProducts.length} of {total}
-        </p>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page <= 1}
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-          >
-            Previous
-          </Button>
-          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((p) => (
+      {totalPages > 1 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="flex items-center justify-between"
+        >
+          <p className="text-sm text-gray-500">
+            Page {page} of {totalPages} · Showing {filteredProducts.length} of {total} products
+          </p>
+          <div className="flex items-center gap-1">
             <Button
-              key={p}
-              variant={page === p ? "default" : "outline"}
+              variant="outline"
               size="sm"
-              onClick={() => setPage(p)}
+              disabled={page <= 1 || isLoading}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="gap-1"
             >
-              {p}
+              <ChevronLeft className="h-4 w-4" />
+              Previous
             </Button>
-          ))}
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page >= totalPages}
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-          >
-            Next
-          </Button>
-        </div>
-      </motion.div>
+            {(() => {
+              const pages: (number | 'ellipsis')[] = [];
+              if (totalPages <= 7) {
+                for (let i = 1; i <= totalPages; i++) pages.push(i);
+              } else {
+                pages.push(1);
+                if (page > 3) pages.push('ellipsis');
+                const start = Math.max(2, page - 1);
+                const end = Math.min(totalPages - 1, page + 1);
+                for (let i = start; i <= end; i++) pages.push(i);
+                if (page < totalPages - 2) pages.push('ellipsis');
+                pages.push(totalPages);
+              }
+              return pages.map((p, idx) =>
+                p === 'ellipsis' ? (
+                  <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">…</span>
+                ) : (
+                  <Button
+                    key={p}
+                    variant={page === p ? "default" : "outline"}
+                    size="sm"
+                    className="min-w-[36px]"
+                    onClick={() => setPage(p)}
+                    disabled={isLoading}
+                  >
+                    {p}
+                  </Button>
+                )
+              );
+            })()}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages || isLoading}
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              className="gap-1"
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Create Product Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>

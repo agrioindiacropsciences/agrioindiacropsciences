@@ -518,6 +518,16 @@ export interface DashboardStats {
   recent_activity?: unknown[];
 }
 
+export interface AdminUserRedemption {
+  id: string;
+  coupon_code: string;
+  prize_type: string;
+  prize_value: number;
+  status: string;
+  scanned_at: string;
+  tier_name?: string | null;
+}
+
 export interface AdminUser {
   id: string;
   phone_number: string;
@@ -529,11 +539,17 @@ export interface AdminUser {
   full_address?: string;
   state?: string;
   district?: string;
+  location?: string;
+  profile_image_url?: string;
   is_active?: boolean;
   role: string;
   total_scans: number;
   total_rewards?: number;
   created_at: string;
+  last_login?: string;
+  language?: string;
+  crops?: { id: string; name: string }[];
+  recent_redemptions?: AdminUserRedemption[];
 }
 
 export interface AdminUsersResponse {

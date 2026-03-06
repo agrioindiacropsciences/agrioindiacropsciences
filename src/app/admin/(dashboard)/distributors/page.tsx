@@ -46,6 +46,7 @@ import type { Distributor } from "@/lib/api";
 export default function DistributorsPage() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [appliedSearchQuery, setAppliedSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -90,7 +91,12 @@ export default function DistributorsPage() {
   const fetchDistributors = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await api.getAdminDistributors({ page, limit: 10 });
+      const response = await api.getAdminDistributors({
+        page,
+        limit: 10,
+        q: appliedSearchQuery || undefined,
+        status: statusFilter !== "all" ? statusFilter : undefined
+      });
 
       if (response.success && response.data) {
         setDistributors(response.data.distributors || []);
@@ -103,24 +109,34 @@ export default function DistributorsPage() {
       console.error("Failed to fetch distributors:", error);
     }
     setIsLoading(false);
-  }, [page]);
+  }, [page, appliedSearchQuery, statusFilter]);
 
   useEffect(() => {
     fetchDistributors();
   }, [fetchDistributors]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAppliedSearchQuery(searchQuery);
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleSearch = () => {
+    setAppliedSearchQuery(searchQuery);
+    setPage(1);
+  };
+
+  const handleStatusChange = (val: string) => {
+    setStatusFilter(val);
+    setPage(1);
+  };
+
   const filteredDistributors = useMemo(() => {
-    return distributors.filter((dist) => {
-      const matchesSearch = dist.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        dist.owner_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        dist.city?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" && dist.is_active) ||
-        (statusFilter === "inactive" && !dist.is_active);
-      return matchesSearch && matchesStatus;
-    });
-  }, [distributors, searchQuery, statusFilter]);
+    // Backend returns already filtered distributors.
+    return distributors;
+  }, [distributors]);
 
   const handleCreateDistributor = async () => {
     if (!formData.name || !formData.phone || !formData.pincode) {
@@ -301,11 +317,16 @@ export default function DistributorsPage() {
               <Input
                 placeholder="Search distributors..."
                 value={searchQuery}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Button onClick={handleSearch} variant="secondary">
+              <Search className="h-4 w-4 mr-2" />
+              Search
+            </Button>
+            <Select value={statusFilter} onValueChange={handleStatusChange}>
               <SelectTrigger className="w-32">
                 <SelectValue placeholder="Status: All" />
               </SelectTrigger>

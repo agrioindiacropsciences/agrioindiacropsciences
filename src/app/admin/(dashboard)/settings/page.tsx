@@ -523,15 +523,7 @@ export default function SettingsPage() {
 
                 <Separator />
 
-                <div>
-                  <Label>Logo</Label>
-                  <div className="mt-2 flex items-center gap-4">
-                    <div className="h-20 w-20 rounded-xl bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg">
-                      AI
-                    </div>
-                    <Button variant="outline">Change Logo</Button>
-                  </div>
-                </div>
+
 
                 <div className="flex justify-end pt-4">
                   <Button className="shadow-lg" onClick={handleSaveCompany} disabled={saving}>

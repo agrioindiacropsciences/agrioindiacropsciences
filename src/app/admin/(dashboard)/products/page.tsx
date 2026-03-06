@@ -63,6 +63,7 @@ import type { Product, Category } from "@/lib/api";
 export default function ProductsPage() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [appliedSearchQuery, setAppliedSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -101,7 +102,12 @@ export default function ProductsPage() {
     setIsLoading(true);
     try {
       const [productsRes, categoriesRes] = await Promise.all([
-        api.getAdminProducts({ page, limit: 10 }),
+        api.getAdminProducts({
+          page,
+          limit: 10,
+          q: appliedSearchQuery || undefined,
+          category: categoryFilter !== 'all' ? categoryFilter : undefined
+        }),
         api.getCategories(),
       ]);
 
@@ -122,23 +128,34 @@ export default function ProductsPage() {
       console.error("Failed to fetch products:", error);
     }
     setIsLoading(false);
-  }, [page]);
+  }, [page, appliedSearchQuery, categoryFilter]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAppliedSearchQuery(searchQuery);
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleSearch = () => {
+    setAppliedSearchQuery(searchQuery);
+    setPage(1);
+  };
+
+  const handleCategoryChange = (val: string) => {
+    setCategoryFilter(val);
+    setPage(1);
+  };
+
   const filteredProducts = useMemo(() => {
-    const filtered = products.filter((product) => {
-      const matchesSearch =
-        product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (product.name_hi || '').includes(searchQuery);
-      const matchesCategory =
-        categoryFilter === "all" || product.category?.id === categoryFilter;
-      return matchesSearch && matchesCategory;
-    });
+    // Backend returns already filtered products. We just handle the display sort order
     // Sort: best sellers first by rank (1, 2, 3...), then non-best-sellers
-    return [...filtered].sort((a, b) => {
+    return [...products].sort((a, b) => {
       const rankA = (a as any).best_seller_rank ?? 999;
       const rankB = (b as any).best_seller_rank ?? 999;
       if (a.is_best_seller && b.is_best_seller) return rankA - rankB;
@@ -503,10 +520,15 @@ export default function ProductsPage() {
                   placeholder="Search by product name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                   className="pl-11 h-11 bg-gray-50 border-gray-200"
                 />
               </div>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <Button onClick={handleSearch} variant="secondary" className="h-11">
+                <Search className="h-4 w-4 mr-2" />
+                Search
+              </Button>
+              <Select value={categoryFilter} onValueChange={handleCategoryChange}>
                 <SelectTrigger className="w-48 h-11">
                   <LayoutGrid className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Category" />

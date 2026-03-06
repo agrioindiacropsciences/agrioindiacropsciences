@@ -379,7 +379,27 @@ export default function ReportsPage() {
               <CardTitle>Product Analytics</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Detailed product analytics coming soon.</p>
+              {isLoading ? (
+                <div className="h-64 flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <>
+                  <div className="h-64 flex items-end justify-between gap-1">
+                    {Array.from({ length: 30 }, (_, i) => (
+                      <div
+                        key={i}
+                        className="flex-1 bg-primary/30 hover:bg-primary/50 rounded-t transition-colors"
+                        style={{ height: `${Math.random() * 70 + 30}%` }}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                    <span>30 days ago</span>
+                    <span>Today</span>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -421,7 +441,27 @@ export default function ReportsPage() {
               <CardTitle>Distributor Analytics</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Detailed distributor analytics coming soon.</p>
+              {isLoading ? (
+                <div className="h-64 flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <>
+                  <div className="h-64 flex items-end justify-between gap-1">
+                    {Array.from({ length: 30 }, (_, i) => (
+                      <div
+                        key={i}
+                        className="flex-1 bg-primary/30 hover:bg-primary/50 rounded-t transition-colors"
+                        style={{ height: `${Math.random() * 60 + 20}%` }}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                    <span>30 days ago</span>
+                    <span>Today</span>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

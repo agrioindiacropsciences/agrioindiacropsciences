@@ -1037,24 +1037,28 @@ export async function deleteUser(id: string): Promise<ApiResponse<null>> {
 
 // Admin Products
 export async function getAdminProducts(
-  pageOrOptions: number | { page?: number; limit?: number; category?: string } = 1,
+  pageOrOptions: number | { page?: number; limit?: number; category?: string; q?: string } = 1,
   limit = 10,
   category?: string
 ): Promise<ApiResponse<T.ProductsResponse>> {
   let page = 1;
   let cat = category;
   let l = limit;
+  let q: string | undefined;
 
   if (typeof pageOrOptions === 'object') {
     page = pageOrOptions.page || 1;
     l = pageOrOptions.limit || 10;
     cat = pageOrOptions.category;
+    q = pageOrOptions.q;
   } else {
     page = pageOrOptions;
   }
 
   const params = new URLSearchParams({ page: String(page), limit: String(l) });
-  if (cat) params.append('category', cat);
+  if (cat && cat !== 'all') params.append('category', cat);
+  if (q) params.append('q', q);
+
   return adminGet<T.ProductsResponse>(`/admin/products?${params.toString()}`);
 }
 
@@ -1177,20 +1181,26 @@ export async function deleteCampaign(id: string): Promise<ApiResponse<null>> {
 
 // Admin Distributors
 export async function getAdminDistributors(
-  pageOrOptions: number | { page?: number; limit?: number } = 1,
+  pageOrOptions: number | { page?: number; limit?: number; q?: string; status?: string } = 1,
   limit = 10
 ): Promise<ApiResponse<T.DistributorsResponse>> {
   let page = 1;
   let l = limit;
+  let q: string | undefined;
+  let status: string | undefined;
 
   if (typeof pageOrOptions === 'object') {
     page = pageOrOptions.page || 1;
     l = pageOrOptions.limit || 10;
+    q = pageOrOptions.q;
+    status = pageOrOptions.status;
   } else {
     page = pageOrOptions;
   }
 
   const params = new URLSearchParams({ page: String(page), limit: String(l) });
+  if (q) params.append('q', q);
+  if (status && status !== 'all') params.append('status', status);
   return adminGet<T.DistributorsResponse>(`/admin/distributors?${params.toString()}`);
 }
 
@@ -1474,6 +1484,14 @@ export async function uploadMedia(file: File, folder = 'general'): Promise<ApiRe
   return adminPostFormData<{ url: string; public_id: string }>('/admin/media/upload', formData);
 }
 
+export async function listMedia(folder = 'notifications', limit = 20): Promise<ApiResponse<T.AdminMedia[]>> {
+  return adminGet<T.AdminMedia[]>(`/admin/media?folder=${folder}&limit=${limit}`);
+}
+
+export async function deleteMedia(publicId: string): Promise<ApiResponse<void>> {
+  return adminDelete<void>(`/admin/media/${encodeURIComponent(publicId)}`);
+}
+
 // Admin API namespace
 export const adminApi = {
   login: adminLogin,
@@ -1540,4 +1558,6 @@ export const adminApi = {
   deleteAiFile: deleteAdminAiFile,
   toggleAiFileStatus: toggleAdminAiFileStatus,
   uploadMedia,
+  listMedia,
+  deleteMedia,
 };

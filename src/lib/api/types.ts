@@ -390,6 +390,12 @@ export interface AdminFcmSendRequest {
   slug?: string;
   productId?: string;
   url?: string; // For URL type notifications
+
+  // Advanced targeting
+  platform?: 'android' | 'ios' | 'all';
+  registrationPeriod?: 'all' | 'new_users' | 'this_month' | 'this_year' | 'crop_preference';
+  daysAgo?: number; // 1-7 (or whatever)
+  cropId?: string; // For crop preference filtering
 }
 
 // ==================== Support ====================
@@ -560,20 +566,28 @@ export interface AdminUsersResponse {
 export interface AdminCoupon {
   id: string;
   code: string;
+  serial_number?: string;
+  auth_code?: string;
   product_name?: string;
   product?: { id: string; name: string; name_hi?: string };
   batch_number?: string;
   status: 'UNUSED' | 'USED' | 'EXPIRED';
   is_used?: boolean;
-  reward_type?: 'CASHBACK' | 'DISCOUNT' | 'GIFT';
-  reward_value?: number;
-  scanned_by?: string;
-  redeemed_by?: { id: string; name?: string; phone_number?: string };
-  scanned_at?: string;
+  is_scratched?: boolean;
+  reward_type?: 'CASHBACK' | 'DISCOUNT' | 'GIFT' | null;
+  reward_value?: number | null;
   reward_name?: string;
+  reward_image?: string | null;
+  scanned_by?: string;
+  used_by?: { id?: string; name?: string; phone?: string; phone_number?: string; image?: string };
+  redeemed_by?: { id?: string; name?: string; phone?: string; phone_number?: string; image?: string };
+  scanned_at?: string;
+  scratched_at?: string;
+  used_at?: string | Date;
+  campaign?: string;
   created_at: string;
   expires_at?: string;
-  expiry_date?: string;
+  expiry_date?: string | null;
 }
 
 export interface AdminCouponsResponse {
@@ -593,6 +607,15 @@ export interface GenerateCouponsResponse {
   generated_count: number;
   codes_preview?: string[];
   batch_id?: string;
+}
+
+export interface AdminMedia {
+  public_id: string;
+  url: string;
+  created_at: string;
+  format: string;
+  width: number;
+  height: number;
 }
 
 // Campaign types for coupon generation

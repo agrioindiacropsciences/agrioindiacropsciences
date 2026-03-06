@@ -24,7 +24,10 @@ import {
   ArrowRight,
   Database,
   History,
-  RefreshCw
+  RefreshCw,
+  Calendar,
+  Trophy,
+  Rocket
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -79,6 +82,7 @@ export default function CouponsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [viewCouponDialogOpen, setViewCouponDialogOpen] = useState(false);
+  const [isFetchingCouponDetails, setIsFetchingCouponDetails] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState<AdminCoupon | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
@@ -413,56 +417,39 @@ export default function CouponsPage() {
   const allSelected = filteredCoupons.length > 0 && filteredCoupons.every((c) => selectedIds.has(c.id));
   const someSelected = filteredCoupons.some((c) => selectedIds.has(c.id));
 
-  const handleClearHistory = async () => {
-    const redeemedIds = coupons.filter(c => c.is_used).map(c => c.id);
-    if (redeemedIds.length === 0) {
-      toast({ title: "No history", description: "There are no redeemed coupons to clear." });
-      return;
-    }
-
-    if (!confirm(`This will delete ALL ${redeemedIds.length} redeemed records in the current set. Continue?`)) return;
-
-    setIsDeleting(true);
-    try {
-      const res = await api.deleteCouponsBulk(redeemedIds);
-      if (res.success) {
-        toast({ title: "History Cleared", description: "Redemption history has been purged." });
-        setSelectedIds(prev => {
-          const n = new Set(prev);
-          redeemedIds.forEach(id => n.delete(id));
-          return n;
-        });
-        fetchCoupons();
-      }
-    } catch {
-      toast({ title: "Error", description: "Failed to clear history", variant: "destructive" });
-    }
-    setIsDeleting(false);
-  };
 
   return (
-    <div className="space-y-6 pb-8">
-      {/* Hero Header */}
+    <div className="space-y-8 pb-12">
+      {/* Sophisticated Hero Header */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 p-6 sm:p-8 text-white"
+        className="relative overflow-hidden rounded-[2.5rem] bg-slate-950 p-8 sm:p-12 text-white shadow-2xl shadow-slate-200"
       >
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+        {/* Animated Background Orbs */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-orange-500/20 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
 
-        <div className="relative">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-                <Ticket className="h-7 w-7" />
+        <div className="relative z-10">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+            <div className="flex items-start gap-6">
+              <div className="h-20 w-20 rounded-[2rem] bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-xl shadow-orange-500/20 ring-4 ring-white/10 shrink-0">
+                <Ticket className="h-10 w-10 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold">Coupons Management</h1>
-                <p className="text-white/70 text-sm">Design rewards and manage QR code inventory</p>
+                <motion.h1
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="text-3xl sm:text-5xl font-black tracking-tight"
+                >
+                  Coupon <span className="text-orange-500">List</span>
+                </motion.h1>
+                <p className="text-slate-400 text-lg mt-2 font-medium max-w-md">Create reward campaigns and manage your QR codes easily.</p>
               </div>
             </div>
-            <div className="flex gap-2">
+
+            <div className="flex flex-wrap gap-4">
               <Button
                 variant="outline"
                 onClick={() => {
@@ -477,109 +464,147 @@ export default function CouponsPage() {
                   });
                   setCreateCampaignDialogOpen(true);
                 }}
-                className="bg-white/20 border-white/30 hover:bg-white/30 text-white"
+                className="h-14 px-8 rounded-2xl bg-white/5 border-white/10 hover:bg-white/10 text-white font-black transition-all hover:scale-105 active:scale-95 backdrop-blur-md"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-5 w-5 mr-3" />
                 New Campaign
               </Button>
               <Link href="/admin/coupons/bulk">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg border-0">
-                  <Upload className="h-4 w-4 mr-2" />
+                <Button className="h-14 px-8 rounded-2xl bg-orange-600 hover:bg-orange-500 text-white font-black shadow-xl shadow-orange-600/20 transition-all hover:scale-105 active:scale-95 border-0">
+                  <Upload className="h-5 w-5 mr-3" />
                   Bulk Upload
                 </Button>
               </Link>
             </div>
           </div>
 
-
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12 pt-8 border-t border-white/5">
+            {[
+              { label: 'Total Campaigns', value: campaigns.filter(c => c.is_active).length, icon: Sparkles, color: 'text-orange-400' },
+              { label: 'Usage Rate', value: total > 0 ? `${((usedCount / total) * 100).toFixed(1)}%` : '0%', icon: Activity, color: 'text-blue-400' },
+              { label: 'Total Coupons', value: total.toLocaleString(), icon: Database, color: 'text-emerald-400' },
+              { label: 'Not Used', value: (total - usedCount).toLocaleString(), icon: Ticket, color: 'text-purple-400' }
+            ].map((stat, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className={`h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center ${stat.color}`}>
+                  <stat.icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{stat.label}</p>
+                  <p className="text-lg font-black text-white">{stat.value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </motion.div>
 
-      {/* Main Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-white/50 backdrop-blur border border-gray-100 p-1 rounded-xl h-auto self-start">
-          <TabsTrigger
-            value="campaigns"
-            className="rounded-lg px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
-          >
-            Reward Campaigns
-          </TabsTrigger>
-          <TabsTrigger
-            value="history"
-            className="rounded-lg px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
-          >
-            <QrCode className="h-4 w-4 mr-2" />
-            QR Scan History
-          </TabsTrigger>
-          <TabsTrigger
-            value="batches"
-            className="rounded-lg px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Upload Inventory
-          </TabsTrigger>
-        </TabsList>
+      {/* Main Control Center */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <TabsList className="bg-slate-100/50 p-1.5 rounded-2xl h-auto self-start border border-slate-200/50">
+            {[
+              { id: 'campaigns', label: 'Offer Campaigns', icon: Gift },
+              { id: 'history', label: 'Scan History', icon: QrCode },
+              { id: 'batches', label: 'File History', icon: Upload }
+            ].map(tab => (
+              <TabsTrigger
+                key={tab.id}
+                value={tab.id}
+                className="rounded-xl px-6 py-3 data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-lg data-[state=active]:shadow-orange-500/10 font-bold transition-all text-sm flex items-center gap-2"
+              >
+                <tab.icon className="h-4 w-4" />
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-        <TabsContent value="campaigns" className="mt-0">
-          <Card className="border-0 shadow-md overflow-hidden">
+          {activeTab === 'history' && (
+            <div className="flex items-center gap-3">
+              <Button onClick={() => fetchCoupons()} variant="outline" className="h-12 px-6 rounded-xl font-bold border-slate-200 bg-white hover:bg-slate-50 text-slate-600 shadow-sm">
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh List
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <TabsContent value="campaigns" className="mt-0 focus-visible:outline-none">
+          <Card className="border-0 shadow-2xl shadow-slate-200/50 rounded-[2rem] overflow-hidden bg-white">
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50/50">
-                    <TableHead className="font-semibold">Campaign</TableHead>
-                    <TableHead className="font-semibold">Structure</TableHead>
-                    <TableHead className="font-semibold">Status</TableHead>
-                    <TableHead className="font-semibold">Dates</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
+                  <TableRow className="bg-slate-50/50 border-0">
+                    <TableHead className="py-6 px-8 text-[11px] font-black uppercase tracking-widest text-slate-400">Campaign Name</TableHead>
+                    <TableHead className="py-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Prizes</TableHead>
+                    <TableHead className="py-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Status</TableHead>
+                    <TableHead className="py-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Dates</TableHead>
+                    <TableHead className="py-6 px-8 text-right text-[11px] font-black uppercase tracking-widest text-slate-400">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {campaigns.length > 0 ? (
-                    campaigns.map((camp) => (
-                      <TableRow key={camp.id} className="hover:bg-gray-50/50">
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-bold text-gray-900">{camp.name}</span>
-                            <span className="text-[10px] text-gray-400 font-mono tracking-tight uppercase">{camp.id.slice(0, 8)}...</span>
+                    campaigns.map((camp, idx) => (
+                      <TableRow key={camp.id} className="group hover:bg-slate-50/80 transition-all border-slate-100">
+                        <TableCell className="py-6 px-8">
+                          <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400 group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors">
+                              {idx + 1}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="font-black text-slate-900 text-sm group-hover:text-orange-600 transition-colors">{camp.name}</span>
+                              <span className="text-[10px] text-slate-400 font-mono tracking-tight uppercase mt-0.5">{camp.id.slice(0, 12)}</span>
+                            </div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {camp.tiers?.slice(0, 2).map((t, i) => (
-                              <Badge key={i} variant="secondary" className="bg-orange-50 text-orange-700 text-[10px] scale-90 origin-left">
+                        <TableCell className="py-6">
+                          <div className="flex flex-wrap gap-1.5">
+                            {camp.tiers?.slice(0, 3).map((t, i) => (
+                              <Badge key={i} className="bg-white border-slate-100 text-slate-600 text-[10px] font-bold py-1 px-3 shadow-sm">
                                 {t.reward_name}
                               </Badge>
                             ))}
-                            {(camp.tiers?.length || 0) > 2 && (
-                              <span className="text-[10px] text-gray-400">+{camp.tiers!.length - 2}</span>
+                            {(camp.tiers?.length || 0) > 3 && (
+                              <span className="text-[10px] font-black text-slate-300 ml-1">+{camp.tiers!.length - 3} More</span>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <Badge variant={camp.is_active ? "success" : "secondary"} className="rounded-full text-[10px]">
-                            {camp.is_active ? "Active" : "Draft"}
-                          </Badge>
+                        <TableCell className="py-6">
+                          <div className="flex items-center gap-2">
+                            <div className={`h-2 w-2 rounded-full ${camp.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                            <span className={`text-[11px] font-black uppercase tracking-wider ${camp.is_active ? 'text-emerald-600' : 'text-slate-400'}`}>
+                              {camp.is_active ? "Active" : "Draft"}
+                            </span>
+                          </div>
                         </TableCell>
-                        <TableCell className="text-[11px] text-gray-500">
-                          {camp.start_date ? new Date(camp.start_date).toLocaleDateString() : 'N/A'} - {camp.end_date ? new Date(camp.end_date).toLocaleDateString() : 'N/A'}
+                        <TableCell className="py-6">
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600">
+                              <span className="text-slate-300">Start:</span> {camp.start_date ? new Date(camp.start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'N/A'}
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600">
+                              <span className="text-slate-300">Final:</span> {camp.end_date ? new Date(camp.end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'N/A'}
+                            </div>
+                          </div>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
+                        <TableCell className="py-6 px-8 text-right">
+                          <div className="flex justify-end gap-2">
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-orange-600 text-xs"
+                              className="h-10 px-4 rounded-xl text-orange-600 text-xs font-black hover:bg-orange-50 hover:text-orange-700 transition-all"
                               onClick={() => handleEditCampaign(camp)}
                             >
                               Manage
                             </Button>
                             <Button
                               variant="ghost"
-                              size="sm"
-                              className="text-red-500 text-xs hover:text-red-700 hover:bg-red-50"
+                              size="icon"
+                              className="h-10 w-10 rounded-xl text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
                               onClick={() => handleDeleteCampaign(camp.id, camp.name)}
                             >
-                              Delete
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -587,9 +612,20 @@ export default function CouponsPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-16">
-                        <Sparkles className="h-10 w-10 text-gray-200 mx-auto mb-2" />
-                        <p className="text-gray-400 text-sm font-medium">No campaigns created yet</p>
+                      <TableCell colSpan={5} className="text-center py-32 bg-slate-50/30">
+                        <div className="flex flex-col items-center">
+                          <div className="h-20 w-20 rounded-3xl bg-white shadow-xl flex items-center justify-center mb-6">
+                            <Sparkles className="h-10 w-10 text-slate-200" />
+                          </div>
+                          <p className="text-slate-900 font-black text-xl">No Campaigns Found</p>
+                          <p className="text-slate-400 text-sm mt-2 max-w-xs mx-auto">Launch your first reward structure to begin generating secure coupons.</p>
+                          <Button
+                            onClick={() => setCreateCampaignDialogOpen(true)}
+                            className="mt-8 bg-orange-600 hover:bg-orange-700 rounded-xl h-12 px-8 font-black shadow-lg shadow-orange-600/20"
+                          >
+                            Create One Now
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )}
@@ -599,102 +635,104 @@ export default function CouponsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="history" className="mt-0 space-y-6">
-          <Card className="border-0 shadow-md">
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <TabsContent value="history" className="mt-0 space-y-8 focus-visible:outline-none">
+          {/* Advanced Filtering */}
+          <Card className="border-0 shadow-lg shadow-slate-200/50 rounded-3xl overflow-hidden bg-white/50 backdrop-blur-md">
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="relative group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 transition-colors group-focus-within:text-orange-500" />
                   <Input
-                    placeholder="Search codes..."
+                    placeholder="Search coupon codes..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-11 h-11 bg-gray-50 border-gray-200"
+                    className="pl-12 h-14 bg-white border-slate-100 rounded-2xl shadow-sm focus:ring-2 focus:ring-orange-500/20 transition-all font-medium text-sm"
                   />
                 </div>
-                <div className="relative w-40">
+
+                <div className="relative group">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-[10px] uppercase tracking-tighter mr-2">Batch #</div>
                   <Input
-                    placeholder="Batch #"
+                    placeholder="Enter ID"
                     value={batchFilter}
                     onChange={(e) => { setBatchFilter(e.target.value); setPage(1); }}
-                    className="h-11 bg-gray-50 border-gray-200"
+                    className="pl-20 h-14 bg-white border-slate-100 rounded-2xl shadow-sm focus:ring-2 focus:ring-orange-500/20 transition-all font-mono font-bold text-sm"
                   />
                 </div>
+
                 <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPage(1); }}>
-                  <SelectTrigger className="w-32 h-11">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Status" />
+                  <SelectTrigger className="h-14 bg-white border-slate-100 rounded-2xl shadow-sm focus:ring-2 focus:ring-orange-500/20 transition-all font-bold px-4">
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4 text-slate-400" />
+                      <SelectValue placeholder="Display Mode" />
+                    </div>
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="used">Scanned Only</SelectItem>
-                    <SelectItem value="unused">Waitlist (Unscanned)</SelectItem>
-                    <SelectItem value="all">View All (Admin)</SelectItem>
+                  <SelectContent className="rounded-2xl border-slate-100 shadow-2xl">
+                    <SelectItem value="used" className="rounded-lg">📊 Showing: Scanned Only</SelectItem>
+                    <SelectItem value="unused" className="rounded-lg">⏳ Showing: Available Only</SelectItem>
+                    <SelectItem value="all" className="rounded-lg">🌐 Showing: All Coupons</SelectItem>
                   </SelectContent>
                 </Select>
-                {someSelected && (
-                  <Button
-                    variant="destructive"
-                    onClick={handleDeleteSelected}
-                    disabled={isDeleting}
-                    className="h-11 px-6 rounded-xl shadow-sm"
-                  >
-                    {isDeleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
-                    Delete Selected ({selectedIds.size})
-                  </Button>
-                )}
-                {statusFilter === 'used' && usedCount > 0 && (
-                  <Button
-                    variant="outline"
-                    onClick={handleClearHistory}
-                    disabled={isDeleting}
-                    className="h-11 px-6 rounded-xl border-red-100 text-red-600 hover:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Clear All Redeemed
-                  </Button>
-                )}
-                <Button onClick={() => fetchCoupons()} variant="secondary" className="h-11 px-8 rounded-xl font-semibold">
-                  Update List
-                </Button>
+
+                <div className="flex gap-2">
+                  {someSelected ? (
+                    <Button
+                      variant="destructive"
+                      onClick={handleDeleteSelected}
+                      disabled={isDeleting}
+                      className="flex-1 h-14 rounded-2xl shadow-lg shadow-red-500/20 font-black transition-all hover:scale-105 active:scale-95"
+                    >
+                      {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                      Delete ({selectedIds.size})
+                    </Button>
+                  ) : (
+                    <div className="flex-1 h-14 rounded-2xl border border-dashed border-slate-200 flex items-center justify-center">
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">Filter Applied</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-md overflow-hidden">
+          <Card className="border-0 shadow-2xl shadow-slate-200/50 rounded-[2.5rem] overflow-hidden bg-white">
             <CardContent className="p-0">
               {isLoading ? (
-                <div className="p-12 flex flex-col items-center justify-center gap-3">
-                  <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-                  <p className="text-gray-400 text-sm">Loading activity data...</p>
+                <div className="p-32 flex flex-col items-center justify-center gap-6">
+                  <div className="relative">
+                    <Loader2 className="h-12 w-12 text-orange-500 animate-spin" />
+                    <div className="absolute inset-0 bg-orange-500/10 rounded-full blur-2xl animate-pulse" />
+                  </div>
+                  <p className="text-slate-400 font-black text-sm uppercase tracking-widest animate-pulse">Loading Coupon Data...</p>
                 </div>
               ) : (
                 <>
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-gray-50/50">
-                        <TableHead className="w-12">
+                      <TableRow className="bg-slate-50/50 border-0">
+                        <TableHead className="w-16 px-8 py-6">
                           <Checkbox
                             checked={allSelected}
                             onCheckedChange={(checked) => {
                               if (checked) setSelectedIds(new Set(filteredCoupons.map((c) => c.id)));
                               else setSelectedIds(new Set());
                             }}
+                            className="rounded-md border-slate-200"
                           />
                         </TableHead>
-                        <TableHead className="font-semibold">Code</TableHead>
-                        <TableHead className="font-semibold">Batch</TableHead>
-                        <TableHead className="font-semibold">Product</TableHead>
-                        <TableHead className="font-semibold">Win Reward</TableHead>
-                        <TableHead className="font-semibold">Status</TableHead>
-                        <TableHead className="font-semibold">User</TableHead>
-                        <TableHead className="text-right">Detail</TableHead>
+                        <TableHead className="py-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Coupon Code</TableHead>
+                        <TableHead className="py-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Batch ID</TableHead>
+                        <TableHead className="py-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Reward</TableHead>
+                        <TableHead className="py-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Status</TableHead>
+                        <TableHead className="py-6 text-[11px] font-black uppercase tracking-widest text-slate-400">Customer Details</TableHead>
+                        <TableHead className="py-6 px-8 text-right text-[11px] font-black uppercase tracking-widest text-slate-400">Details</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredCoupons.length > 0 ? (
-                        filteredCoupons.map((coupon, idx) => (
-                          <TableRow key={coupon.id} className="group hover:bg-gray-50/50 transition-colors">
-                            <TableCell>
+                        filteredCoupons.map((coupon) => (
+                          <TableRow key={coupon.id} className="group hover:bg-slate-50 transition-all border-slate-100">
+                            <TableCell className="px-8 py-4">
                               <Checkbox
                                 checked={selectedIds.has(coupon.id)}
                                 onCheckedChange={(checked) => {
@@ -705,54 +743,80 @@ export default function CouponsPage() {
                                     return n;
                                   });
                                 }}
+                                className="rounded-md border-slate-200"
                               />
                             </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <QrCode className="h-3.5 w-3.5 text-gray-400" />
-                                <span className="font-mono font-bold text-gray-800 text-xs">{coupon.code}</span>
+                            <TableCell className="py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center group-hover:bg-white group-hover:shadow-sm transition-all">
+                                  <QrCode className="h-4 w-4 text-slate-400 group-hover:text-orange-600 transition-colors" />
+                                </div>
+                                <span className="font-mono font-black text-slate-900 text-xs tracking-widest">{coupon.code}</span>
                               </div>
                             </TableCell>
-                            <TableCell>
-                              <span className="text-[10px] font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                            <TableCell className="py-4">
+                              <Badge variant="outline" className="text-[10px] font-mono font-bold text-slate-400 border-slate-100 bg-slate-50/50 px-2">
                                 {coupon.batch_number || "GEN-001"}
-                              </span>
+                              </Badge>
                             </TableCell>
-                            <TableCell className="text-xs text-gray-500 truncate max-w-[120px]">{coupon.product?.name || "-"}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1.5">
-                                <Gift className="h-3.5 w-3.5 text-amber-500" />
-                                <span className="text-xs font-bold text-gray-700">
+                            <TableCell className="py-4">
+                              <div className="flex items-center gap-2">
+                                <div className="h-7 w-7 rounded-full bg-amber-50 flex items-center justify-center">
+                                  <Gift className="h-3.5 w-3.5 text-amber-600" />
+                                </div>
+                                <span className="text-xs font-black text-slate-700">
                                   {coupon.reward_type === 'CASHBACK' ? `₹${coupon.reward_value}` :
                                     coupon.reward_type === 'DISCOUNT' ? `${coupon.reward_value}%` :
                                       coupon.reward_type === 'GIFT' ? 'Gift' : '-'}
                                 </span>
                               </div>
                             </TableCell>
-                            <TableCell>
-                              <Badge variant={coupon.is_used ? "secondary" : "success"} className="text-[10px] px-2 py-0">
-                                {coupon.is_used ? "Redeemed" : "Available"}
-                              </Badge>
+                            <TableCell className="py-4">
+                              <div className="flex items-center gap-2">
+                                <div className={`h-1.5 w-1.5 rounded-full ${coupon.is_used ? 'bg-slate-300' : 'bg-emerald-500 animate-pulse'}`} />
+                                <span className={`text-[10px] font-black uppercase tracking-wider ${coupon.is_used ? 'text-slate-400' : 'text-emerald-600'}`}>
+                                  {coupon.is_used ? "Used" : "Available"}
+                                </span>
+                              </div>
                             </TableCell>
-                            <TableCell className="text-xs font-medium text-gray-600">{coupon.redeemed_by?.name || "-"}</TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="py-4">
+                              {coupon.redeemed_by?.name ? (
+                                <div className="flex items-center gap-3">
+                                  <div className="h-7 w-7 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-black text-blue-600 border border-blue-200/50">
+                                    {coupon.redeemed_by.name[0]}
+                                  </div>
+                                  <span className="text-xs font-bold text-slate-600 truncate max-w-[120px]">{coupon.redeemed_by.name}</span>
+                                </div>
+                              ) : (
+                                <span className="text-[10px] font-black uppercase text-slate-300 tracking-widest italic">Not Yet Scanned</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-4 px-8 text-right">
                               <div className="flex items-center justify-end gap-1">
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-8 text-[11px] font-bold text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                  className="h-10 px-5 rounded-xl text-orange-600 text-xs font-black hover:bg-orange-50 hover:text-orange-700 transition-all"
                                   onClick={async () => {
+                                    setSelectedCoupon({ code: coupon.code } as AdminCoupon);
+                                    setViewCouponDialogOpen(true);
+                                    setIsFetchingCouponDetails(true);
                                     const resp = await api.getAdminCoupon(coupon.id);
-                                    if (resp.success) { setSelectedCoupon(resp.data as AdminCoupon); setViewCouponDialogOpen(true); }
+                                    if (resp.success) { setSelectedCoupon(resp.data as AdminCoupon); }
+                                    setIsFetchingCouponDetails(false);
                                   }}
-                                >View</Button>
+                                >
+                                  View Details
+                                </Button>
                                 {!coupon.is_used && (
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="h-10 w-10 text-slate-200 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all rounded-xl"
                                     onClick={() => handleDeleteCoupon(coupon.id)}
-                                  ><Trash2 className="h-3.5 w-3.5" /></Button>
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
                                 )}
                               </div>
                             </TableCell>
@@ -760,21 +824,48 @@ export default function CouponsPage() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-20 grayscale opacity-50">
-                            <Ticket className="h-12 w-12 mx-auto mb-2" />
-                            <p>No scans matching your filter</p>
+                          <TableCell colSpan={7} className="text-center py-32 opacity-20 filter grayscale">
+                            <div className="flex flex-col items-center">
+                              <Database className="h-16 w-16 mb-4" />
+                              <p className="text-lg font-black tracking-widest uppercase">No Results Found</p>
+                            </div>
                           </TableCell>
                         </TableRow>
                       )}
                     </TableBody>
                   </Table>
 
-                  {/* Pagination Inside Tab */}
-                  <div className="p-4 border-t flex items-center justify-between bg-gray-50/30">
-                    <p className="text-xs text-gray-400 font-medium">Page {page} of {totalPages}</p>
+                  {/* Advanced Pagination */}
+                  <div className="px-8 py-6 border-t border-slate-50 flex items-center justify-between bg-white">
+                    <div className="flex items-center gap-4">
+                      <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                        Showing {filteredCoupons.length} coupons out of {total.toLocaleString()}
+                      </p>
+                      <div className="h-4 w-[1px] bg-slate-100 hidden sm:block" />
+                      <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest hidden sm:block">
+                        Page {page} / {totalPages}
+                      </p>
+                    </div>
+
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="h-8 text-xs font-bold" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Prev</Button>
-                      <Button variant="outline" size="sm" className="h-8 text-xs font-bold" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={page <= 1}
+                        onClick={() => setPage(p => p - 1)}
+                        className="h-10 px-6 rounded-xl font-black text-xs border-slate-100 hover:bg-slate-50 hover:text-orange-600 transition-all active:scale-95 disabled:opacity-30 shadow-sm"
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={page >= totalPages}
+                        onClick={() => setPage(p => p + 1)}
+                        className="h-10 px-6 rounded-xl font-black text-xs border-slate-100 hover:bg-slate-50 hover:text-orange-600 transition-all active:scale-95 disabled:opacity-30 shadow-sm"
+                      >
+                        Next
+                      </Button>
                     </div>
                   </div>
                 </>
@@ -782,27 +873,28 @@ export default function CouponsPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="batches" className="mt-6">
-          <div className="flex items-center justify-between mb-8">
+
+        <TabsContent value="batches" className="mt-0 focus-visible:outline-none">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
             <div>
-              <h2 className="text-2xl font-black text-gray-900 tracking-tight">Bulk Upload Inventory</h2>
-              <p className="text-sm text-gray-500 font-medium">Manage and track your Excel data batches</p>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Bulk Inventory <span className="text-orange-600">Operations</span></h2>
+              <p className="text-slate-400 font-medium mt-1">Audit and maintain cryptographically generated QR batches</p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={fetchBatches}
                 disabled={isLoadingBatches}
-                className="h-11 px-5 rounded-2xl border-gray-200 bg-white hover:bg-gray-50 shadow-sm"
+                className="h-12 px-6 rounded-2xl border-slate-200 bg-white hover:bg-slate-50 shadow-sm font-bold text-slate-600 transition-all active:scale-95"
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingBatches ? 'animate-spin' : ''}`} />
-                Scan for Inventory
+                Scan Cold Storage
               </Button>
               <Link href="/admin/coupons/bulk">
-                <Button className="h-11 px-6 rounded-2xl bg-gray-900 hover:bg-black text-white shadow-lg shadow-gray-200">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload New File
+                <Button className="h-12 px-6 rounded-2xl bg-orange-600 hover:bg-orange-500 text-white shadow-xl shadow-orange-600/20 font-black border-0 transition-all hover:scale-105 active:scale-95">
+                  <Upload className="h-4 w-4 mr-3" />
+                  Inject New Batch
                 </Button>
               </Link>
             </div>
@@ -811,7 +903,7 @@ export default function CouponsPage() {
           {isLoadingBatches ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {[1, 2, 3].map(i => (
-                <Card key={i} className="border-0 shadow-sm animate-pulse bg-gray-50/10 rounded-3xl h-64" />
+                <div key={i} className="h-64 rounded-[2.5rem] bg-slate-50 animate-pulse border border-slate-100" />
               ))}
             </div>
           ) : batches.length > 0 ? (
@@ -824,115 +916,127 @@ export default function CouponsPage() {
                 const isUncategorized = batch.batch_number === 'UNCATEGORIZED';
 
                 return (
-                  <Card key={batch.batch_number} className="group border-0 shadow-lg hover:shadow-2xl transition-all duration-500 rounded-[2.5rem] overflow-hidden bg-white flex flex-col">
-                    <div className={`h-3 w-full ${isUncategorized ? 'bg-amber-400' : 'bg-orange-500'}`} />
-                    <CardHeader className="pb-4 pt-8 px-8">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className={`h-16 w-16 rounded-3xl flex items-center justify-center shadow-inner ${isUncategorized ? 'bg-amber-50 text-amber-600' : 'bg-orange-50 text-orange-600'}`}>
-                          {isUncategorized ? <Database className="h-8 w-8" /> : <FileSpreadsheet className="h-8 w-8" />}
-                        </div>
-                        <div className="flex flex-col items-end gap-1.5">
-                          <Badge variant="outline" className="text-[11px] font-black border-2 border-gray-100 rounded-full px-3 py-1">
-                            {total.toLocaleString()} CODES
-                          </Badge>
-                          <div className="flex items-center gap-1.5 text-[9px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
-                            <FileCheck className="h-3 w-3" />
-                            S.No + Auth Verified
-                          </div>
-                        </div>
-                      </div>
-                      <CardTitle className="text-xl font-black text-gray-900 tracking-tight truncate pr-4">
-                        {isUncategorized ? 'Legacy Uploads' : batch.batch_number}
-                      </CardTitle>
-                      <CardDescription className="flex items-center text-xs font-bold text-gray-400 uppercase tracking-widest mt-2">
-                        <History className="h-3.5 w-3.5 mr-1.5 text-orange-500/50" />
-                        {new Date(batch.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </CardDescription>
-                    </CardHeader>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    key={batch.batch_number}
+                  >
+                    <Card className="group relative border-0 shadow-2xl shadow-slate-200/50 rounded-[2.5rem] overflow-hidden bg-white hover:scale-[1.02] transition-all duration-500 flex flex-col h-full">
+                      {/* Decorative Background Accent */}
+                      <div className={`absolute top-0 right-0 w-32 h-32 ${isUncategorized ? 'bg-amber-500/5' : 'bg-orange-500/5'} rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:opacity-100 opacity-50 transition-all`} />
 
-                    <CardContent className="flex-1 px-8 pb-8 flex flex-col justify-between space-y-8">
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-end">
-                          <div className="space-y-1">
-                            <p className="text-[10px] uppercase font-black text-gray-400 tracking-[0.2em] mb-1">Consumption</p>
-                            <div className="flex items-baseline gap-1">
-                              <span className="text-3xl font-black text-gray-900">{used}</span>
-                              <span className="text-sm font-bold text-gray-400 italic">used</span>
+                      <div className={`h-3 w-full ${isUncategorized ? 'bg-amber-400' : 'bg-orange-600'}`} />
+
+                      <CardHeader className="pb-4 pt-8 px-8 flex-none">
+                        <div className="flex justify-between items-start mb-6">
+                          <div className={`h-16 w-16 rounded-[1.5rem] flex items-center justify-center shadow-inner ${isUncategorized ? 'bg-amber-50 text-amber-600' : 'bg-orange-50 text-orange-600'}`}>
+                            {isUncategorized ? <Database className="h-8 w-8" /> : <FileSpreadsheet className="h-8 w-8" />}
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <Badge variant="outline" className="text-[10px] font-black border-2 border-slate-100 rounded-full px-4 py-1.5 bg-white text-slate-500">
+                              {total.toLocaleString()} UNITS
+                            </Badge>
+                            <div className="flex items-center gap-1.5 text-[9px] text-emerald-600 font-black bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                              <FileCheck className="h-3 w-3" />
+                              VERIFIED ASSETS
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-2xl font-black text-gray-700">{left}</p>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Remaining</p>
+                        </div>
+
+                        <CardTitle className="text-xl font-black text-slate-900 tracking-tight truncate pr-4">
+                          {isUncategorized ? 'Legacy Repository' : batch.batch_number}
+                        </CardTitle>
+                        <CardDescription className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 ml-1">
+                          <History className="h-3.5 w-3.5 mr-2 text-slate-300" />
+                          {new Date(batch.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </CardDescription>
+                      </CardHeader>
+
+                      <CardContent className="flex-1 px-8 pb-8 flex flex-col justify-between space-y-8">
+                        <div className="space-y-6">
+                          <div className="flex justify-between items-end">
+                            <div>
+                              <p className="text-[9px] font-black uppercase text-slate-400 tracking-[0.2em] mb-2 ml-1">Consumption Audit</p>
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-4xl font-black text-slate-900 tracking-tighter">{used.toLocaleString()}</span>
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest italic">Executed</span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-2xl font-black text-slate-900 leading-none">{left.toLocaleString()}</p>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Backlog</p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+                              <span>Batch Saturation</span>
+                              <span className="text-slate-900">{percentageUsed}%</span>
+                            </div>
+                            <div className="relative h-4 w-full bg-slate-50 rounded-full border border-slate-100 overflow-hidden shadow-inner">
+                              <Progress value={percentageUsed} className={`h-full transition-all duration-1000 ${isUncategorized ? 'bg-amber-500' : 'bg-orange-600'}`} />
+                            </div>
                           </div>
                         </div>
 
-                        <div className="relative pt-1">
-                          <Progress value={percentageUsed} className="h-4 bg-gray-50 rounded-full border border-gray-100" />
-                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <span className={`text-[9px] font-black tracking-widest ${percentageUsed > 50 ? 'text-white' : 'text-gray-400'}`}>
-                              {percentageUsed}% EXHAUSTED
-                            </span>
-                          </div>
+                        <div className="flex gap-3 pt-2">
+                          <Button
+                            className="flex-1 bg-slate-950 hover:bg-slate-900 text-white rounded-2xl h-14 text-sm font-black shadow-xl shadow-slate-200/50 transition-all hover:scale-[1.02] active:scale-95"
+                            onClick={() => {
+                              setBatchFilter(batch.batch_number === 'UNCATEGORIZED' ? "" : batch.batch_number);
+                              setActiveTab('history');
+                            }}
+                          >
+                            Inspect Shards
+                            <ArrowRight className="h-4 w-4 ml-2 opacity-50 group-hover:translate-x-1 transition-transform" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            disabled={used > 0}
+                            className="h-14 w-14 shrink-0 border-2 border-slate-100 hover:border-red-100 hover:bg-red-50 hover:text-red-500 transition-all rounded-2xl text-slate-300 shadow-sm flex items-center justify-center"
+                            onClick={async () => {
+                              if (confirm(`RECOVERY WARNING: This will permanently purge ${left} unused cryptographic assets from the blockchain index. Proceed?`)) {
+                                try {
+                                  const res = await api.deleteAdminBatch(batch.batch_number);
+                                  if (res.success) {
+                                    toast({ title: "Index Flushed", description: "Batch assets have been purged from cold storage." });
+                                    fetchBatches();
+                                  }
+                                } catch (err) { }
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </Button>
                         </div>
-                      </div>
-
-                      <div className="flex gap-3 pt-4">
-                        <Button
-                          className="flex-1 bg-gray-900 hover:bg-black text-white rounded-[1.25rem] h-12 text-sm font-bold shadow-lg shadow-gray-200 group-hover:translate-x-1 transition-transform"
-                          onClick={() => {
-                            setBatchFilter(batch.batch_number === 'UNCATEGORIZED' ? "" : batch.batch_number);
-                            setActiveTab('history');
-                          }}
-                        >
-                          Manage codes
-                          <ArrowRight className="h-4 w-4 ml-2 opacity-50" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          disabled={used > 0}
-                          className="h-12 w-12 shrink-0 border-2 border-gray-100 hover:border-red-100 hover:bg-red-50 hover:text-red-500 transition-all rounded-[1.25rem] text-gray-300"
-                          onClick={async () => {
-                            if (confirm(`CRITICAL: This will permanently delete ${left} unused QR codes. This action cannot be undone. Proceed?`)) {
-                              try {
-                                const res = await api.deleteAdminBatch(batch.batch_number);
-                                if (res.success) {
-                                  toast({ title: "Inventory Updated", description: "File successfully removed." });
-                                  fetchBatches();
-                                }
-                              } catch (err) { }
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 );
               })}
 
-              {/* Add a blank card to encourage adding more? */}
               <Link href="/admin/coupons/bulk" className="group">
-                <div className="h-full border-4 border-dashed border-gray-100 rounded-[2.5rem] flex flex-col items-center justify-center py-20 px-10 hover:border-orange-200 hover:bg-orange-50/30 transition-all duration-500">
-                  <div className="h-20 w-20 bg-gray-50 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <Plus className="h-10 w-10 text-gray-200 group-hover:text-orange-300" />
+                <div className="h-full border-4 border-dashed border-slate-100 rounded-[2.5rem] flex flex-col items-center justify-center py-20 px-10 hover:border-orange-200 hover:bg-orange-50/30 transition-all duration-500 bg-slate-50/20">
+                  <div className="h-20 w-20 bg-white border border-slate-100 rounded-3xl shadow-sm flex items-center justify-center mb-6 group-hover:scale-110 group-hover:shadow-2xl group-hover:shadow-orange-500/10 transition-all duration-500">
+                    <Plus className="h-10 w-10 text-slate-200 group-hover:text-orange-600 transition-colors" />
                   </div>
-                  <p className="text-gray-400 font-bold group-hover:text-orange-400">Add another batch</p>
+                  <p className="text-slate-400 font-black text-xs uppercase tracking-[0.2em] group-hover:text-orange-600 transition-colors">Bulk Injection Profile</p>
+                  <p className="text-[10px] text-slate-300 mt-2 font-medium">Add new cryptographic inventory shards</p>
                 </div>
               </Link>
             </div>
           ) : (
-            <div className="bg-white rounded-[3rem] border-4 border-dashed border-gray-100 py-32 text-center shadow-sm">
-              <div className="h-24 w-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <FileCheck className="h-12 w-12 text-gray-200" />
+            <div className="bg-white rounded-[3.5rem] border-4 border-dashed border-slate-100 py-32 text-center shadow-2xl shadow-slate-200/50">
+              <div className="h-28 w-28 bg-slate-50 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-inner ring-8 ring-white">
+                <FileCheck className="h-12 w-12 text-slate-200" />
               </div>
-              <h3 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">Your Inventory is Empty</h3>
-              <p className="text-gray-400 max-w-sm mx-auto mb-10 font-medium">Connect your spreadsheet data to start generating QR codes for your reward campaigns.</p>
+              <h3 className="text-3xl font-black text-slate-900 mb-4 tracking-tight uppercase">No Coupons <span className="text-slate-300">Found</span></h3>
+              <p className="text-slate-400 max-w-sm mx-auto mb-12 font-medium leading-relaxed">Please upload a spreadsheet file to add coupons and rewards to the system.</p>
               <Link href="/admin/coupons/bulk">
-                <Button className="px-12 h-14 rounded-2xl font-black text-lg bg-orange-500 hover:bg-orange-600 text-white shadow-xl shadow-orange-200 transition-all hover:scale-105">
+                <Button className="px-14 h-16 rounded-2xl font-black text-lg bg-orange-600 hover:bg-orange-500 text-white shadow-2xl shadow-orange-600/20 transition-all hover:scale-105 active:scale-95 border-0">
                   <Upload className="h-6 w-6 mr-3" />
-                  Upload Your First XLS
+                  Upload Now
                 </Button>
               </Link>
             </div>
@@ -942,173 +1046,461 @@ export default function CouponsPage() {
 
       {/* Details Dialog */}
       <Dialog open={viewCouponDialogOpen} onOpenChange={setViewCouponDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <QrCode className="h-5 w-5 text-primary" />
-              Coupon Detail View
-            </DialogTitle>
-          </DialogHeader>
-          {selectedCoupon && (
-            <div className="space-y-6">
-              <div className="flex justify-center p-6 bg-gray-50 rounded-2xl border border-gray-100">
-                <img src={getQrUrl(selectedCoupon.code)} alt="QR" className="w-44 h-44 shadow-sm" />
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden rounded-[2.5rem] border-0 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.15)] bg-white/80 backdrop-blur-2xl flex flex-col">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex flex-col flex-1 min-h-0 bg-white/40"
+          >
+            {/* Header with decorative background */}
+            <div className="relative p-7 border-b border-gray-100/50 overflow-hidden shrink-0">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-orange-100/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 -z-10" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-100/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 -z-10" />
+
+              <div className="flex items-center gap-5 relative z-10">
+                <div className="h-12 w-12 flex items-center justify-center bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl shadow-lg shadow-orange-200 ring-4 ring-white">
+                  <Ticket className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-black text-gray-900 tracking-tight">
+                    Coupon Details
+                  </DialogTitle>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">View coupon and scan information</p>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 text-xs font-medium">
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-400 block mb-1 uppercase tracking-widest text-[9px]">Coupon Code</span>
-                  <span className="text-sm font-mono font-bold tracking-wider">{selectedCoupon.code}</span>
-                </div>
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-400 block mb-1 uppercase tracking-widest text-[9px]">Current Status</span>
-                  <Badge variant={selectedCoupon.is_used ? "secondary" : "success"}>{selectedCoupon.is_used ? "Redeemed" : "Available"}</Badge>
-                </div>
-                <div className="p-3 bg-gray-100/50 rounded-lg col-span-2">
-                  <span className="text-gray-400 block mb-1 uppercase tracking-widest text-[9px]">Linked Reward</span>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold">{selectedCoupon.reward_name || "Campaign Tier Reward"}</span>
-                    <span className="px-2 py-0.5 bg-white rounded border uppercase text-[9px] font-black">{selectedCoupon.reward_type}</span>
-                  </div>
-                </div>
-                {selectedCoupon.redeemed_by && (
-                  <div className="p-3 bg-blue-50/50 rounded-lg col-span-2 flex items-center justify-between border border-blue-100">
-                    <div>
-                      <span className="text-blue-400 block mb-1 uppercase tracking-widest text-[9px]">Claimed By</span>
-                      <span className="text-sm font-bold text-blue-900">{selectedCoupon.redeemed_by.name}</span>
-                    </div>
-                    <span className="text-[10px] text-blue-400 font-mono tracking-tighter">{new Date(selectedCoupon.scanned_at!).toLocaleDateString()}</span>
-                  </div>
-                )}
-              </div>
-              <DialogFooter className="gap-2">
-                <Button variant="outline" onClick={() => setViewCouponDialogOpen(false)} className="flex-1 rounded-xl">Dismiss</Button>
-                <Button onClick={() => downloadQrPng(selectedCoupon.code, getQrUrl(selectedCoupon.code))} className="flex-1 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold">Save QR Code</Button>
-              </DialogFooter>
             </div>
-          )}
+
+            <div className="flex-1 min-h-0 overflow-hidden p-6 md:p-8">
+              {isFetchingCouponDetails ? (
+                <div className="h-full flex flex-col items-center justify-center gap-6">
+                  <div className="relative">
+                    <Loader2 className="h-10 w-10 text-orange-500 animate-spin" />
+                    <div className="absolute inset-0 bg-orange-500/20 rounded-full blur-xl animate-pulse" />
+                  </div>
+                  <p className="text-gray-400 font-bold text-xs uppercase tracking-widest animate-pulse">Syncing Payload...</p>
+                </div>
+              ) : selectedCoupon ? (
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-8 h-full min-h-0">
+
+                  {/* Left Column: Premium Visual Card */}
+                  <div className="md:col-span-2 h-full flex flex-col min-h-0">
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="group relative h-full flex flex-col justify-between p-6 bg-gradient-to-br from-gray-50 to-white border border-gray-100/80 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden"
+                    >
+                      <div className="absolute top-0 inset-x-0 h-48 bg-gradient-to-b from-orange-50/50 to-transparent pointer-events-none" />
+
+                      <div className="relative z-10 flex-1 flex flex-col items-center justify-center w-full min-h-0">
+                        <div className="relative w-full h-[380px] overflow-hidden rounded-[2.5rem] bg-white border border-gray-100/50 flex items-center justify-center shadow-inner group shrink-0">
+                          <div className="absolute inset-0 bg-gradient-to-br from-orange-50/10 to-transparent pointer-events-none" />
+
+                          {selectedCoupon.reward_image ? (
+                            <img
+                              src={selectedCoupon.reward_image}
+                              alt="Reward"
+                              className="relative z-0 w-full h-full object-cover drop-shadow-[0_20px_40px_rgba(0,0,0,0.1)] group-hover:scale-110 transition-transform duration-700"
+                            />
+                          ) : (
+                            <div className="relative z-10 flex flex-col items-center justify-center text-center p-12">
+                              <div className="h-24 w-24 bg-orange-50 rounded-full flex items-center justify-center mb-6 shadow-sm ring-8 ring-orange-50/50">
+                                <Gift className="h-12 w-12 text-orange-200" />
+                              </div>
+                              <span className="text-[11px] font-black text-gray-300 uppercase tracking-[0.2em]">Intangible Asset</span>
+                            </div>
+                          )}
+
+                          {selectedCoupon.campaign && (
+                            <div className="absolute bottom-6 inset-x-0 flex justify-center z-20">
+                              <span className="text-[10px] font-black tracking-[0.2em] uppercase text-orange-600/60 px-6 py-2 bg-white/90 backdrop-blur-md rounded-full border border-orange-100 shadow-sm">
+                                {selectedCoupon.campaign}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="relative z-10 mt-4 shrink-0">
+                        <h3 className="text-2xl font-black text-gray-900 tracking-tight leading-tight text-center">
+                          {selectedCoupon.reward_name || (selectedCoupon.reward_value ? `₹${selectedCoupon.reward_value}` : '')}
+                        </h3>
+                      </div>
+                    </motion.div>
+                  </div>
+
+                  {/* Right Column: Intelligence Grid */}
+                  <div className="md:col-span-3 h-full flex flex-col gap-6 overflow-y-auto pr-3 custom-scrollbar min-h-0">
+
+                    {/* Core Identity Section */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="space-y-5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="h-6 w-1 rounded-full bg-orange-500"></div>
+                          <h4 className="text-sm font-black uppercase text-gray-900 tracking-[0.15em]">Coupon Details</h4>
+                        </div>
+                        <Badge variant={selectedCoupon.is_used ? "secondary" : "success"} className="rounded-full px-4 py-1 text-[10px] font-black uppercase tracking-widest border-0 shadow-sm ring-1 ring-gray-100">
+                          {selectedCoupon.is_used ? "Used" : "Available"}
+                        </Badge>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        {[
+                          { label: 'Coupon Code', value: selectedCoupon.code, mono: true, emphasis: true },
+                          { label: 'Secret Key', value: selectedCoupon.auth_code, mono: true, accent: true },
+                          { label: 'File ID', value: selectedCoupon.batch_number || "GEN-001", mono: true },
+                          { label: 'Status', value: selectedCoupon.status === 'USED' ? 'Used' : 'Available', status: true }
+                        ].map((item, idx) => (
+                          <div key={idx} className="group p-4 bg-gray-50/50 rounded-2xl border border-gray-100/50 hover:bg-white hover:border-orange-200 hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300">
+                            <span className="text-gray-400 block mb-1.5 uppercase tracking-widest text-[9px] font-black group-hover:text-orange-400 transition-colors">{item.label}</span>
+                            <span className={`
+                              block truncate
+                              ${item.mono ? 'font-mono' : 'font-bold'}
+                              ${item.emphasis ? 'text-lg font-black tracking-tight text-gray-900' : 'text-sm font-bold text-gray-700'}
+                              ${item.accent ? 'text-orange-600' : ''}
+                            `}>
+                              {item.value || '---'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+
+                    {/* Redemption Intelligence Section */}
+                    {selectedCoupon.redeemed_by && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="space-y-5"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-6 w-1 rounded-full bg-blue-500"></div>
+                          <h4 className="text-sm font-black uppercase text-gray-900 tracking-[0.15em]">Customer Info</h4>
+                        </div>
+
+                        <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50/50 rounded-[2rem] border border-blue-100/30 relative overflow-hidden">
+                          <div className="absolute -right-6 -bottom-6 opacity-5 pointer-events-none">
+                            <Activity className="h-32 w-32 text-blue-900" />
+                          </div>
+
+                          <div className="relative z-10 flex flex-col gap-6">
+                            <div className="flex items-center gap-4">
+                              <div className="relative h-14 w-14 group">
+                                <div className="absolute inset-0 bg-blue-400/20 rounded-2xl blur-lg animate-pulse" />
+                                {selectedCoupon.redeemed_by.image ? (
+                                  <img src={selectedCoupon.redeemed_by.image} className="h-full w-full rounded-2xl object-cover border-2 border-white shadow-md relative z-10" />
+                                ) : (
+                                  <div className="h-full w-full rounded-2xl bg-white shadow-md border-2 border-white flex items-center justify-center font-black text-xl text-blue-600 relative z-10">
+                                    {selectedCoupon.redeemed_by.name?.[0] || "U"}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-lg font-black text-blue-900 tracking-tight">{selectedCoupon.redeemed_by.name || "System User"}</span>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-[11px] font-bold text-blue-500 flex items-center gap-1 bg-blue-100/50 px-3 py-0.5 rounded-full">
+                                    {selectedCoupon.redeemed_by.phone_number || selectedCoupon.redeemed_by.phone || "---"}
+                                  </span>
+                                  {selectedCoupon.is_used && (
+                                    <span className="text-[10px] font-black uppercase text-green-600 bg-green-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                      <FileCheck className="h-3 w-3" /> Success
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              {selectedCoupon.used_at && (
+                                <>
+                                  <div className="p-3 bg-white/60 backdrop-blur-md rounded-2xl border border-white shadow-sm">
+                                    <span className="text-blue-400 block mb-1 uppercase tracking-widest text-[9px] font-black">Scanned On</span>
+                                    <span className="text-sm text-blue-900 font-bold block">
+                                      {new Date(selectedCoupon.used_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                    </span>
+                                  </div>
+                                  <div className="p-3 bg-white/60 backdrop-blur-md rounded-2xl border border-white shadow-sm">
+                                    <span className="text-blue-400 block mb-1 uppercase tracking-widest text-[9px] font-black">Verification Time</span>
+                                    <span className="text-sm text-blue-900 font-bold block">
+                                      {new Date(selectedCoupon.used_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                    </span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="p-6 border-t border-gray-100 bg-gray-50/30 flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setViewCouponDialogOpen(false)}
+                className="px-8 rounded-2xl h-12 font-black text-gray-500 hover:text-gray-900 hover:bg-white border-gray-200 shadow-sm transition-all hover:shadow-lg active:scale-95"
+              >
+                Close Details
+              </Button>
+            </div>
+          </motion.div>
         </DialogContent>
       </Dialog>
 
+
       {/* Create Campaign Dialog */}
       <Dialog open={createCampaignDialogOpen} onOpenChange={setCreateCampaignDialogOpen}>
-        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto shadow-2xl border-0 rounded-3xl p-6">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-xl font-black text-gray-900">
-              <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
-                <Sparkles className="h-5 w-5 text-orange-600" />
-              </div>
-              Launch Reward Campaign
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-8 mt-6">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="col-span-2 space-y-2">
-                <Label className="text-xs font-black text-gray-400 uppercase tracking-widest">Internal Campaign Name *</Label>
-                <Input className="h-12 rounded-xl bg-gray-50 border-gray-100 focus:bg-white transition-all shadow-sm" placeholder="e.g., Diwali Monsoon Rewards 2026" value={campaignForm.name} onChange={(e) => setCampaignForm({ ...campaignForm, name: e.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-black text-gray-400 uppercase tracking-widest">Starts On</Label>
-                <Input type="date" className="h-12 rounded-xl bg-gray-50 border-gray-100" value={campaignForm.start_date} onChange={(e) => setCampaignForm({ ...campaignForm, start_date: e.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-black text-gray-400 uppercase tracking-widest">Expires On</Label>
-                <Input type="date" className="h-12 rounded-xl bg-gray-50 border-gray-100" value={campaignForm.end_date} onChange={(e) => setCampaignForm({ ...campaignForm, end_date: e.target.value })} />
-              </div>
-            </div>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-hidden shadow-2xl border-0 rounded-[2.5rem] p-0 bg-white/80 backdrop-blur-2xl">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="relative flex flex-col h-full max-h-[90vh]"
+          >
+            {/* Header with decorative background */}
+            <div className="relative p-8 border-b border-slate-100/50 overflow-hidden shrink-0">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-orange-100/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 -z-10" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-100/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 -z-10" />
 
-            <div className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl relative overflow-hidden group">
-              <div className="absolute -right-4 -top-4 h-24 w-24 bg-blue-200/20 rounded-full blur-2xl group-hover:bg-blue-300/30 transition-all duration-500" />
-              <Label className="text-xs font-black text-blue-900 uppercase tracking-widest relative z-10">Inventory Size (Planned Scans) *</Label>
-              <Input type="number" className="h-12 mt-2 bg-white border-blue-200 rounded-xl font-black text-blue-900 placeholder:text-blue-200" placeholder="1000" value={campaignForm.total_coupons} onChange={(e) => setCampaignForm({ ...campaignForm, total_coupons: e.target.value })} />
-              <p className="text-[10px] text-blue-400 mt-3 italic font-medium leading-relaxed">Probability of winning a prize is weight-balanced against this number across all generated codes.</p>
-            </div>
-
-            <div className="space-y-6">
-              <div className="flex items-center justify-between border-b pb-4">
-                <h4 className="text-sm font-black uppercase text-gray-900 tracking-tighter">Prize Distribution</h4>
-                <Button variant="outline" size="sm" className="rounded-full border-orange-200 text-orange-600 hover:bg-orange-50 font-bold h-8 px-4" onClick={() => setCampaignForm({ ...campaignForm, tiers: [...campaignForm.tiers, { reward_type: "CASHBACK", reward_value: "0", max_winners: "0", image_url: "" }] })}>+ Add Level</Button>
-              </div>
-              {campaignForm.tiers.map((t, i) => (
-                <div key={i} className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm relative group hover:border-orange-200 transition-all duration-300">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] font-black uppercase text-gray-400">Reward Type</Label>
-                      <Select value={t.reward_type} onValueChange={(v: any) => { const n = [...campaignForm.tiers]; n[i].reward_type = v; setCampaignForm({ ...campaignForm, tiers: n }); }}>
-                        <SelectTrigger className="h-10 text-xs font-bold rounded-lg bg-gray-50 border-0"><SelectValue /></SelectTrigger>
-                        <SelectContent className="rounded-xl border-gray-100 shadow-xl">
-                          <SelectItem value="CASHBACK">💰 Instant Cashback</SelectItem>
-                          <SelectItem value="GIFT">🎁 Physical Gift</SelectItem>
-                          <SelectItem value="DISCOUNT">🏷️ Reward Discount</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] font-black uppercase text-gray-400">{t.reward_type === 'GIFT' ? 'Item Name' : 'Reward Value (₹)'}</Label>
-                      <Input className="h-10 text-xs font-bold rounded-lg bg-gray-50 border-0" value={t.reward_value} onChange={(e) => { const n = [...campaignForm.tiers]; n[i].reward_value = e.target.value; setCampaignForm({ ...campaignForm, tiers: n }); }} />
-                    </div>
-                    <div className="col-span-2 space-y-1.5">
-                      <Label className="text-[10px] font-black uppercase text-gray-400">Total Available Prizes (Winners Limit)</Label>
-                      <Input type="number" className="h-10 text-xs font-bold rounded-lg bg-gray-50 border-0" value={t.max_winners} onChange={(e) => { const n = [...campaignForm.tiers]; n[i].max_winners = e.target.value; setCampaignForm({ ...campaignForm, tiers: n }); }} />
-                    </div>
-                  </div>
-
-                  {t.reward_type === 'GIFT' && (
-                    <div className="mt-4 flex items-center gap-4 p-3 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
-                      <div
-                        className="h-14 w-14 rounded-xl bg-white border border-gray-100 flex items-center justify-center cursor-pointer shadow-sm relative group/img overflow-hidden"
-                        onClick={() => (document.getElementById(`up-${i}`) as any)?.click()}
-                      >
-                        {t.image_url ? (
-                          <>
-                            <img src={t.image_url} className="h-full w-full object-cover" />
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
-                              <Trash2 className="h-4 w-4 text-white" />
-                            </div>
-                          </>
-                        ) : (
-                          uploadingTierIndex === i ? <Loader2 className="h-5 w-5 animate-spin text-orange-400" /> : <ImagePlus className="h-6 w-6 text-gray-200 group-hover:text-orange-300 transition-colors" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider">Visual Asset</p>
-                        <p className="text-[9px] text-gray-300 font-medium">Shown to the user when they scratch-win this gift.</p>
-                      </div>
-                      <input type="file" id={`up-${i}`} className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handleImageUpload(i, e.target.files[0])} />
-                    </div>
-                  )}
-
-                  {campaignForm.tiers.length > 1 && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6 absolute -top-2 -right-2 bg-white border border-gray-100 shadow-md rounded-full text-gray-300 hover:text-red-500 hover:scale-110 active:scale-[0.95] transition-all" onClick={() => { const n = [...campaignForm.tiers]; n.splice(i, 1); setCampaignForm({ ...campaignForm, tiers: n }); }}><Trash2 className="h-3 w-3" /></Button>
-                  )}
+              <div className="flex items-center gap-5 relative z-10">
+                <div className="h-14 w-14 flex items-center justify-center bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl shadow-lg shadow-orange-200 ring-4 ring-white shrink-0">
+                  <Sparkles className="h-7 w-7 text-white" />
                 </div>
-              ))}
+                <div>
+                  <DialogTitle className="text-2xl font-black text-slate-900 tracking-tight">
+                    {editingCampaignId ? "Edit Offer" : "Start New Offer"}
+                  </DialogTitle>
+                  <p className="text-sm font-medium text-slate-500 mt-0.5">Set up rewards and total number of coupons</p>
+                </div>
+              </div>
             </div>
 
-            <div className="flex items-center gap-4 p-5 bg-orange-50/70 rounded-3xl border border-orange-100 relative overflow-hidden">
-              <div className="absolute right-0 bottom-0 opacity-10">
-                <Activity className="h-20 w-20 text-orange-900" />
+            <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="col-span-2 space-y-2.5">
+                  <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Campaign Name *</Label>
+                  <Input
+                    className="h-14 rounded-2xl bg-slate-50 border-slate-100 focus:bg-white focus:ring-4 focus:ring-orange-500/5 transition-all shadow-sm font-bold text-slate-900 placeholder:text-slate-300 px-6"
+                    placeholder="e.g., Diwali Monsoon Rewards 2026"
+                    value={campaignForm.name}
+                    onChange={(e) => setCampaignForm({ ...campaignForm, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2.5">
+                  <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Start Date</Label>
+                  <div className="relative group">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-orange-500 transition-colors" />
+                    <Input
+                      type="date"
+                      className="h-14 pl-12 pr-6 rounded-2xl bg-slate-50 border-slate-100 font-bold text-slate-900 transition-all focus:bg-white"
+                      value={campaignForm.start_date}
+                      onChange={(e) => setCampaignForm({ ...campaignForm, start_date: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2.5">
+                  <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Expires On</Label>
+                  <div className="relative group">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-orange-500 transition-colors" />
+                    <Input
+                      type="date"
+                      className="h-14 pl-12 pr-6 rounded-2xl bg-slate-50 border-slate-100 font-bold text-slate-900 transition-all focus:bg-white"
+                      value={campaignForm.end_date}
+                      onChange={(e) => setCampaignForm({ ...campaignForm, end_date: e.target.value })}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="h-12 w-12 rounded-2xl bg-orange-100 flex items-center justify-center shadow-inner shadow-orange-200/50"><Activity className="h-6 w-6 text-orange-600" /></div>
-              <div className="flex-1 relative z-10">
-                <p className="text-[10px] font-black text-orange-900/50 uppercase tracking-widest">Winning Probability</p>
-                <p className="text-2xl font-black text-orange-600 tracking-tighter">
-                  {((campaignForm.tiers.reduce((acc, t) => acc + (parseInt(t.max_winners) || 0), 0) / (parseInt(campaignForm.total_coupons) || 1)) * 100).toFixed(1)}%
-                  <span className="text-[10px] font-bold text-orange-800/40 ml-2 uppercase tracking-tight italic">Effective Hit Rate</span>
+
+              <div className="p-6 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 border border-blue-100/50 rounded-3xl relative overflow-hidden group">
+                <div className="absolute -right-4 -top-4 h-24 w-24 bg-blue-200/20 rounded-full blur-2xl group-hover:bg-blue-300/30 transition-all duration-500" />
+                <div className="relative z-10 flex items-center justify-between gap-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-xl bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                      <Database className="h-4 w-4 text-white" />
+                    </div>
+                    <Label className="text-[10px] font-black text-blue-900 uppercase tracking-widest">Inventory Size (Planned Scans) *</Label>
+                  </div>
+                </div>
+                <Input
+                  type="number"
+                  className="h-14 bg-white border-blue-100 rounded-2xl font-black text-xl text-blue-900 placeholder:text-blue-100 focus:ring-4 focus:ring-blue-500/5 transition-all text-center"
+                  placeholder="1000"
+                  value={campaignForm.total_coupons}
+                  onChange={(e) => setCampaignForm({ ...campaignForm, total_coupons: e.target.value })}
+                />
+                <p className="text-[10px] text-blue-400 mt-4 italic font-medium leading-relaxed bg-white/40 p-2.5 rounded-xl border border-blue-100/50">
+                  <Sparkles className="h-3 w-3 inline mr-1 text-blue-400" />
+                  Prizes are weight-balanced against this number across all generated codes.
                 </p>
               </div>
+
+              <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-6 w-1 rounded-full bg-orange-500" />
+                    <h4 className="text-sm font-black uppercase text-slate-900 tracking-[0.1em]">Prize Architecture</h4>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl border-orange-200 text-orange-600 hover:bg-orange-50 font-black h-10 px-5 shadow-sm active:scale-95 transition-all border-2"
+                    onClick={() => setCampaignForm({ ...campaignForm, tiers: [...campaignForm.tiers, { reward_type: "CASHBACK", reward_value: "0", max_winners: "0", image_url: "" }] })}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Tier
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  {campaignForm.tiers.map((t, i) => (
+                    <motion.div
+                      layout
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      key={i}
+                      className="p-6 bg-white rounded-[2rem] border border-slate-100 hover:border-orange-200 hover:shadow-2xl hover:shadow-orange-500/5 transition-all duration-300 relative group/tier"
+                    >
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Reward Type</Label>
+                          <Select value={t.reward_type} onValueChange={(v: "CASHBACK" | "GIFT" | "DISCOUNT") => { const n = [...campaignForm.tiers]; n[i].reward_type = v; setCampaignForm({ ...campaignForm, tiers: n }); }}>
+                            <SelectTrigger className="h-12 text-xs font-black rounded-xl bg-slate-50 border-0 shadow-inner px-4 text-slate-700">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl border-slate-100 shadow-2xl p-1">
+                              <SelectItem value="CASHBACK" className="rounded-xl font-bold py-3">💰 Instant Cashback</SelectItem>
+                              <SelectItem value="GIFT" className="rounded-xl font-bold py-3">🎁 Physical Gift</SelectItem>
+                              <SelectItem value="DISCOUNT" className="rounded-xl font-bold py-3">🏷️ Reward Discount</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">
+                            {t.reward_type === 'GIFT' ? 'Premium Item Name' : 'Reward Value (₹)'}
+                          </Label>
+                          <Input
+                            className="h-12 text-xs font-black rounded-xl bg-slate-50 border-0 shadow-inner px-4 text-slate-900"
+                            placeholder={t.reward_type === 'GIFT' ? "e.g., iPhone 15 Pro" : "e.g., 500"}
+                            value={t.reward_value}
+                            onChange={(e) => { const n = [...campaignForm.tiers]; n[i].reward_value = e.target.value; setCampaignForm({ ...campaignForm, tiers: n }); }}
+                          />
+                        </div>
+                        <div className="col-span-2 space-y-2">
+                          <Label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Total Available Prizes (Winners Limit)</Label>
+                          <div className="relative group">
+                            <Trophy className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 group-hover:text-orange-500 transition-colors" />
+                            <Input
+                              type="number"
+                              className="h-12 pl-12 text-xs font-black rounded-xl bg-slate-50 border-0 shadow-inner px-4 text-slate-900"
+                              value={t.max_winners}
+                              onChange={(e) => { const n = [...campaignForm.tiers]; n[i].max_winners = e.target.value; setCampaignForm({ ...campaignForm, tiers: n }); }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {t.reward_type === 'GIFT' && (
+                        <div className="mt-6 flex items-center gap-5 p-4 bg-orange-50/30 rounded-2xl border border-dashed border-orange-200">
+                          <div
+                            className="h-20 w-20 rounded-2xl bg-white border border-slate-100 flex items-center justify-center cursor-pointer shadow-sm relative group/img overflow-hidden shrink-0"
+                            onClick={() => document.getElementById(`up-${i}`)?.click()}
+                          >
+                            {t.image_url ? (
+                              <>
+                                <img src={t.image_url} className="h-full w-full object-contain p-2" />
+                                <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
+                                  <Trash2 className="h-5 w-5 text-white" />
+                                </div>
+                              </>
+                            ) : (
+                              uploadingTierIndex === i ? (
+                                <Loader2 className="h-8 w-8 animate-spin text-orange-400" />
+                              ) : (
+                                <ImagePlus className="h-8 w-8 text-slate-200 group-hover:text-orange-400 transition-colors" />
+                              )
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Visual Asset Content</p>
+                            <p className="text-[10px] text-slate-400 font-medium leading-relaxed mt-1">High-quality mockups improve conversion rates when users discover their rewards.</p>
+                          </div>
+                          <input type="file" id={`up-${i}`} className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handleImageUpload(i, e.target.files[0])} />
+                        </div>
+                      )}
+
+                      {campaignForm.tiers.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 absolute -top-3 -right-3 bg-white border border-slate-100 shadow-xl rounded-full text-slate-300 hover:text-red-500 hover:scale-110 active:scale-95 transition-all opacity-0 group-hover/tier:opacity-100"
+                          onClick={() => { const n = [...campaignForm.tiers]; n.splice(i, 1); setCampaignForm({ ...campaignForm, tiers: n }); }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Intelligence Summary */}
+              <div className="p-6 bg-slate-900 text-white rounded-[2rem] border border-slate-800 relative overflow-hidden group">
+                <div className="absolute right-0 bottom-0 opacity-10 translate-x-1/4 translate-y-1/4 group-hover:scale-110 transition-transform duration-700">
+                  <Activity className="h-40 w-40 text-orange-500" />
+                </div>
+
+                <div className="flex items-center gap-6 relative z-10">
+                  <div className="h-16 w-16 rounded-[1.25rem] bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-2xl shadow-orange-500/40 shrink-0">
+                    <Activity className="h-8 w-8 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[10px] font-black text-orange-400 uppercase tracking-[0.2em] mb-1">Algorithmic Hit Rate</p>
+                    <div className="flex items-end gap-3">
+                      <p className="text-4xl font-black text-white tracking-tighter">
+                        {((campaignForm.tiers.reduce((acc, t) => acc + (parseInt(t.max_winners) || 0), 0) / (parseInt(campaignForm.total_coupons) || 1)) * 100).toFixed(1)}%
+                      </p>
+                      <div className="flex flex-col mb-1.5">
+                        <span className="text-[10px] font-black uppercase text-orange-200/50 tracking-tight leading-none italic">Probability</span>
+                        <span className="text-[10px] font-bold text-slate-500 tracking-tight leading-none mt-1">Winning Factor</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <DialogFooter className="mt-10 flex gap-3">
-            <Button variant="ghost" className="rounded-2xl h-14 font-black text-gray-400 hover:text-gray-900 px-8" onClick={() => setCreateCampaignDialogOpen(false)}>Close</Button>
-            <Button
-              className="bg-orange-600 hover:bg-orange-700 text-white rounded-2xl flex-1 h-14 font-black shadow-[0_10px_30px_-10px_rgba(234,88,12,0.5)] transition-all hover:-translate-y-1 active:scale-[0.98]"
-              onClick={handleSubmitCampaign}
-              disabled={isCreatingCampaign || !campaignForm.name}
-            >
-              {isCreatingCampaign ? <Loader2 className="h-5 w-5 animate-spin mr-3" /> : <Sparkles className="h-5 w-5 mr-3" />}
-              {editingCampaignId ? "Update Campaign" : "Deploy Campaign"}
-            </Button>
-          </DialogFooter>
+
+            <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row gap-4 shrink-0">
+              <Button
+                variant="ghost"
+                className="rounded-2xl h-14 font-black text-slate-400 hover:text-slate-900 px-10 order-2 sm:order-1 transition-all"
+                onClick={() => setCreateCampaignDialogOpen(false)}
+              >
+                Discard Draft
+              </Button>
+              <Button
+                className="bg-orange-600 hover:bg-orange-500 text-white rounded-2xl flex-1 h-14 font-black shadow-xl shadow-orange-600/20 transition-all hover:scale-[1.02] active:scale-[0.98] order-1 sm:order-2"
+                onClick={handleSubmitCampaign}
+                disabled={isCreatingCampaign || !campaignForm.name}
+              >
+                {isCreatingCampaign ? (
+                  <Loader2 className="h-5 w-5 animate-spin mr-3" />
+                ) : (
+                  editingCampaignId ? <RefreshCw className="h-5 w-5 mr-3" /> : <Rocket className="h-5 w-5 mr-3" />
+                )}
+                {editingCampaignId ? "Synchronize Updates" : "Deploy Campaign Architecture"}
+              </Button>
+            </div>
+          </motion.div>
         </DialogContent>
       </Dialog>
     </div>

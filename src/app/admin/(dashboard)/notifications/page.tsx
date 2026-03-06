@@ -19,7 +19,6 @@ import {
   UploadCloud,
   Trash2,
   X,
-  Bug,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,7 +101,7 @@ export default function NotificationsPage() {
   const [registrationPeriod, setRegistrationPeriod] = useState<"all" | "new_users" | "this_month" | "this_year" | "crop_preference">("all");
   const [daysAgo, setDaysAgo] = useState("7");
   const [cropId, setCropId] = useState("all");
-  const [isTestMode, setIsTestMode] = useState(false);
+
 
   const [title, setTitle] = useState("");
   const [titleHi, setTitleHi] = useState("");
@@ -233,7 +232,7 @@ export default function NotificationsPage() {
         titleHi: titleHi.trim() || undefined,
         messageHi: messageHi.trim() || undefined,
         imageUrl: imageUrl.trim() || undefined,
-        topic: isTestMode ? "debug_users" : (topic || "all_users"),
+        topic: topic || "all_users",
         type,
         slug: slug !== "none" ? slug.trim() : undefined,
         productId: productId.trim() || undefined,
@@ -338,42 +337,10 @@ export default function NotificationsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Test Mode Banner */}
-            <div className={`p-4 rounded-xl border-2 transition-all duration-300 ${isTestMode
-              ? "bg-amber-50 border-amber-200 shadow-sm"
-              : "bg-gray-50 border-gray-100"
-              }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${isTestMode ? "bg-amber-100 text-amber-600" : "bg-gray-200 text-gray-500"}`}>
-                    <Bug className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h4 className={`font-bold text-sm ${isTestMode ? "text-amber-800" : "text-gray-700"}`}>
-                      Developer Test Mode
-                    </h4>
-                    <p className="text-xs text-muted-foreground">
-                      {isTestMode
-                        ? "Notification will ONLY be sent to Debug/Development apps."
-                        : "Notification will be sent to REAL PRODUCTION users."}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${isTestMode ? "text-amber-600" : "text-gray-400"}`}>
-                    {isTestMode ? "Enabled" : "Disabled"}
-                  </span>
-                  <Switch
-                    checked={isTestMode}
-                    onCheckedChange={setIsTestMode}
-                    className="data-[state=checked]:bg-amber-500"
-                  />
-                </div>
-              </div>
-            </div>
+
 
             {/* Target Audience */}
-            <div className={`space-y-4 ${isTestMode ? "opacity-50 pointer-events-none grayscale" : ""}`}>
+            <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-semibold flex items-center gap-2">

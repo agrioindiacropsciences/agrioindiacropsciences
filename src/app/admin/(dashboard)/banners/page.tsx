@@ -65,6 +65,8 @@ export default function BannersPage() {
   });
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [selectedImageHi, setSelectedImageHi] = useState<File | null>(null);
+  const [imagePreviewHi, setImagePreviewHi] = useState<string>("");
 
   const fetchBanners = useCallback(async () => {
     setIsLoading(true);
@@ -102,6 +104,8 @@ export default function BannersPage() {
     });
     setSelectedImage(null);
     setImagePreview("");
+    setSelectedImageHi(null);
+    setImagePreviewHi("");
     setEditingBanner(null);
   };
 
@@ -111,6 +115,16 @@ export default function BannersPage() {
       setSelectedImage(file);
       setImagePreview(URL.createObjectURL(file));
       setFormData((prev) => ({ ...prev, image_url: "" }));
+    }
+    e.target.value = "";
+  };
+
+  const handleImageHiSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImageHi(file);
+      setImagePreviewHi(URL.createObjectURL(file));
+      setFormData((prev) => ({ ...prev, image_url_hi: "" }));
     }
     e.target.value = "";
   };
@@ -134,8 +148,13 @@ export default function BannersPage() {
       fd.append("displayOrder", String(formData.display_order));
       fd.append("isActive", String(formData.is_active));
       if (formData.title) fd.append("title", formData.title);
-      if (formData.image_url_hi) fd.append("imageUrlHi", formData.image_url_hi);
+
       fd.append("image", selectedImage);
+      if (selectedImageHi) {
+        fd.append("imageHi", selectedImageHi);
+      } else if (formData.image_url_hi) {
+        fd.append("imageUrlHi", formData.image_url_hi);
+      }
 
       const response = await api.createBanner(fd);
 
@@ -175,6 +194,8 @@ export default function BannersPage() {
     });
     setSelectedImage(null);
     setImagePreview("");
+    setSelectedImageHi(null);
+    setImagePreviewHi("");
     setEditDialogOpen(true);
   };
 
@@ -198,9 +219,18 @@ export default function BannersPage() {
       fd.append("displayOrder", String(formData.display_order));
       fd.append("isActive", String(formData.is_active));
       if (formData.title) fd.append("title", formData.title);
-      if (formData.image_url_hi) fd.append("imageUrlHi", formData.image_url_hi);
+
       if (selectedImage) {
         fd.append("image", selectedImage);
+      }
+
+      if (selectedImageHi) {
+        fd.append("imageHi", selectedImageHi);
+      } else if (formData.image_url_hi) {
+        fd.append("imageUrlHi", formData.image_url_hi);
+      } else {
+        // If no file and no existing URL, we might want to clear it
+        fd.append("clearImageHi", "true");
       }
 
       const response = await api.updateBanner(editingBanner.id, fd);
@@ -420,7 +450,7 @@ export default function BannersPage() {
               </Select>
             </div>
             <div>
-              <Label>Banner Image *</Label>
+              <Label>Banner Image (English) *</Label>
               <input
                 type="file"
                 accept="image/jpeg,image/jpg,image/png,image/webp"
@@ -430,20 +460,62 @@ export default function BannersPage() {
               />
               <label
                 htmlFor="create-banner-image"
-                className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-primary transition-colors block bg-gray-50"
+                className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-primary transition-colors block bg-gray-50"
               >
-                <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm font-medium">Click to select image from device</p>
-                <p className="text-xs text-muted-foreground mt-1">JPG, PNG or WebP (max 10MB)</p>
+                <Upload className="h-8 w-8 text-gray-400 mx-auto mb-1" />
+                <p className="text-sm font-medium">Click to select image</p>
               </label>
               {(imagePreview || formData.image_url) && (
-                <div className="mt-3 relative h-24 w-full rounded-lg overflow-hidden bg-gray-100">
+                <div className="mt-2 relative h-20 w-full rounded-lg overflow-hidden bg-gray-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={imagePreview || formData.image_url}
                     alt="Preview"
                     className="w-full h-full object-contain"
                   />
+                </div>
+              )}
+            </div>
+            <div>
+              <Label>Banner Image (Hindi)</Label>
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={handleImageHiSelect}
+                className="hidden"
+                id="create-banner-image-hi"
+              />
+              <label
+                htmlFor="create-banner-image-hi"
+                className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-primary transition-colors block bg-gray-50"
+              >
+                <Upload className="h-8 w-8 text-gray-400 mx-auto mb-1" />
+                <p className="text-sm font-medium">Click to select Hindi image</p>
+              </label>
+              {(imagePreviewHi || formData.image_url_hi) && (
+                <div className="mt-2 relative h-20 w-full rounded-lg overflow-hidden bg-gray-100">
+                  <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded font-bold z-10">HI</div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={imagePreviewHi || formData.image_url_hi}
+                    alt="Hindi Preview"
+                    className="w-full h-full object-contain"
+                  />
+                  {(imagePreviewHi || formData.image_url_hi) && (
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-6 w-6 rounded-full"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setSelectedImageHi(null);
+                        setImagePreviewHi("");
+                        setFormData(prev => ({ ...prev, image_url_hi: "" }));
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
@@ -516,7 +588,7 @@ export default function BannersPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Banner Image *</Label>
+              <Label>Banner Image (English) *</Label>
               <input
                 type="file"
                 accept="image/jpeg,image/jpg,image/png,image/webp"
@@ -526,20 +598,62 @@ export default function BannersPage() {
               />
               <label
                 htmlFor="edit-banner-image"
-                className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-primary transition-colors block bg-gray-50"
+                className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-primary transition-colors block bg-gray-50"
               >
-                <Upload className="h-10 w-10 text-gray-400 mx-auto mb-2" />
+                <Upload className="h-8 w-8 text-gray-400 mx-auto mb-1" />
                 <p className="text-sm font-medium">Click to select new image (or keep current)</p>
-                <p className="text-xs text-muted-foreground mt-1">JPG, PNG or WebP (max 10MB)</p>
               </label>
               {(imagePreview || formData.image_url) && (
-                <div className="mt-3 relative h-24 w-full rounded-lg overflow-hidden bg-gray-100">
+                <div className="mt-2 relative h-20 w-full rounded-lg overflow-hidden bg-gray-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={imagePreview || formData.image_url}
                     alt="Preview"
                     className="w-full h-full object-contain"
                   />
+                </div>
+              )}
+            </div>
+            <div>
+              <Label>Banner Image (Hindi)</Label>
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={handleImageHiSelect}
+                className="hidden"
+                id="edit-banner-image-hi"
+              />
+              <label
+                htmlFor="edit-banner-image-hi"
+                className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-primary transition-colors block bg-gray-50"
+              >
+                <Upload className="h-8 w-8 text-gray-400 mx-auto mb-1" />
+                <p className="text-sm font-medium">Click to select new Hindi image (or keep current)</p>
+              </label>
+              {(imagePreviewHi || formData.image_url_hi) && (
+                <div className="mt-2 relative h-20 w-full rounded-lg overflow-hidden bg-gray-100">
+                  <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded font-bold z-10">HI</div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={imagePreviewHi || formData.image_url_hi}
+                    alt="Hindi Preview"
+                    className="w-full h-full object-contain"
+                  />
+                  {(imagePreviewHi || formData.image_url_hi) && (
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-6 w-6 rounded-full"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setSelectedImageHi(null);
+                        setImagePreviewHi("");
+                        setFormData(prev => ({ ...prev, image_url_hi: "" }));
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

@@ -174,6 +174,44 @@ export default function ScanPage() {
     setIsScanning(false);
   }, []);
 
+  // 2. Handle QR Scan -> Go to Form
+  const handleQRScanSuccess = useCallback(async (rawCode: string) => {
+    if (isProcessingScan) return;
+    setIsProcessingScan(true);
+
+    await stopQRScanner();
+    console.log("Scanned Code:", rawCode);
+
+    let extractedSerial = "";
+    let extractedAuth = "";
+
+    try {
+      const json = JSON.parse(rawCode);
+      if (json.sn || json.serial_number) extractedSerial = json.sn || json.serial_number;
+      if (json.ac || json.auth_code) extractedAuth = json.ac || json.auth_code;
+    } catch (e) {
+      try {
+        const url = new URL(rawCode);
+        extractedSerial = url.searchParams.get("sn") || url.searchParams.get("serial") || "";
+        extractedAuth = url.searchParams.get("ac") || url.searchParams.get("auth") || "";
+      } catch (e2) {
+        if (rawCode.includes('|')) {
+          const parts = rawCode.split('|');
+          extractedSerial = parts[0];
+          extractedAuth = parts[1] || "";
+        } else {
+          extractedSerial = rawCode.trim();
+        }
+      }
+    }
+
+    setSerialNumber(extractedSerial);
+    setAuthCode(extractedAuth);
+
+    setIsProcessingScan(false);
+    setState("verify-form");
+  }, [isProcessingScan, stopQRScanner]);
+
   // Effect to manage scanner lifecycle
   useEffect(() => {
     let isMounted = true;
@@ -251,57 +289,7 @@ export default function ScanPage() {
     return () => {
       isMounted = false;
     };
-  }, [state, isScanning, facingMode, language, toast]);
-
-  // 2. Handle QR Scan -> Go to Form
-  const handleQRScanSuccess = async (rawCode: string) => {
-    if (isProcessingScan) return;
-    setIsProcessingScan(true);
-
-    await stopQRScanner();
-    console.log("Scanned Code:", rawCode);
-
-    // Try to extract Serial & Auth from QR if format allows
-    // Format assumptions: 
-    // 1. JSON: { "sn": "...", "ac": "..." }
-    // 2. URL params: ?sn=...&ac=...
-    // 3. Pipe separated: SERIAL|AUTH
-    // 4. Just Serial (user enters Auth)
-
-    let extractedSerial = "";
-    let extractedAuth = "";
-
-    try {
-      // Try JSON
-      const json = JSON.parse(rawCode);
-      if (json.sn || json.serial_number) extractedSerial = json.sn || json.serial_number;
-      if (json.ac || json.auth_code) extractedAuth = json.ac || json.auth_code;
-    } catch (e) {
-      // Not JSON
-      try {
-        // Try URL
-        const url = new URL(rawCode);
-        extractedSerial = url.searchParams.get("sn") || url.searchParams.get("serial") || "";
-        extractedAuth = url.searchParams.get("ac") || url.searchParams.get("auth") || "";
-      } catch (e2) {
-        // Not URL, try split
-        if (rawCode.includes('|')) {
-          const parts = rawCode.split('|');
-          extractedSerial = parts[0];
-          extractedAuth = parts[1] || "";
-        } else {
-          // Assume entire code is Serial? Or just pre-fill serial
-          extractedSerial = rawCode.trim();
-        }
-      }
-    }
-
-    setSerialNumber(extractedSerial);
-    setAuthCode(extractedAuth);
-
-    setIsProcessingScan(false);
-    setState("verify-form");
-  };
+  }, [state, isScanning, facingMode, language, toast, handleQRScanSuccess]);
 
   // 3. Verify & Claim (Form Submit)
   const handleSubmitVerification = async () => {
@@ -597,7 +585,7 @@ export default function ScanPage() {
                 {/* Prize Underneath (Hidden initially) */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-yellow-50 to-orange-50 p-6">
                   {wonPrize?.type === 'GIFT' && wonPrize.image_url ? (
-                    <img src={wonPrize.image_url} alt="Prize" className="h-32 w-32 object-contain mb-4 drop-shadow-lg" />
+                    <img src={wonPrize.image_url} alt={wonPrize.name} className="h-32 w-32 object-contain mb-4 drop-shadow-lg" />
                   ) : (
                     <div className="h-24 w-24 bg-yellow-100 rounded-full flex items-center justify-center mb-4 text-4xl shadow-inner">🏆</div>
                   )}
@@ -641,7 +629,7 @@ export default function ScanPage() {
                 <div className="h-40 w-40 mx-auto rounded-full bg-gradient-to-br from-yellow-300 to-orange-400 p-1 shadow-2xl">
                   <div className="h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden">
                     {wonPrize.image_url ? (
-                      <img src={wonPrize.image_url} className="h-28 w-28 object-contain" />
+                      <img src={wonPrize.image_url} alt={wonPrize.name} className="h-28 w-28 object-contain" />
                     ) : (
                       <span className="text-5xl">🎁</span>
                     )}

@@ -174,7 +174,7 @@ function ScratchDialog({
             <div className="h-32 w-32 mx-auto rounded-full bg-gradient-to-br from-yellow-300 to-orange-400 p-1 shadow-2xl">
               <div className="h-full w-full rounded-full bg-white flex items-center justify-center overflow-hidden">
                 {reward?.image_url ? (
-                  <img src={reward.image_url} alt="Prize" className="h-24 w-24 object-contain" />
+                  <img src={reward.image_url} alt={reward.name || "Prize"} className="h-24 w-24 object-contain" />
                 ) : (
                   <span className="text-5xl">🎁</span>
                 )}
@@ -422,7 +422,7 @@ export default function RewardsPage() {
                             <div className="flex items-center gap-4">
                               <div className="h-14 w-14 rounded-xl flex items-center justify-center shrink-0 overflow-hidden bg-green-50">
                                 {reward.image_url ? (
-                                  <img src={reward.image_url} alt={reward.name} className="h-full w-full object-cover" />
+                                  <img src={reward.image_url} alt={reward.name || "Reward"} className="h-full w-full object-cover" />
                                 ) : (
                                   <Gift className="h-7 w-7 text-green-600" />
                                 )}
@@ -544,7 +544,7 @@ export default function RewardsPage() {
                 {selectedReward.image_url ? (
                   <img
                     src={selectedReward.image_url}
-                    alt={selectedReward.name}
+                    alt={selectedReward.name || "Reward"}
                     className="h-full w-full object-cover"
                   />
                 ) : (

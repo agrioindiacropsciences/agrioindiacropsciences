@@ -1194,7 +1194,7 @@ export default function CouponsPage() {
                               <div className="relative h-14 w-14 group">
                                 <div className="absolute inset-0 bg-blue-400/20 rounded-2xl blur-lg animate-pulse" />
                                 {selectedCoupon.redeemed_by.image ? (
-                                  <img src={selectedCoupon.redeemed_by.image} className="h-full w-full rounded-2xl object-cover border-2 border-white shadow-md relative z-10" />
+                                  <img src={selectedCoupon.redeemed_by.image} alt={selectedCoupon.redeemed_by.name || "User"} className="h-full w-full rounded-2xl object-cover border-2 border-white shadow-md relative z-10" />
                                 ) : (
                                   <div className="h-full w-full rounded-2xl bg-white shadow-md border-2 border-white flex items-center justify-center font-black text-xl text-blue-600 relative z-10">
                                     {selectedCoupon.redeemed_by.name?.[0] || "U"}
@@ -1417,7 +1417,7 @@ export default function CouponsPage() {
                           >
                             {t.image_url ? (
                               <>
-                                <img src={t.image_url} className="h-full w-full object-contain p-2" />
+                                <img src={t.image_url} alt={t.reward_value} className="h-full w-full object-contain p-2" />
                                 <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
                                   <Trash2 className="h-5 w-5 text-white" />
                                 </div>

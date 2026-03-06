@@ -179,7 +179,7 @@ export default function NotificationsPage() {
     if (topic === "dealers" && registrationPeriod === "crop_preference") {
       setRegistrationPeriod("all");
     }
-  }, [topic]);
+  }, [topic, registrationPeriod]);
 
   // Handle PROMO type specific logic
   useEffect(() => {
@@ -743,11 +743,11 @@ export default function NotificationsPage() {
                   </Select>
                   {slug && slug !== "none" ? (
                     <p className="text-xs text-amber-600 font-medium flex items-center gap-1">
-                      <span>⚠️</span> Disabled — "Target App Screen" is active. Clear it to select a product.
+                      <span>⚠️</span> Disabled — &quot;Target App Screen&quot; is active. Clear it to select a product.
                     </p>
                   ) : (
                     <p className={`text-xs ${type === "PROMO" ? "text-amber-700 font-medium" : "text-muted-foreground"}`}>
-                      {type === "PROMO" ? "✨ Choose a product to link this promotion to" : "Deep-link user directly to this product's page"}
+                      {type === "PROMO" ? "✨ Choose a product to link this promotion to" : "Deep-link user directly to this product&apos;s page"}
                     </p>
                   )}
                 </div>
@@ -813,7 +813,7 @@ export default function NotificationsPage() {
                   <div className="flex items-start gap-4">
                     {imageUrl && (
                       <div className="h-16 w-16 rounded-lg overflow-hidden flex-shrink-0 shadow-sm border">
-                        <img src={imageUrl} alt="preview" className="h-full w-full object-cover" />
+                        <img src={imageUrl} alt="Notification Preview" className="h-full w-full object-cover" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">

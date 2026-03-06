@@ -232,7 +232,7 @@ export default function BuyNearbyPage() {
       }
     };
     initPage();
-  }, [user?.id, user?.pincode, handleSearchWithPincode, handleUseLocation]);
+  }, [user?.id, user?.pincode, handleSearchWithPincode, handleUseLocation, distributors.length]);
 
   return (
     <div className="min-h-screen overflow-hidden">

@@ -9,10 +9,11 @@ export default function PublicError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const [showDebug, setShowDebug] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
-    console.error("Page error:", error?.message, error?.digest);
+    console.error("Page error:", error?.message, error?.stack, error?.digest);
   }, [error]);
 
   useEffect(() => {
@@ -52,6 +53,22 @@ export default function PublicError({
             Reload Page
           </button>
         </div>
+        {/* Debug info — tap to toggle */}
+        <button
+          onClick={() => setShowDebug((v) => !v)}
+          className="mt-8 text-[10px] text-gray-300"
+        >
+          tap for details
+        </button>
+        {showDebug && (
+          <pre className="mt-2 text-left text-[10px] text-red-400 bg-gray-50 p-3 rounded-lg overflow-auto max-h-40 break-all whitespace-pre-wrap">
+            {error?.message || "Unknown error"}
+            {"\n"}
+            {error?.digest || ""}
+            {"\n"}
+            {error?.stack?.slice(0, 500) || ""}
+          </pre>
+        )}
       </div>
     </div>
   );

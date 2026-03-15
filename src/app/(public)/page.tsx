@@ -197,15 +197,19 @@ export default function HomePage() {
         if (configRes.status === "fulfilled" && configRes.value.success && configRes.value.data?.content) {
           const content = configRes.value.data.content;
           if (content.home_features?.length > 0) {
-            setHomeFeatures(content.home_features.map((f: any) => ({
+            setHomeFeatures(content.home_features.map((f: any, idx: number) => ({
+              ...features[idx],
               ...f,
-              icon: ICON_MAP[f.icon_name] || Leaf,
+              icon: ICON_MAP[f.icon_name] || features[idx]?.icon || Leaf,
+              href: f.href || features[idx]?.href || "/products",
+              gradient: f.gradient || features[idx]?.gradient || "from-green-500 to-emerald-600",
             })));
           }
           if (content.why_choose_us?.length > 0) {
-            setHomeWhyChooseUs(content.why_choose_us.map((f: any) => ({
+            setHomeWhyChooseUs(content.why_choose_us.map((f: any, idx: number) => ({
+              ...whyChooseUs[idx],
               ...f,
-              icon: ICON_MAP[f.icon_name] || Shield,
+              icon: ICON_MAP[f.icon_name] || whyChooseUs[idx]?.icon || Shield,
             })));
           }
           if (content.home_hero?.hero_image) {
@@ -683,52 +687,56 @@ export default function HomePage() {
           </AnimatedSection>
 
           <AnimatedContainer className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6" staggerDelay={0.1}>
-            {homeFeatures.map((feature, index) => (
-              <AnimatedItem key={index}>
-                <Link href={feature.href}>
-                  <motion.div
-                    whileHover={{ y: -10 }}
-                    transition={{ duration: 0.3 }}
-                    className="block h-full cursor-pointer"
-                  >
-                    <Card className="h-full min-h-[300px] border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group relative flex flex-col">
-                      {/* Background Image with Blur */}
-                      {feature.image && (
-                        <div className="absolute inset-0 bg-white">
-                          <Image
-                            src={feature.image}
-                            alt={language === "en" ? feature.title : feature.titleHi}
-                            fill
-                            className="object-contain opacity-75"
-                            style={{ filter: 'blur(1px)', objectPosition: 'center' }}
-                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-white/15 to-white/25" />
-                        </div>
-                      )}
+            {homeFeatures.map((feature, index) => {
+              const FeatureIcon = feature.icon || Leaf;
+              const featureGradient = feature.gradient || "from-green-500 to-emerald-600";
+              const featureHref = feature.href || "/products";
 
-                      <CardContent className="p-8 text-center relative z-10 flex flex-col flex-grow">
-                        {/* Gradient background on hover */}
-                        <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
+              return (
+                <AnimatedItem key={index}>
+                  <Link href={featureHref}>
+                    <motion.div
+                      whileHover={{ y: -10 }}
+                      transition={{ duration: 0.3 }}
+                      className="block h-full cursor-pointer"
+                    >
+                      <Card className="h-full min-h-[300px] border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group relative flex flex-col">
+                        {feature.image && (
+                          <div className="absolute inset-0 bg-white">
+                            <Image
+                              src={feature.image}
+                              alt={language === "en" ? (feature.title ?? "") : (feature.titleHi ?? "")}
+                              fill
+                              className="object-contain opacity-75"
+                              style={{ filter: 'blur(1px)', objectPosition: 'center' }}
+                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-white/15 to-white/25" />
+                          </div>
+                        )}
 
-                        <motion.div
-                          whileHover={{ scale: 1.1, rotate: 5 }}
-                          className={`mx-auto h-16 w-16 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 shadow-lg relative z-10`}
-                        >
-                          <feature.icon className="h-8 w-8 text-white" />
-                        </motion.div>
-                        <h3 className="font-bold text-xl mb-3 relative z-10">
-                          {language === "en" ? feature.title : feature.titleHi}
-                        </h3>
-                        <p className="text-gray-800 leading-relaxed relative z-10">
-                          {language === "en" ? feature.description : feature.descriptionHi}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                </Link>
-              </AnimatedItem>
-            ))}
+                        <CardContent className="p-8 text-center relative z-10 flex flex-col flex-grow">
+                          <div className={`absolute inset-0 bg-gradient-to-br ${featureGradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
+
+                          <motion.div
+                            whileHover={{ scale: 1.1, rotate: 5 }}
+                            className={`mx-auto h-16 w-16 rounded-2xl bg-gradient-to-br ${featureGradient} flex items-center justify-center mb-6 shadow-lg relative z-10`}
+                          >
+                            <FeatureIcon className="h-8 w-8 text-white" />
+                          </motion.div>
+                          <h3 className="font-bold text-xl mb-3 relative z-10">
+                            {language === "en" ? (feature.title ?? "") : (feature.titleHi ?? "")}
+                          </h3>
+                          <p className="text-gray-800 leading-relaxed relative z-10">
+                            {language === "en" ? (feature.description ?? "") : (feature.descriptionHi ?? "")}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  </Link>
+                </AnimatedItem>
+              );
+            })}
           </AnimatedContainer>
         </div>
       </section>
@@ -1125,19 +1133,20 @@ export default function HomePage() {
           </AnimatedSection>
 
           <AnimatedContainer className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8" staggerDelay={0.1}>
-            {homeWhyChooseUs.map((item, index) => (
+            {homeWhyChooseUs.map((item, index) => {
+              const ItemIcon = item.icon || Shield;
+              return (
               <AnimatedItem key={index}>
                 <motion.div
                   whileHover={{ y: -8 }}
                   className="text-center group"
                 >
                   <Card className="h-full min-h-[300px] border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden relative flex flex-col">
-                    {/* Background Image with Blur */}
                     {item.image && (
                       <div className="absolute inset-0 bg-white">
                         <Image
                           src={item.image}
-                          alt={language === "en" ? item.title : item.titleHi}
+                          alt={language === "en" ? (item.title ?? "") : (item.titleHi ?? "")}
                           fill
                           className="object-contain opacity-75"
                           style={{ filter: 'blur(1px)', objectPosition: 'center' }}
@@ -1152,24 +1161,25 @@ export default function HomePage() {
                         whileHover={{ scale: 1.1 }}
                         className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-to-br from-primary to-emerald-500 shadow-lg mb-6 relative z-10"
                       >
-                        <item.icon className="h-8 w-8 text-white" />
+                        <ItemIcon className="h-8 w-8 text-white" />
                       </motion.div>
 
-                      <p className="text-4xl font-bold text-primary mb-1 relative z-10">{item.stat}</p>
+                      <p className="text-4xl font-bold text-primary mb-1 relative z-10">{item.stat ?? ""}</p>
                       <p className="text-sm text-gray-700 mb-4 relative z-10">
-                        {language === "en" ? item.statLabel : item.statLabelHi}
+                        {language === "en" ? (item.statLabel ?? "") : (item.statLabelHi ?? "")}
                       </p>
                       <h3 className="font-bold text-xl mb-3 text-gray-900 relative z-10">
-                        {language === "en" ? item.title : item.titleHi}
+                        {language === "en" ? (item.title ?? "") : (item.titleHi ?? "")}
                       </h3>
                       <p className="text-gray-800 text-sm leading-relaxed relative z-10">
-                        {language === "en" ? item.description : item.descriptionHi}
+                        {language === "en" ? (item.description ?? "") : (item.descriptionHi ?? "")}
                       </p>
                     </CardContent>
                   </Card>
                 </motion.div>
               </AnimatedItem>
-            ))}
+              );
+            })}
           </AnimatedContainer>
         </div>
       </section>

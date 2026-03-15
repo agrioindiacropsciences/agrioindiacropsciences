@@ -179,7 +179,7 @@ export default function BestSellingPage() {
                 ? product.pack_sizes[0].size
                 : "";
               // Use gradient from technical_details or fallback to category-based gradient
-              const gradient = (technicalDetails.gradient as string) || getCategoryGradient(product.category.name);
+              const gradient = (technicalDetails.gradient as string) || getCategoryGradient(product.category?.name ?? "");
               const image = product.image_url || "/logo.svg";
               const technical = language === "en" 
                 ? product.composition 
@@ -227,7 +227,7 @@ export default function BestSellingPage() {
                     <CardContent className="p-6">
                       {/* Category */}
                       <Badge className={`mb-3 bg-gradient-to-r ${gradient} text-white border-0`}>
-                        {language === "en" ? product.category.name : product.category.name_hi}
+                        {language === "en" ? (product.category?.name ?? "Product") : (product.category?.name_hi ?? "उत्पाद")}
                       </Badge>
 
                       {/* Product Name */}

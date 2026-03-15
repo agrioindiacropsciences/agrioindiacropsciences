@@ -230,7 +230,7 @@ export default function ReportsPage() {
                       <div
                         key={i}
                         className="flex-1 bg-primary/30 hover:bg-primary/50 rounded-t transition-colors"
-                        style={{ height: `${Math.random() * 80 + 20}%` }}
+                        style={{ height: `${((i * 37 + 13) % 80) + 20}%` }}
                       />
                     ))}
                   </div>
@@ -299,7 +299,7 @@ export default function ReportsPage() {
                     <div
                       key={i}
                       className="flex-1 bg-primary/30 hover:bg-primary/50 rounded-t transition-colors"
-                      style={{ height: `${Math.random() * 80 + 20}%` }}
+                      style={{ height: `${((i * 37 + 13) % 80) + 20}%` }}
                     />
                   ))}
                 </div>
@@ -390,7 +390,7 @@ export default function ReportsPage() {
                       <div
                         key={i}
                         className="flex-1 bg-primary/30 hover:bg-primary/50 rounded-t transition-colors"
-                        style={{ height: `${Math.random() * 70 + 30}%` }}
+                        style={{ height: `${((i * 41 + 17) % 70) + 30}%` }}
                       />
                     ))}
                   </div>
@@ -452,7 +452,7 @@ export default function ReportsPage() {
                       <div
                         key={i}
                         className="flex-1 bg-primary/30 hover:bg-primary/50 rounded-t transition-colors"
-                        style={{ height: `${Math.random() * 60 + 20}%` }}
+                        style={{ height: `${((i * 29 + 11) % 60) + 20}%` }}
                       />
                     ))}
                   </div>

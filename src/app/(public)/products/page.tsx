@@ -54,7 +54,7 @@ const transformProduct = (product: Product) => {
   const packSize = product.pack_sizes && product.pack_sizes.length > 0
     ? product.pack_sizes[0].size
     : "";
-  const gradient = technicalDetails.gradient || getCategoryGradient(product.category.name);
+  const gradient = technicalDetails.gradient || getCategoryGradient(product.category?.name ?? "");
   
   return {
     id: product.id,
@@ -65,8 +65,8 @@ const transformProduct = (product: Product) => {
     price,
     packSize,
     image: product.image_url || "/logo.svg",
-    category: product.category.name,
-    categoryHi: product.category.name_hi,
+    category: product.category?.name ?? "Product",
+    categoryHi: product.category?.name_hi ?? "उत्पाद",
     gradient,
     bgGradient: gradient.replace("from-", "from-").replace("to-", "to-").replace("500", "50").replace("600", "50"),
     dosage: product.dosage || "",

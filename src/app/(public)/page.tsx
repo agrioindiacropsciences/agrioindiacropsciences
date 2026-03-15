@@ -169,99 +169,114 @@ const ICON_MAP: Record<string, any> = {
 
 export default function HomePage() {
   const { language } = useStore();
+  const [mounted, setMounted] = React.useState(false);
   const [bestSellingProducts, setBestSellingProducts] = React.useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = React.useState(true);
 
-  // Dynamic Content State
   const [homeFeatures, setHomeFeatures] = React.useState<any[]>(features);
   const [homeWhyChooseUs, setHomeWhyChooseUs] = React.useState<any[]>(whyChooseUs);
   const [heroImage, setHeroImage] = React.useState<string>("https://res.cloudinary.com/dyumjsohc/image/upload/v1770294230/agrio_india/static_assets/ggmj1s5khjkrfaqiiyf4.png");
   const [nearbyDistributors, setNearbyDistributors] = React.useState<Distributor[]>([]);
   const [loadingDistributors, setLoadingDistributors] = React.useState(false);
 
+  React.useEffect(() => { setMounted(true); }, []);
 
   React.useEffect(() => {
+    if (!mounted) return;
+    let cancelled = false;
+
     const fetchData = async () => {
       try {
-        // Fetch Config
-        const configRes = await getAppConfig();
-        if (configRes.success && configRes.data?.content) {
-          const content = configRes.data.content;
+        const [configRes, productsRes] = await Promise.allSettled([
+          getAppConfig(),
+          getBestSellers(4),
+        ]);
 
-          if (content.home_features && content.home_features.length > 0) {
+        if (cancelled) return;
+
+        if (configRes.status === "fulfilled" && configRes.value.success && configRes.value.data?.content) {
+          const content = configRes.value.data.content;
+          if (content.home_features?.length > 0) {
             setHomeFeatures(content.home_features.map((f: any) => ({
               ...f,
-              icon: ICON_MAP[f.icon_name] || Leaf // Fallback icon
+              icon: ICON_MAP[f.icon_name] || Leaf,
             })));
           }
-
-          if (content.why_choose_us && content.why_choose_us.length > 0) {
+          if (content.why_choose_us?.length > 0) {
             setHomeWhyChooseUs(content.why_choose_us.map((f: any) => ({
               ...f,
-              icon: ICON_MAP[f.icon_name] || Shield // Fallback icon
+              icon: ICON_MAP[f.icon_name] || Shield,
             })));
           }
-
           if (content.home_hero?.hero_image) {
             setHeroImage(content.home_hero.hero_image);
           }
         }
 
-        // Fetch Best Sellers
-        const response = await getBestSellers(4);
-        if (response.success && response.data) {
-          const sortedProducts = [...response.data].sort((a, b) => {
+        if (productsRes.status === "fulfilled" && productsRes.value.success && productsRes.value.data) {
+          const sortedProducts = [...productsRes.value.data].sort((a, b) => {
             const rankA = (a as any).best_seller_rank || (a as any).sales_rank || 999;
             const rankB = (b as any).best_seller_rank || (b as any).sales_rank || 999;
             return rankA - rankB;
           });
           setBestSellingProducts(sortedProducts);
         }
-
-        // Fetch Nearby Distributors automatically if possible
-        if ("geolocation" in navigator) {
-          setLoadingDistributors(true);
-          navigator.geolocation.getCurrentPosition(
-            async (position) => {
-              try {
-                const distRes = await getDistributors({
-                  lat: position.coords.latitude,
-                  lng: position.coords.longitude,
-                  limit: 3
-                });
-                if (distRes.success && distRes.data) {
-                  setNearbyDistributors(distRes.data);
-                }
-              } catch (e) {
-                console.error("Failed to fetch nearby distributors:", e);
-              } finally {
-                setLoadingDistributors(false);
-              }
-            },
-            async () => {
-              // Fallback: fetch without location (just some distributors)
-              try {
-                const distRes = await getDistributors({ limit: 3 });
-                if (distRes.success && distRes.data) {
-                  setNearbyDistributors(distRes.data);
-                }
-              } catch (e) {
-                console.error("Failed to fetch distributors fallback:", e);
-              } finally {
-                setLoadingDistributors(false);
-              }
-            }
-          );
-        }
       } catch (error) {
         console.error("Failed to fetch home data:", error);
       } finally {
-        setLoadingProducts(false);
+        if (!cancelled) setLoadingProducts(false);
+      }
+
+      fetchDistributors(cancelled);
+    };
+
+    const fetchDistributors = async (isCancelled: boolean) => {
+      if (isCancelled) return;
+      try {
+        if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+          return fetchDistributorsFallback(isCancelled);
+        }
+
+        setLoadingDistributors(true);
+
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            timeout: 8000,
+            maximumAge: 300000,
+          });
+        });
+
+        if (isCancelled) return;
+
+        const distRes = await getDistributors({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          limit: 3,
+        });
+        if (!isCancelled && distRes.success && distRes.data) {
+          setNearbyDistributors(distRes.data);
+        }
+      } catch {
+        await fetchDistributorsFallback(isCancelled);
+      } finally {
+        if (!isCancelled) setLoadingDistributors(false);
+      }
+    };
+
+    const fetchDistributorsFallback = async (isCancelled: boolean) => {
+      try {
+        const distRes = await getDistributors({ limit: 3 });
+        if (!isCancelled && distRes.success && distRes.data) {
+          setNearbyDistributors(distRes.data);
+        }
+      } catch {
+        // silently fail
       }
     };
 
     fetchData();
-  }, []);
+    return () => { cancelled = true; };
+  }, [mounted]);
 
 
 
@@ -792,7 +807,7 @@ export default function HomePage() {
                       <CardContent className="p-4">
                         {/* Category */}
                         <Badge className={`mb-2 bg-gradient-to-r ${gradient} text-white border-0 text-xs`}>
-                          {language === "en" ? product.category.name : product.category.name_hi}
+                          {language === "en" ? (product.category?.name ?? "Product") : (product.category?.name_hi ?? "उत्पाद")}
                         </Badge>
 
                         {/* Product Name */}
@@ -942,24 +957,24 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Floating particles */}
+        {/* Floating particles — deterministic positions to avoid hydration mismatch */}
         <div className="absolute inset-0 overflow-hidden">
-          {[...Array(20)].map((_, i) => (
+          {[5,18,31,44,57,70,83,12,25,38,51,64,77,90,8,21,34,47,60,73].map((pos, i) => (
             <motion.div
               key={i}
               className="absolute w-1 h-1 bg-white/30 rounded-full"
               style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
+                left: `${pos}%`,
+                top: `${(i * 17 + 7) % 100}%`,
               }}
               animate={{
                 y: [0, -100],
                 opacity: [0, 1, 0],
               }}
               transition={{
-                duration: 3 + Math.random() * 2,
+                duration: 3 + (i % 5) * 0.4,
                 repeat: Infinity,
-                delay: Math.random() * 3,
+                delay: (i % 7) * 0.4,
                 ease: "easeOut",
               }}
             />

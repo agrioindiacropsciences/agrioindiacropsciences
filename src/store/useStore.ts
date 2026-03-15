@@ -1,7 +1,30 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { User, UserStats, Reward, Product, Distributor } from "@/types";
 import { clearTokens, clearAdminTokens } from "@/lib/api";
+
+const safeLocalStorage = () => ({
+  getItem: (name: string): string | null => {
+    try {
+      if (typeof window === "undefined") return null;
+      return localStorage.getItem(name);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (name: string, value: string): void => {
+    try {
+      if (typeof window === "undefined") return;
+      localStorage.setItem(name, value);
+    } catch {}
+  },
+  removeItem: (name: string): void => {
+    try {
+      if (typeof window === "undefined") return;
+      localStorage.removeItem(name);
+    } catch {}
+  },
+});
 
 interface AppState {
   // User state
@@ -85,6 +108,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: "agrio-store",
+      storage: createJSONStorage(safeLocalStorage),
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
@@ -118,6 +142,7 @@ export const useAdminStore = create<AdminState>()(
     }),
     {
       name: "agrio-admin-store",
+      storage: createJSONStorage(safeLocalStorage),
     }
   )
 );

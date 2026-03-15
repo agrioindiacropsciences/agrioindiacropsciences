@@ -617,16 +617,25 @@ export async function getBanners(): Promise<ApiResponse<T.Banner[]>> {
 const ADMIN_TOKEN_KEY = 'agrio_admin_token';
 const ADMIN_REFRESH_KEY = 'agrio_admin_refresh';
 
-export const getAdminToken = () => typeof window !== 'undefined' ? localStorage.getItem(ADMIN_TOKEN_KEY) : null;
+export const getAdminToken = () => {
+  try {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(ADMIN_TOKEN_KEY);
+  } catch { return null; }
+};
 export const setAdminTokens = (t: string, r: string) => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(ADMIN_TOKEN_KEY, t);
-  localStorage.setItem(ADMIN_REFRESH_KEY, r);
+  try {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(ADMIN_TOKEN_KEY, t);
+    localStorage.setItem(ADMIN_REFRESH_KEY, r);
+  } catch {}
 };
 export const clearAdminTokens = () => {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem(ADMIN_TOKEN_KEY);
-  localStorage.removeItem(ADMIN_REFRESH_KEY);
+  try {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
+    localStorage.removeItem(ADMIN_REFRESH_KEY);
+  } catch {}
 };
 
 /**
@@ -815,7 +824,7 @@ async function adminPatch<T>(endpoint: string, body: unknown): Promise<ApiRespon
       headers,
       body: JSON.stringify(body),
     });
-    return response.json();
+    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid response' } }));
   } catch (error) {
     return {
       success: false,
@@ -870,7 +879,7 @@ async function adminPost<T>(endpoint: string, body: unknown): Promise<ApiRespons
       headers,
       body: JSON.stringify(body),
     });
-    return response.json();
+    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid response' } }));
   } catch (error) {
     return {
       success: false,
@@ -894,7 +903,7 @@ async function adminPut<T>(endpoint: string, body: unknown): Promise<ApiResponse
       headers,
       body: JSON.stringify(body),
     });
-    return response.json();
+    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid response' } }));
   } catch (error) {
     return {
       success: false,
@@ -917,7 +926,7 @@ async function adminDelete<T>(endpoint: string): Promise<ApiResponse<T>> {
       method: 'DELETE',
       headers,
     });
-    return response.json();
+    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid response' } }));
   } catch (error) {
     return {
       success: false,
@@ -940,7 +949,7 @@ async function adminPostFormData<T>(endpoint: string, formData: FormData): Promi
       headers,
       body: formData,
     });
-    return response.json();
+    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid response' } }));
   } catch (error) {
     return {
       success: false,

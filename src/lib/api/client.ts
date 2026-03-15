@@ -4,6 +4,14 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
+async function safeJson<T>(response: Response): Promise<ApiResponse<T>> {
+  try {
+    return await response.json();
+  } catch {
+    return { success: false, error: { code: 'PARSE_ERROR', message: 'Invalid response from server' } };
+  }
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -26,25 +34,33 @@ const TOKEN_KEY = 'agrio_access_token';
 const REFRESH_TOKEN_KEY = 'agrio_refresh_token';
 
 export const getAccessToken = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(TOKEN_KEY);
+  try {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(TOKEN_KEY);
+  } catch { return null; }
 };
 
 export const getRefreshToken = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
+  try {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(REFRESH_TOKEN_KEY);
+  } catch { return null; }
 };
 
 export const setTokens = (accessToken: string, refreshToken: string): void => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(TOKEN_KEY, accessToken);
-  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  try {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(TOKEN_KEY, accessToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  } catch {}
 };
 
 export const clearTokens = (): void => {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  try {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  } catch {}
 };
 
 // Request Handler
@@ -88,7 +104,7 @@ async function request<T>(
           ...options,
           headers,
         });
-        return retryResponse.json();
+        return safeJson<T>(retryResponse);
       } else {
         clearTokens();
         if (typeof window !== 'undefined') {
@@ -98,7 +114,7 @@ async function request<T>(
       }
     }
 
-    return response.json();
+    return safeJson<T>(response);
   } catch (error) {
     return {
       success: false,
@@ -183,7 +199,7 @@ export async function postFormData<T>(endpoint: string, formData: FormData, auth
           headers,
           body: formData,
         });
-        return retryResponse.json();
+        return safeJson<T>(retryResponse);
       } else {
         clearTokens();
         if (typeof window !== 'undefined') {
@@ -193,7 +209,7 @@ export async function postFormData<T>(endpoint: string, formData: FormData, auth
       }
     }
 
-    return response.json();
+    return safeJson<T>(response);
   } catch (error) {
     return {
       success: false,
@@ -236,7 +252,7 @@ export async function patchFormData<T>(endpoint: string, formData: FormData, aut
           headers,
           body: formData,
         });
-        return retryResponse.json();
+        return safeJson<T>(retryResponse);
       } else {
         clearTokens();
         if (typeof window !== 'undefined') {
@@ -246,7 +262,7 @@ export async function patchFormData<T>(endpoint: string, formData: FormData, aut
       }
     }
 
-    return response.json();
+    return safeJson<T>(response);
   } catch (error) {
     return {
       success: false,

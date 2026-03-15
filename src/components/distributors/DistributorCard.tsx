@@ -65,11 +65,11 @@ export function DistributorCard({ distributor }: DistributorCardProps) {
                     </div>
 
                     {/* Distance Badge */}
-                    {distributor.distance_km !== undefined && (
+                    {distributor.distance_km != null && (
                         <div className="flex items-center gap-2 text-sm text-primary mb-5 bg-primary/5 rounded-xl px-4 py-2.5 border border-primary/10">
                             <Navigation className="h-4 w-4 animate-pulse" />
                             <span className="font-bold">
-                                {distributor.distance_km.toFixed(1)} {language === "en" ? "km away" : "किमी दूर"}
+                                {Number(distributor.distance_km).toFixed(1)} {language === "en" ? "km away" : "किमी दूर"}
                             </span>
                         </div>
                     )}

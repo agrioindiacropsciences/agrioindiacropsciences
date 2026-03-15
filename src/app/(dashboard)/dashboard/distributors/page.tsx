@@ -313,9 +313,9 @@ export default function DistributorsPage() {
                         </span>
                       </div>
 
-                      {distributor.distance_km && (
+                      {distributor.distance_km != null && (
                         <div className="text-sm text-primary">
-                          {distributor.distance_km.toFixed(1)} {language === "en" ? "km away" : "किमी दूर"}
+                          {Number(distributor.distance_km).toFixed(1)} {language === "en" ? "km away" : "किमी दूर"}
                         </div>
                       )}
 

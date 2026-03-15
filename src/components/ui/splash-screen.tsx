@@ -13,10 +13,7 @@ export function SplashScreen() {
 
   useEffect(() => {
     setMounted(true);
-    let shown = false;
-    try {
-      shown = !!sessionStorage.getItem(SPLASH_STORAGE_KEY);
-    } catch {}
+    const shown = typeof window !== "undefined" && sessionStorage.getItem(SPLASH_STORAGE_KEY);
     if (shown) {
       setIsVisible(false);
       return;
@@ -25,7 +22,7 @@ export function SplashScreen() {
 
     const timer = setTimeout(() => {
       setIsVisible(false);
-      try { sessionStorage.setItem(SPLASH_STORAGE_KEY, "1"); } catch {}
+      sessionStorage.setItem(SPLASH_STORAGE_KEY, "1");
     }, SPLASH_DURATION_MS);
 
     return () => clearTimeout(timer);

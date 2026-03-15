@@ -64,12 +64,7 @@ export default function ScanPage() {
   const qrCodeRegionId = "qr-reader";
 
   // ─── Auth Guard: Block scan page for unauthenticated users ───
-  const [hasToken, setHasToken] = useState(false);
-  useEffect(() => {
-    try {
-      setHasToken(!!api.getAccessToken());
-    } catch {}
-  }, [isAuthenticated]);
+  const hasToken = typeof window !== 'undefined' ? !!api.getAccessToken() : false;
   const isLoggedIn = isAuthenticated && hasToken;
 
   // Detect mobile device

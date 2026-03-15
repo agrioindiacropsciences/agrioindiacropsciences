@@ -191,8 +191,12 @@ export default function DistributorsPage() {
     }
   };
 
-  const copyAddress = (address: string, id: string) => {
-    navigator.clipboard.writeText(address);
+  const copyAddress = async (address: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(address);
+    } catch {
+      // Clipboard API not available on some mobile browsers
+    }
     setCopiedId(id);
     toast({
       title: language === "en" ? "Address Copied!" : "पता कॉपी हो गया!",

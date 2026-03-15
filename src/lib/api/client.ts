@@ -4,14 +4,6 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
-async function safeJson<T>(response: Response): Promise<ApiResponse<T>> {
-  try {
-    return await response.json();
-  } catch {
-    return { success: false, error: { code: 'PARSE_ERROR', message: 'Invalid response from server' } };
-  }
-}
-
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -52,7 +44,7 @@ export const setTokens = (accessToken: string, refreshToken: string): void => {
     if (typeof window === 'undefined') return;
     localStorage.setItem(TOKEN_KEY, accessToken);
     localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-  } catch {}
+  } catch { /* Safari private mode / quota exceeded */ }
 };
 
 export const clearTokens = (): void => {
@@ -60,7 +52,7 @@ export const clearTokens = (): void => {
     if (typeof window === 'undefined') return;
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
-  } catch {}
+  } catch { /* ignore */ }
 };
 
 // Request Handler
@@ -104,7 +96,7 @@ async function request<T>(
           ...options,
           headers,
         });
-        return safeJson<T>(retryResponse);
+        return await retryResponse.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid server response' } }));
       } else {
         clearTokens();
         if (typeof window !== 'undefined') {
@@ -114,7 +106,7 @@ async function request<T>(
       }
     }
 
-    return safeJson<T>(response);
+    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid server response' } }));
   } catch (error) {
     return {
       success: false,
@@ -199,7 +191,7 @@ export async function postFormData<T>(endpoint: string, formData: FormData, auth
           headers,
           body: formData,
         });
-        return safeJson<T>(retryResponse);
+        return await retryResponse.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid server response' } }));
       } else {
         clearTokens();
         if (typeof window !== 'undefined') {
@@ -209,7 +201,7 @@ export async function postFormData<T>(endpoint: string, formData: FormData, auth
       }
     }
 
-    return safeJson<T>(response);
+    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid server response' } }));
   } catch (error) {
     return {
       success: false,
@@ -252,7 +244,7 @@ export async function patchFormData<T>(endpoint: string, formData: FormData, aut
           headers,
           body: formData,
         });
-        return safeJson<T>(retryResponse);
+        return await retryResponse.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid server response' } }));
       } else {
         clearTokens();
         if (typeof window !== 'undefined') {
@@ -262,7 +254,7 @@ export async function patchFormData<T>(endpoint: string, formData: FormData, aut
       }
     }
 
-    return safeJson<T>(response);
+    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid server response' } }));
   } catch (error) {
     return {
       success: false,

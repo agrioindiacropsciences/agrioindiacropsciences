@@ -617,25 +617,20 @@ export async function getBanners(): Promise<ApiResponse<T.Banner[]>> {
 const ADMIN_TOKEN_KEY = 'agrio_admin_token';
 const ADMIN_REFRESH_KEY = 'agrio_admin_refresh';
 
-export const getAdminToken = () => {
-  try {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem(ADMIN_TOKEN_KEY);
-  } catch { return null; }
-};
+export const getAdminToken = () => { try { return typeof window !== 'undefined' ? localStorage.getItem(ADMIN_TOKEN_KEY) : null; } catch { return null; } };
 export const setAdminTokens = (t: string, r: string) => {
   try {
     if (typeof window === 'undefined') return;
     localStorage.setItem(ADMIN_TOKEN_KEY, t);
     localStorage.setItem(ADMIN_REFRESH_KEY, r);
-  } catch {}
+  } catch { /* Safari private mode / quota exceeded */ }
 };
 export const clearAdminTokens = () => {
   try {
     if (typeof window === 'undefined') return;
     localStorage.removeItem(ADMIN_TOKEN_KEY);
     localStorage.removeItem(ADMIN_REFRESH_KEY);
-  } catch {}
+  } catch { /* ignore */ }
 };
 
 /**
@@ -653,7 +648,8 @@ export async function adminLogin(email: string, password: string): Promise<ApiRe
  * Admin refresh token
  */
 export async function adminRefreshToken(): Promise<ApiResponse<T.RefreshTokenResponse>> {
-  const refresh_token = typeof window !== 'undefined' ? localStorage.getItem(ADMIN_REFRESH_KEY) : null;
+  let refresh_token: string | null = null;
+  try { refresh_token = typeof window !== 'undefined' ? localStorage.getItem(ADMIN_REFRESH_KEY) : null; } catch { /* ignore */ }
   if (!refresh_token) return { success: false, error: { code: 'NO_TOKEN', message: 'No refresh token' } };
 
   const response = await post<T.RefreshTokenResponse>('/admin/auth/refresh', { refresh_token });
@@ -824,7 +820,7 @@ async function adminPatch<T>(endpoint: string, body: unknown): Promise<ApiRespon
       headers,
       body: JSON.stringify(body),
     });
-    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid response' } }));
+    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid server response' } }));
   } catch (error) {
     return {
       success: false,
@@ -879,7 +875,7 @@ async function adminPost<T>(endpoint: string, body: unknown): Promise<ApiRespons
       headers,
       body: JSON.stringify(body),
     });
-    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid response' } }));
+    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid server response' } }));
   } catch (error) {
     return {
       success: false,
@@ -903,7 +899,7 @@ async function adminPut<T>(endpoint: string, body: unknown): Promise<ApiResponse
       headers,
       body: JSON.stringify(body),
     });
-    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid response' } }));
+    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid server response' } }));
   } catch (error) {
     return {
       success: false,
@@ -926,7 +922,7 @@ async function adminDelete<T>(endpoint: string): Promise<ApiResponse<T>> {
       method: 'DELETE',
       headers,
     });
-    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid response' } }));
+    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid server response' } }));
   } catch (error) {
     return {
       success: false,
@@ -949,7 +945,7 @@ async function adminPostFormData<T>(endpoint: string, formData: FormData): Promi
       headers,
       body: formData,
     });
-    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid response' } }));
+    return await response.json().catch(() => ({ success: false, error: { code: 'PARSE_ERROR', message: 'Invalid server response' } }));
   } catch (error) {
     return {
       success: false,

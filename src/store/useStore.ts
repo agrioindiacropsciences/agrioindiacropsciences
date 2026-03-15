@@ -1,30 +1,31 @@
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { persist, type StateStorage } from "zustand/middleware";
 import type { User, UserStats, Reward, Product, Distributor } from "@/types";
 import { clearTokens, clearAdminTokens } from "@/lib/api";
 
-const safeLocalStorage = () => ({
-  getItem: (name: string): string | null => {
+const safeStorage: StateStorage = {
+  getItem: (name) => {
     try {
-      if (typeof window === "undefined") return null;
-      return localStorage.getItem(name);
+      return typeof window !== "undefined" ? localStorage.getItem(name) : null;
     } catch {
       return null;
     }
   },
-  setItem: (name: string, value: string): void => {
+  setItem: (name, value) => {
     try {
-      if (typeof window === "undefined") return;
-      localStorage.setItem(name, value);
-    } catch {}
+      if (typeof window !== "undefined") localStorage.setItem(name, value);
+    } catch {
+      // Safari private mode, quota exceeded, etc.
+    }
   },
-  removeItem: (name: string): void => {
+  removeItem: (name) => {
     try {
-      if (typeof window === "undefined") return;
-      localStorage.removeItem(name);
-    } catch {}
+      if (typeof window !== "undefined") localStorage.removeItem(name);
+    } catch {
+      // ignore
+    }
   },
-});
+};
 
 interface AppState {
   // User state
@@ -108,7 +109,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: "agrio-store",
-      storage: createJSONStorage(safeLocalStorage),
+      storage: safeStorage,
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
@@ -142,7 +143,7 @@ export const useAdminStore = create<AdminState>()(
     }),
     {
       name: "agrio-admin-store",
-      storage: createJSONStorage(safeLocalStorage),
+      storage: safeStorage,
     }
   )
 );

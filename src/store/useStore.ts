@@ -1,9 +1,9 @@
 import { create } from "zustand";
-import { persist, type StateStorage } from "zustand/middleware";
+import { persist, createJSONStorage, type StateStorage } from "zustand/middleware";
 import type { User, UserStats, Reward, Product, Distributor } from "@/types";
 import { clearTokens, clearAdminTokens } from "@/lib/api";
 
-const safeStorage: StateStorage = {
+const safeLocalStorage: StateStorage = {
   getItem: (name) => {
     try {
       return typeof window !== "undefined" ? localStorage.getItem(name) : null;
@@ -109,7 +109,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: "agrio-store",
-      storage: safeStorage,
+      storage: createJSONStorage(() => safeLocalStorage),
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
@@ -143,7 +143,7 @@ export const useAdminStore = create<AdminState>()(
     }),
     {
       name: "agrio-admin-store",
-      storage: safeStorage,
+      storage: createJSONStorage(() => safeLocalStorage),
     }
   )
 );

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage, type StateStorage } from "zustand/middleware";
-import type { User, UserStats, Reward, Product, Distributor } from "@/types";
+import type { User, UserStats, Reward, Product, Distributor } from "@/lib/api/types";
 import { clearTokens, clearAdminTokens } from "@/lib/api";
 
 const safeLocalStorage: StateStorage = {
@@ -44,6 +44,7 @@ interface AppState {
   // Distributors
   distributors: Distributor[];
   nearbyDistributors: Distributor[];
+  distributorProfile: Distributor | null;
 
   // UI State
   isLoading: boolean;
@@ -60,6 +61,7 @@ interface AppState {
   setBestSellingProducts: (products: Product[]) => void;
   setDistributors: (distributors: Distributor[]) => void;
   setNearbyDistributors: (distributors: Distributor[]) => void;
+  setDistributorProfile: (profile: Distributor | null) => void;
   setLoading: (isLoading: boolean) => void;
   setSidebarOpen: (open: boolean) => void;
   logout: () => void;
@@ -78,6 +80,7 @@ export const useStore = create<AppState>()(
       bestSellingProducts: [],
       distributors: [],
       nearbyDistributors: [],
+      distributorProfile: null,
       isLoading: false,
       sidebarOpen: true,
 
@@ -95,6 +98,7 @@ export const useStore = create<AppState>()(
       setDistributors: (distributors) => set({ distributors }),
       setNearbyDistributors: (nearbyDistributors) =>
         set({ nearbyDistributors }),
+      setDistributorProfile: (distributorProfile) => set({ distributorProfile }),
       setLoading: (isLoading) => set({ isLoading }),
       setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
       logout: () => {
@@ -104,6 +108,7 @@ export const useStore = create<AppState>()(
           isAuthenticated: false,
           userStats: null,
           rewards: [],
+          distributorProfile: null,
         });
       },
     }),
@@ -114,6 +119,7 @@ export const useStore = create<AppState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         language: state.language,
+        distributorProfile: state.distributorProfile,
       }),
     }
   )

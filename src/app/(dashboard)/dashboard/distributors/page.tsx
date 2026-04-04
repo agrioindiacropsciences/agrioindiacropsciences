@@ -48,7 +48,7 @@ function DistributorSkeleton() {
 export default function DistributorsPage() {
   const { language, user } = useStore();
   const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = useState(user?.pincode || "");
+  const [searchQuery, setSearchQuery] = useState(user?.pin_code || "");
   const [searchedFor, setSearchedFor] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
@@ -128,11 +128,11 @@ export default function DistributorsPage() {
   }, []);
 
   useEffect(() => {
-    if (user?.pincode && isPincode(user.pincode)) {
-      setSearchQuery(user.pincode);
-      handleSearchWithPincode(user.pincode);
+    if (user?.pin_code && isPincode(user.pin_code)) {
+      setSearchQuery(user.pin_code);
+      handleSearchWithPincode(user.pin_code);
     }
-  }, [user?.pincode, handleSearchWithPincode]);
+  }, [user?.pin_code, handleSearchWithPincode]);
 
   const handleUseLocation = async () => {
     setIsLocating(true);

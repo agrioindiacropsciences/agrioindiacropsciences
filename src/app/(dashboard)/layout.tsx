@@ -32,8 +32,18 @@ import { Separator } from "@/components/ui/separator";
 import { useStore } from "@/store/useStore";
 import { cn } from "@/lib/utils";
 import * as api from "@/lib/api";
+import { DistributorVerificationBanner } from "@/components/dashboard/DistributorVerificationBanner";
+import { getDealerFlowPath, isAllowedDealerPath } from "@/lib/dealer-flow";
 
-const navItems = [
+type DashboardNavItem = {
+  href: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  labelHi: string;
+  highlight?: boolean;
+};
+
+const farmerNavItems: DashboardNavItem[] = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", labelHi: "डैशबोर्ड" },
   { href: "/dashboard/scan", icon: QrCode, label: "Scan & Win", labelHi: "स्कैन और जीतें", highlight: true },
   { href: "/dashboard/rewards", icon: Gift, label: "My Rewards", labelHi: "मेरे पुरस्कार" },
@@ -42,16 +52,25 @@ const navItems = [
   { href: "/dashboard/support", icon: HelpCircle, label: "Support", labelHi: "सहायता" },
 ];
 
-const bottomNavItems = [
+const dealerNavItems: DashboardNavItem[] = [
+  { href: "/dashboard/dealer", icon: LayoutDashboard, label: "Home", labelHi: "होम" },
+  { href: "/dashboard/profile/distributor", icon: QrCode, label: "Business Profile", labelHi: "बिज़नेस प्रोफ़ाइल" },
+  { href: "/dashboard/support", icon: HelpCircle, label: "Support", labelHi: "सहायता" },
+];
+
+const farmerBottomNavItems: DashboardNavItem[] = [
   { href: "/dashboard/profile", icon: User, label: "My Profile", labelHi: "मेरी प्रोफाइल" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isAuthenticated, language, setLanguage, logout, setUser, setAuthenticated } = useStore();
+  const { user, isAuthenticated, language, setLanguage, logout, setUser, setAuthenticated, distributorProfile } = useStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const isDealer = user?.role === "DEALER";
+  const activeNavItems = isDealer ? dealerNavItems : farmerNavItems;
+  const activeBottomNavItems = isDealer ? [] : farmerBottomNavItems;
 
   // Check authentication on mount/refresh
   useEffect(() => {
@@ -68,21 +87,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       // Token exists - validate it by fetching profile
       try {
-        const response = await api.getProfile();
-        if (response.success && response.data) {
-          const userData = response.data;
+        const [profileRes, distProfileRes] = await Promise.all([
+          api.getProfile(),
+          api.distributorsApi.getMyProfile(),
+        ]);
+
+        if (profileRes.success && profileRes.data) {
+          const userData = profileRes.data;
           setUser({
-            id: userData.id,
-            name: userData.full_name || "",
-            mobile: userData.phone_number,
-            pincode: userData.pin_code || "",
-            state: userData.state || "",
-            district: userData.district || "",
-            cropPreferences: userData.crop_preferences?.map(c => c.id) || [],
-            language: userData.language || language,
-            isActive: userData.is_active,
-            createdAt: userData.created_at,
-            lastLogin: userData.last_login || new Date().toISOString(),
+            ...userData,
           });
           setAuthenticated(true);
         } else {
@@ -90,6 +103,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           api.clearTokens();
           setAuthenticated(false);
           router.push("/auth");
+          return;
+        }
+
+        if (distProfileRes.success && distProfileRes.data) {
+          useStore.getState().setDistributorProfile(distProfileRes.data);
+        } else {
+          useStore.getState().setDistributorProfile(null);
         }
       } catch (error) {
         // Error validating token - clear and redirect
@@ -103,6 +123,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     checkAuth();
   }, [router, setUser, setAuthenticated, language]);
+
+  useEffect(() => {
+    if (!user || !isDealer) return;
+
+    if (!isAllowedDealerPath(pathname, user, distributorProfile)) {
+      router.replace(getDealerFlowPath(user, distributorProfile));
+    }
+  }, [distributorProfile, isDealer, pathname, router, user]);
 
   // Show loading while checking auth
   if (isCheckingAuth) {
@@ -149,7 +177,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1">
-        {navItems.map((item) => {
+        {activeNavItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
@@ -180,7 +208,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Bottom Navigation */}
       <div className="space-y-1">
-        {bottomNavItems.map((item) => {
+        {activeBottomNavItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
@@ -250,7 +278,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Welcome Text - Desktop */}
             <div className="hidden lg:block">
               <h2 className="text-lg font-semibold">
-                {language === "en" ? `Namaste, ${user.name.split(" ")[0]}!` : `नमस्ते, ${user.name.split(" ")[0]}!`}
+                {language === "en" ? `Namaste, ${(user.full_name || "User").split(" ")[0]}!` : `नमस्ते, ${(user.full_name || "User").split(" ")[0]}!`}
               </h2>
               <p className="text-sm text-muted-foreground">
                 {language === "en" ? "Welcome to your Agrio India dashboard." : "आपके एग्रियो इंडिया डैशबोर्ड में आपका स्वागत है।"}
@@ -270,29 +298,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
                       <AvatarFallback className="bg-primary text-white">
-                        {user.name.charAt(0).toUpperCase()}
+                        {(user.full_name || "U").charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-3 py-2">
-                    <p className="font-medium">{user.name}</p>
-                    <p className="text-sm text-muted-foreground">+91 {user.mobile}</p>
+                    <p className="font-medium">{user.full_name}</p>
+                    <p className="text-sm text-muted-foreground">+91 {user.phone_number}</p>
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard/profile" className="cursor-pointer">
-                      <User className="mr-2 h-4 w-4" />
-                      {language === "en" ? "My Profile" : "मेरी प्रोफाइल"}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard/rewards" className="cursor-pointer">
-                      <Gift className="mr-2 h-4 w-4" />
-                      {language === "en" ? "My Rewards" : "मेरे पुरस्कार"}
-                    </Link>
-                  </DropdownMenuItem>
+                  {!isDealer ? (
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard/profile" className="cursor-pointer">
+                        <User className="mr-2 h-4 w-4" />
+                        {language === "en" ? "My Profile" : "मेरी प्रोफाइल"}
+                      </Link>
+                    </DropdownMenuItem>
+                  ) : null}
+                  {!isDealer ? (
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard/rewards" className="cursor-pointer">
+                        <Gift className="mr-2 h-4 w-4" />
+                        {language === "en" ? "My Rewards" : "मेरे पुरस्कार"}
+                      </Link>
+                    </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
@@ -305,9 +337,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Page Content */}
-        <main className="p-4 lg:p-8">{children}</main>
+        <main className="p-4 lg:p-8">
+          <DistributorVerificationBanner />
+          {children}
+        </main>
       </div>
     </div>
   );
 }
-

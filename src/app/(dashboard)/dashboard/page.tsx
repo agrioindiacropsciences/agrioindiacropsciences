@@ -166,7 +166,7 @@ export default function DashboardPage() {
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold mb-2">
-              {language === "en" ? `Namaste, ${user?.name?.split(" ")[0] || ""}!` : `नमस्ते, ${user?.name?.split(" ")[0] || ""}!`}
+              {language === "en" ? `Namaste, ${user?.full_name?.split(" ")[0] || ""}!` : `नमस्ते, ${user?.full_name?.split(" ")[0] || ""}!`}
             </h1>
             <p className="text-white/70 text-sm sm:text-base max-w-md">
               {language === "en" 

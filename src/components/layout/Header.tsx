@@ -218,16 +218,16 @@ export function Header() {
                         whileHover={{ scale: 1.1 }}
                         className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-emerald-500 text-white text-sm font-semibold shadow-inner"
                       >
-                        {user.name.charAt(0).toUpperCase()}
+                        {(user.full_name || "U").charAt(0).toUpperCase()}
                       </motion.div>
-                      <span className="hidden md:inline-block font-medium text-gray-700">{user.name.split(" ")[0]}</span>
+                      <span className="hidden md:inline-block font-medium text-gray-700">{(user.full_name || "User").split(" ")[0]}</span>
                       <ChevronDown className="h-4 w-4 text-gray-400" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 p-2 mt-2 rounded-2xl shadow-xl border-0 bg-white/95 backdrop-blur-xl">
                     <div className="px-3 py-4 border-b mb-2 bg-gradient-to-r from-primary/5 to-emerald-500/5 rounded-xl -mt-1 -mx-1">
-                      <p className="font-semibold text-gray-900">{user.name}</p>
-                      <p className="text-xs text-gray-500">{user.mobile}</p>
+                      <p className="font-semibold text-gray-900">{user.full_name}</p>
+                      <p className="text-xs text-gray-500">{user.phone_number}</p>
                     </div>
                     <DropdownMenuItem asChild className="cursor-pointer rounded-xl h-11">
                       <Link href="/dashboard" className="flex items-center gap-3">

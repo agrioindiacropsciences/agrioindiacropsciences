@@ -213,10 +213,10 @@ export default function BuyNearbyPage() {
       }
 
       // 2. Also try user pincode as a parallel fallback/enhancement if they are logged in
-      if (user?.pincode && isPincode(user.pincode)) {
+      if (user?.pin_code && isPincode(user.pin_code)) {
         if (!distributors.length) { // Only if location hasn't loaded yet
-          setSearchQuery(user.pincode);
-          handleSearchWithPincode(user.pincode);
+          setSearchQuery(user.pin_code);
+          handleSearchWithPincode(user.pin_code);
         }
       } else if (user?.id) {
         try {
@@ -232,7 +232,7 @@ export default function BuyNearbyPage() {
       }
     };
     initPage();
-  }, [user?.id, user?.pincode, handleSearchWithPincode, handleUseLocation, distributors.length]);
+  }, [user?.id, user?.pin_code, handleSearchWithPincode, handleUseLocation, distributors.length]);
 
   return (
     <div className="min-h-screen overflow-hidden">

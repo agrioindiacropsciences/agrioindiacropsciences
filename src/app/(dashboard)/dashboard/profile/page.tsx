@@ -81,9 +81,9 @@ export default function ProfilePage() {
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: user?.name || "",
-      pincode: user?.pincode || "",
-      email: "",
+      name: user?.full_name || "",
+      pincode: user?.pin_code || "",
+      email: user?.email || "",
     },
   });
 
@@ -199,8 +199,8 @@ export default function ProfilePage() {
         if (user) {
           setUser({ 
             ...user, 
-            name: response.data.full_name || data.name, 
-            pincode: response.data.pin_code || data.pincode,
+            full_name: response.data.full_name || data.name, 
+            pin_code: response.data.pin_code || data.pincode,
             state: response.data.state || user.state,
             district: response.data.district || user.district,
           });
@@ -244,7 +244,8 @@ export default function ProfilePage() {
       if (response.success) {
         setUserCrops(selectedCrops);
         if (user) {
-          setUser({ ...user, cropPreferences: selectedCrops });
+          const updatedCrops = crops.filter(c => selectedCrops.includes(c.id));
+          setUser({ ...user, crop_preferences: updatedCrops });
         }
         
         setIsEditingCrops(false);
@@ -286,7 +287,7 @@ export default function ProfilePage() {
   const stats = [
     {
       label: language === "en" ? "Registration Date" : "पंजीकरण तिथि",
-      value: formatDate(user.createdAt),
+      value: formatDate(user.created_at),
       icon: Calendar,
     },
     {
@@ -348,14 +349,14 @@ export default function ProfilePage() {
                 {profileImageUrl ? (
                   <Image 
                     src={profileImageUrl} 
-                    alt={user.name} 
+                    alt={user.full_name || "User"} 
                     width={96}
                     height={96}
                     className="h-full w-full object-cover rounded-full"
                   />
                 ) : (
                   <AvatarFallback className="bg-primary text-white text-3xl">
-                    {user.name.charAt(0).toUpperCase()}
+                    {(user.full_name || "U").charAt(0).toUpperCase()}
                   </AvatarFallback>
                 )}
               </Avatar>
@@ -448,7 +449,7 @@ export default function ProfilePage() {
                         <p className="text-sm text-muted-foreground">
                           {language === "en" ? "Name" : "नाम"}
                         </p>
-                        <p className="font-medium">{user.name}</p>
+                        <p className="font-medium">{user.full_name}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -457,7 +458,7 @@ export default function ProfilePage() {
                         <p className="text-sm text-muted-foreground">
                           {language === "en" ? "Mobile" : "मोबाइल"}
                         </p>
-                        <p className="font-medium">+91 {user.mobile}</p>
+                        <p className="font-medium">+91 {user.phone_number}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -468,8 +469,8 @@ export default function ProfilePage() {
                         </p>
                         <p className="font-medium">
                           {user.district && user.state 
-                            ? `${user.district}, ${user.state} - ${user.pincode}`
-                            : user.pincode}
+                            ? `${user.district}, ${user.state} - ${user.pin_code}`
+                            : user.pin_code}
                         </p>
                       </div>
                     </div>

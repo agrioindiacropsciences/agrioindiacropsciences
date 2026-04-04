@@ -359,20 +359,15 @@ export default function ScanPage() {
       // Add to global store
       addReward({
         id: data.redemptionId || "",
-        couponCode: serialNumber,
-        prize: {
-          id: data.redemptionId || "",
-          name: reward.rewardName,
-          nameHi: reward.rewardNameHi || "",
-          value: Number(reward.rewardValue),
-          type: reward.rewardType.toLowerCase() as "points" | "cashback" | "discount" | "gift",
-          image: reward.imageUrl || "",
-          description: "",
-          descriptionHi: ""
-        },
-        productName: "Agrio Product", // Could come from API
-        status: "pending", // Pending verification
-        wonAt: new Date().toISOString()
+        coupon_code: serialNumber,
+        name: reward.rewardName,
+        name_hi: reward.rewardNameHi || "",
+        type: reward.rewardType,
+        amount: Number(reward.rewardValue),
+        image_url: reward.imageUrl || "",
+        product_name: "Agrio Product", // Could come from API
+        status: "PENDING", // Pending verification
+        won_at: new Date().toISOString(),
       });
 
       setState("scratch");

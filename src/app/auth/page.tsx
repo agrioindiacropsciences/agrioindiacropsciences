@@ -1,25 +1,39 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useJsApiLoader } from "@react-google-maps/api";
 import {
   Phone,
   ArrowLeft,
   ArrowRight,
   Loader2,
   MapPin,
+  Mail,
+  LocateFixed,
+  MapPinned,
+  RefreshCw,
   Sparkles,
+  UserRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import LocationPicker from "@/components/LocationPicker";
 import { useToast } from "@/hooks/use-toast";
 import { useStore } from "@/store/useStore";
 import * as api from "@/lib/api";
@@ -37,57 +51,227 @@ const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   pincode: z.string().regex(/^[1-9][0-9]{5}$/, "Please enter a valid 6-digit pincode"),
   email: z.string().email().optional().or(z.literal("")),
+  role: z.enum(["FARMER", "DEALER"]),
 });
 
 type Step = "mobile" | "otp" | "profile" | "crops";
+type MobileFormData = z.infer<typeof mobileSchema>;
+type OtpFormData = z.infer<typeof otpSchema>;
+type ProfileFormData = z.infer<typeof profileSchema>;
+
+const mapLibraries: ("places")[] = ["places"];
 
 export default function AuthPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { language, setLanguage, setUser, setAuthenticated } = useStore();
+  const profileLocationAttemptedRef = useRef(false);
 
   const [step, setStep] = useState<Step>("mobile");
   const [isNewUser, setIsNewUser] = useState(false);
   const [mobile, setMobile] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [isLocationLocked, setIsLocationLocked] = useState(false);
+  const [detectedLocation, setDetectedLocation] = useState("");
+  const [selectedState, setSelectedState] = useState("");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedLatitude, setSelectedLatitude] = useState<number | null>(null);
+  const [selectedLongitude, setSelectedLongitude] = useState<number | null>(null);
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
   const [selectedCrops, setSelectedCrops] = useState<string[]>([]);
-  const [profileData, setProfileData] = useState({ name: "", pincode: "", email: "", state: "", district: "" });
-  const [crops, setCrops] = useState<{ id: string; name: string; name_hi: string }[]>([]);
+  const [profileData, setProfileData] = useState({
+    name: "",
+    pincode: "",
+    email: "",
+    address: "",
+    role: "FARMER" as "FARMER" | "DEALER",
+    state: "",
+    district: "",
+  });
+  const [crops, setCrops] = useState<api.Crop[]>([]);
 
   // Forms
-  const mobileForm = useForm({
+  const mobileForm = useForm<MobileFormData>({
     resolver: zodResolver(mobileSchema),
     defaultValues: { mobile: "" },
   });
 
-  const otpForm = useForm({
+  const otpForm = useForm<OtpFormData>({
     resolver: zodResolver(otpSchema),
     defaultValues: { otp: "" },
   });
 
-  const profileForm = useForm({
+  const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { name: "", pincode: "", email: "" },
+    defaultValues: { name: "", pincode: "", email: "", role: "FARMER" },
   });
+
+  const { isLoaded: isMapsLoaded } = useJsApiLoader({
+    id: "google-map-script",
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    libraries: mapLibraries,
+  });
+
+  const selectedRole = profileForm.watch("role");
+  const isDealerProfile = selectedRole === "DEALER";
 
   // Fetch crops from API on mount
   useEffect(() => {
     const fetchCrops = async () => {
       const response = await api.getCrops();
       if (response.success && response.data) {
-        setCrops(response.data.map(c => ({
-          id: c.id,
-          name: c.name,
-          name_hi: c.name_hi,
-        })));
+        setCrops(response.data);
       }
     };
     fetchCrops();
   }, []);
 
+  const profileTitle = useMemo(
+    () => (language === "en" ? "Create Your Profile" : "अपनी प्रोफ़ाइल बनाएं"),
+    [language]
+  );
+
+  const profileSubtitle = useMemo(() => {
+    if (isDealerProfile) {
+      return language === "en"
+        ? "Enter your details below. Business and compliance information will be collected in the next step."
+        : "अपनी जानकारी नीचे दर्ज करें। व्यापार और अनुपालन से जुड़ी जानकारी अगले चरण में ली जाएगी।";
+    }
+
+    return language === "en"
+      ? "Add your personal details first, then choose whether you are joining as a farmer or dealer."
+      : "पहले अपनी व्यक्तिगत जानकारी जोड़ें, फिर चुनें कि आप किसान हैं या डीलर।";
+  }, [isDealerProfile, language]);
+
+  const reverseGeocode = useCallback(async (lat: number, lng: number) => {
+    if (!window.google?.maps) return null;
+
+    const geocoder = new google.maps.Geocoder();
+    const response = await geocoder.geocode({ location: { lat, lng } });
+    const result = response.results[0];
+
+    if (!result) return null;
+
+    let state = "";
+    let district = "";
+    let pincode = "";
+
+    result.address_components.forEach((component) => {
+      if (component.types.includes("administrative_area_level_1")) {
+        state = component.long_name;
+      }
+      if (
+        component.types.includes("administrative_area_level_2") ||
+        component.types.includes("sublocality_level_1") ||
+        component.types.includes("locality")
+      ) {
+        district ||= component.long_name;
+      }
+      if (component.types.includes("postal_code")) {
+        pincode = component.long_name;
+      }
+    });
+
+    return {
+      formattedAddress: result.formatted_address,
+      state,
+      district,
+      pinCode: pincode,
+      latitude: lat,
+      longitude: lng,
+    };
+  }, []);
+
+  const applySelectedLocation = useCallback((
+    location: {
+      address: string;
+      city: string;
+      state: string;
+      pincode: string;
+      lat: number;
+      lng: number;
+    },
+    options?: { lock?: boolean }
+  ) => {
+    const district = location.city || "";
+    const pincode = location.pincode || "";
+
+    setDetectedLocation(location.address || "");
+    setSelectedState(location.state || "");
+    setSelectedDistrict(district);
+    setSelectedLatitude(location.lat);
+    setSelectedLongitude(location.lng);
+    setIsLocationLocked(options?.lock ?? true);
+
+    if (pincode) {
+      profileForm.setValue("pincode", pincode, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+    }
+  }, [profileForm]);
+
+  const detectCurrentLocation = useCallback(async (options?: { lock?: boolean }) => {
+    if (!navigator.geolocation) {
+      setDetectedLocation(language === "en" ? "Location access not available" : "लोकेशन उपलब्ध नहीं है");
+      return;
+    }
+
+    setIsDetectingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const location = isMapsLoaded ? await reverseGeocode(lat, lng) : null;
+
+          if (location) {
+            applySelectedLocation(
+              {
+                address: location.formattedAddress,
+                city: location.district,
+                state: location.state,
+                pincode: location.pinCode,
+                lat,
+                lng,
+              },
+              options
+            );
+          } else {
+            setSelectedLatitude(lat);
+            setSelectedLongitude(lng);
+            setDetectedLocation(language === "en" ? "Current location detected" : "वर्तमान लोकेशन प्राप्त हो गई");
+            setIsLocationLocked(Boolean(options?.lock));
+          }
+        } catch (error) {
+          setDetectedLocation(language === "en" ? "Unable to detect address" : "पता प्राप्त नहीं हो सका");
+        } finally {
+          setIsDetectingLocation(false);
+        }
+      },
+      () => {
+        setDetectedLocation(language === "en" ? "Unable to detect location" : "लोकेशन पता नहीं चल सकी");
+        setIsDetectingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+    );
+  }, [applySelectedLocation, isMapsLoaded, language, reverseGeocode]);
+
+  useEffect(() => {
+    if (step !== "profile" || profileLocationAttemptedRef.current || !isMapsLoaded) {
+      return;
+    }
+
+    profileLocationAttemptedRef.current = true;
+    void detectCurrentLocation();
+  }, [detectCurrentLocation, isMapsLoaded, step]);
+
   // Handle mobile submission - Send OTP via Twilio
-  const onMobileSubmit = async (data: { mobile: string }) => {
+  const onMobileSubmit = async (data: MobileFormData) => {
     setIsLoading(true);
     setMobile(data.mobile);
     
@@ -125,7 +309,7 @@ export default function AuthPage() {
   };
 
   // Handle OTP submission - Verify via Twilio
-  const onOTPSubmit = async (data: { otp: string }) => {
+  const onOTPSubmit = async (data: OtpFormData) => {
     setIsLoading(true);
     
     try {
@@ -134,20 +318,7 @@ export default function AuthPage() {
       if (response.success && response.data) {
         const userData = response.data.user;
         
-        // Store user data
-        setUser({
-          id: userData.id,
-          name: userData.full_name || "",
-          mobile: userData.phone_number,
-          pincode: userData.pin_code || "",
-          state: userData.state || "",
-          district: userData.district || "",
-          cropPreferences: userData.crop_preferences?.map(c => c.id) || [],
-          language: userData.language || language,
-          isActive: userData.is_active,
-          createdAt: userData.created_at,
-          lastLogin: userData.last_login || new Date().toISOString(),
-        });
+        setUser(userData);
         setAuthenticated(true);
         
         if (response.data.is_new_user || !userData.full_name) {
@@ -159,7 +330,19 @@ export default function AuthPage() {
             description: language === "en" ? "Logged in successfully" : "सफलतापूर्वक लॉग इन किया गया",
             variant: "success",
           });
-          router.push("/dashboard");
+          if (userData.role === "DEALER") {
+            if (!userData.distributor) {
+              router.push("/dashboard/profile/distributor");
+            } else if (userData.distributor.verification_status === "APPROVED") {
+              router.push("/dashboard/dealer");
+            } else if (userData.distributor.verification_status === "PENDING") {
+              router.push("/dashboard/dealer/review");
+            } else {
+              router.push("/dashboard/profile/distributor");
+            }
+          } else {
+            router.push("/dashboard");
+          }
         }
       } else {
         // Handle specific Twilio error cases
@@ -211,17 +394,77 @@ export default function AuthPage() {
   };
 
   // Handle profile submission
-  const onProfileSubmit = async (data: { name: string; pincode: string; email?: string }) => {
+  const onProfileSubmit = async (data: ProfileFormData) => {
     setIsLoading(true);
     
     setProfileData({
       name: data.name,
       pincode: data.pincode,
       email: data.email || "",
-      state: "", // Will be auto-filled by backend based on pincode
-      district: "",
+      address: detectedLocation || "",
+      role: data.role,
+      state: selectedState,
+      district: selectedDistrict,
     });
-    
+
+    if (data.role === "DEALER") {
+      try {
+        const profileResponse = await api.createProfile({
+          full_name: data.name,
+          pin_code: data.pincode,
+          email: data.email || undefined,
+          full_address: detectedLocation || undefined,
+          state: selectedState || undefined,
+          district: selectedDistrict || undefined,
+        });
+
+        if (!profileResponse.success || !profileResponse.data) {
+          toast({
+            title: language === "en" ? "Error" : "त्रुटि",
+            description: profileResponse.error?.message || "Failed to create profile",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        const roleResponse = await api.updateProfile({ role: "DEALER" });
+        if (!roleResponse.success) {
+          toast({
+            title: language === "en" ? "Error" : "त्रुटि",
+            description: roleResponse.error?.message || "Failed to update account type",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        const refreshedProfile = await api.getProfile();
+        if (refreshedProfile.success && refreshedProfile.data) {
+          setUser(refreshedProfile.data);
+          setAuthenticated(true);
+        }
+
+        toast({
+          title: language === "en" ? "Profile Created!" : "प्रोफ़ाइल बन गई!",
+          description: language === "en"
+            ? "Continue with dealer verification to complete your website account."
+            : "अपना वेबसाइट खाता पूरा करने के लिए डीलर सत्यापन जारी रखें।",
+          variant: "success",
+        });
+        router.push("/dashboard/profile/distributor");
+      } catch (error) {
+        toast({
+          title: language === "en" ? "Error" : "त्रुटि",
+          description: language === "en" ? "Something went wrong" : "कुछ गलत हो गया",
+          variant: "destructive",
+        });
+      }
+
+      setIsLoading(false);
+      return;
+    }
+
     setStep("crops");
     setIsLoading(false);
   };
@@ -251,6 +494,9 @@ export default function AuthPage() {
         full_name: profileData.name,
         pin_code: profileData.pincode,
         email: profileData.email || undefined,
+        full_address: profileData.address || undefined,
+        state: profileData.state || undefined,
+        district: profileData.district || undefined,
       });
       
       if (!profileResponse.success) {
@@ -274,17 +520,8 @@ export default function AuthPage() {
       const userData = profileResponse.data;
       if (userData) {
         setUser({
-          id: userData.id,
-          name: userData.full_name || profileData.name,
-          mobile: userData.phone_number,
-          pincode: userData.pin_code || profileData.pincode,
-          state: userData.state || "",
-          district: userData.district || "",
-          cropPreferences: selectedCrops,
-          language: userData.language || language,
-          isActive: userData.is_active,
-          createdAt: userData.created_at,
-          lastLogin: userData.last_login || new Date().toISOString(),
+          ...userData,
+          crop_preferences: crops.filter((crop) => selectedCrops.includes(crop.id)),
         });
       }
       
@@ -574,32 +811,62 @@ export default function AuthPage() {
               {step === "profile" && (
                 <div
                   key="profile"
-                  
-                  
-                  
                 >
                   <div className="text-center mb-6">
                     <h1 className="text-2xl font-bold mb-2">
-                      {language === "en" ? "Welcome to Agrio!" : "एग्रियो में आपका स्वागत है!"}
+                      {profileTitle}
                     </h1>
                     <p className="text-gray-600 text-sm">
-                      {language === "en"
-                        ? "Let's set up your profile to get started."
-                        : "आइए शुरू करने के लिए अपनी प्रोफाइल सेट करें।"}
+                      {profileSubtitle}
                     </p>
                   </div>
 
-                  <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+                  <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-5">
+                    {isDealerProfile && (
+                      <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4 text-left">
+                        <div className="mb-2 text-sm font-semibold text-primary">
+                          {language === "en" ? "Personal Information" : "व्यक्तिगत जानकारी"}
+                        </div>
+                        <p className="text-xs leading-5 text-gray-700">
+                          {language === "en"
+                            ? "Enter your name exactly as it appears on Aadhaar. Business name, GSTIN, business PAN, licence, and banking details will be collected during verification."
+                            : "अपना नाम आधार के अनुसार बिल्कुल वैसा ही दर्ज करें। व्यवसाय का नाम, GSTIN, बिज़नेस PAN, लाइसेंस और बैंकिंग जानकारी सत्यापन के दौरान ली जाएगी।"}
+                        </p>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       <Label htmlFor="name">
-                        {language === "en" ? "Full Name" : "पूरा नाम"}
+                        {language === "en"
+                          ? isDealerProfile
+                            ? "Full Legal Name"
+                            : "Full Name"
+                          : "पूरा नाम"}
                       </Label>
-                      <Input
-                        id="name"
-                        placeholder={language === "en" ? "Enter your full name" : "अपना पूरा नाम दर्ज करें"}
-                        className="h-12"
-                        {...profileForm.register("name")}
-                      />
+                      <div className="relative">
+                        <UserRound className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+                        <Input
+                          id="name"
+                          placeholder={
+                            language === "en"
+                              ? isDealerProfile
+                                ? "Full Legal Name (As per Aadhaar)"
+                                : "Enter your full name"
+                              : isDealerProfile
+                                ? "पूरा कानूनी नाम (आधार के अनुसार)"
+                                : "अपना पूरा नाम दर्ज करें"
+                          }
+                          className="h-12 rounded-2xl pl-11"
+                          {...profileForm.register("name")}
+                        />
+                      </div>
+                      {isDealerProfile && (
+                        <p className="text-xs italic text-muted-foreground">
+                          {language === "en"
+                            ? "This must match your Aadhaar record."
+                            : "यह आपके आधार रिकॉर्ड से मेल खाना चाहिए।"}
+                        </p>
+                      )}
                       {profileForm.formState.errors.name && (
                         <p className="text-sm text-destructive">
                           {profileForm.formState.errors.name.message}
@@ -608,28 +875,29 @@ export default function AuthPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="mobile-display">
-                        {language === "en" ? "Mobile Number" : "मोबाइल नंबर"}
-                      </Label>
-                      <Input
-                        id="mobile-display"
-                        value={`+91 ${mobile}`}
-                        disabled
-                        className="h-12 bg-gray-50"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
                       <Label htmlFor="email">
-                        {language === "en" ? "Email (Optional)" : "ईमेल (वैकल्पिक)"}
+                        {language === "en"
+                          ? isDealerProfile
+                            ? "Email Address (Optional)"
+                            : "Email (Optional)"
+                          : "ईमेल (वैकल्पिक)"}
                       </Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder={language === "en" ? "Enter your email" : "अपना ईमेल दर्ज करें"}
-                        className="h-12"
-                        {...profileForm.register("email")}
-                      />
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder={
+                            language === "en"
+                              ? isDealerProfile
+                                ? "Email Address (Optional)"
+                                : "Enter your email"
+                              : "अपना ईमेल दर्ज करें"
+                          }
+                          className="h-12 rounded-2xl pl-11"
+                          {...profileForm.register("email")}
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -637,10 +905,11 @@ export default function AuthPage() {
                         {language === "en" ? "Pincode" : "पिनकोड"}
                       </Label>
                       <div className="relative">
+                        <MapPin className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
                         <Input
                           id="pincode"
                           placeholder={language === "en" ? "Enter your 6-digit pincode" : "अपना 6 अंकों का पिनकोड दर्ज करें"}
-                          className="h-12 pr-28"
+                          className="h-12 rounded-2xl pl-11 pr-32"
                           maxLength={6}
                           {...profileForm.register("pincode")}
                         />
@@ -648,12 +917,29 @@ export default function AuthPage() {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-primary"
+                          className="absolute right-2 top-1/2 h-8 -translate-y-1/2 rounded-full px-3 text-primary"
+                          onClick={() => void detectCurrentLocation()}
+                          disabled={isDetectingLocation}
                         >
-                          <MapPin className="h-4 w-4 mr-1" />
-                          {language === "en" ? "Auto-detect" : "स्वतः पता"}
+                          {isDetectingLocation ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <LocateFixed className="mr-1 h-4 w-4" />
+                              {language === "en" ? "Auto-detect" : "स्वतः पता"}
+                            </>
+                          )}
                         </Button>
                       </div>
+                      <p className="text-xs italic text-muted-foreground">
+                        {isLocationLocked
+                          ? language === "en"
+                            ? "The pincode has been prefilled based on the selected location. You may update it if required."
+                            : "चुनी गई लोकेशन के आधार पर पिनकोड भरा गया है। आवश्यकता होने पर आप इसे बदल सकते हैं।"
+                          : language === "en"
+                            ? "Enter the six-digit pincode or select a location to prefill it."
+                            : "छह अंकों का पिनकोड दर्ज करें या उसे भरने के लिए लोकेशन चुनें।"}
+                      </p>
                       {profileForm.formState.errors.pincode && (
                         <p className="text-sm text-destructive">
                           {profileForm.formState.errors.pincode.message}
@@ -661,17 +947,140 @@ export default function AuthPage() {
                       )}
                     </div>
 
+                    <button
+                      type="button"
+                      onClick={() => setIsLocationDialogOpen(true)}
+                      className={`w-full rounded-2xl border px-4 py-4 text-left transition-all ${
+                        isLocationLocked
+                          ? "border-green-500/40 bg-green-50/70"
+                          : "border-primary/20 bg-white hover:border-primary/40"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        {isDetectingLocation ? (
+                          <Loader2 className="mt-1 h-5 w-5 animate-spin text-primary" />
+                        ) : (
+                          <MapPinned className="mt-1 h-5 w-5 text-primary" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>
+                              {isLocationLocked
+                                ? language === "en"
+                                  ? "Selected Location"
+                                  : "चुनी गई लोकेशन"
+                                : language === "en"
+                                  ? "Auto-detected Location"
+                                  : "स्वतः पता की गई लोकेशन"}
+                            </span>
+                            {isLocationLocked && <MapPin className="h-3.5 w-3.5 text-green-600" />}
+                            {!isDetectingLocation && detectedLocation === "" && (
+                              <RefreshCw className="h-3.5 w-3.5 text-primary" />
+                            )}
+                          </div>
+                          <p className="mt-1 truncate text-sm font-semibold text-primary sm:whitespace-normal">
+                            {detectedLocation ||
+                              (isDetectingLocation
+                                ? language === "en"
+                                  ? "Detecting current location..."
+                                  : "वर्तमान लोकेशन पता की जा रही है..."
+                                : language === "en"
+                                  ? "Select your location"
+                                  : "अपनी लोकेशन चुनें")}
+                          </p>
+                        </div>
+                        <div className="text-right text-xs font-medium text-primary">
+                          {isLocationLocked
+                            ? language === "en"
+                              ? "Change"
+                              : "बदलें"
+                            : language === "en"
+                              ? "Select"
+                              : "चुनें"}
+                        </div>
+                      </div>
+                    </button>
+
+                    <div className="space-y-2">
+                      <Label>{language === "en" ? "Account Type" : "खाते का प्रकार"}</Label>
+                      <div className="relative flex h-14 overflow-hidden rounded-2xl bg-primary/10">
+                        <div
+                          className={`absolute inset-y-0 w-1/2 rounded-2xl bg-primary transition-transform duration-300 ${
+                            isDealerProfile ? "translate-x-full" : "translate-x-0"
+                          }`}
+                        />
+                        {[
+                          {
+                            value: "FARMER",
+                            label: language === "en" ? "Farmer" : "किसान",
+                          },
+                          {
+                            value: "DEALER",
+                            label: language === "en" ? "Dealer" : "डीलर",
+                          },
+                        ].map((option) => {
+                          const active = selectedRole === option.value;
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() =>
+                                profileForm.setValue("role", option.value as "FARMER" | "DEALER", {
+                                  shouldValidate: true,
+                                  shouldDirty: true,
+                                })
+                              }
+                              className={`relative z-10 flex-1 text-base font-semibold transition-colors ${
+                                active ? "text-white" : "text-primary"
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     <Button type="submit" className="w-full h-12" disabled={isLoading}>
                       {isLoading ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
                       ) : (
                         <>
-                          {language === "en" ? "Continue" : "जारी रखें"}
+                          {isDealerProfile
+                            ? language === "en"
+                              ? "Submit & Continue"
+                              : "सबमिट करें और आगे बढ़ें"
+                            : language === "en"
+                              ? "Submit & Continue"
+                              : "सबमिट करें और आगे बढ़ें"}
                           <ArrowRight className="ml-2 h-5 w-5" />
                         </>
                       )}
                     </Button>
                   </form>
+
+                  <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
+                    <DialogContent className="max-w-4xl">
+                      <DialogHeader>
+                        <DialogTitle>
+                          {language === "en" ? "Select your location" : "अपनी लोकेशन चुनें"}
+                        </DialogTitle>
+                        <DialogDescription>
+                          {language === "en"
+                            ? "Search by place, use current location, or pick the exact spot on the map."
+                            : "स्थान खोजें, वर्तमान लोकेशन इस्तेमाल करें, या मैप पर सटीक जगह चुनें।"}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <LocationPicker
+                        initialLat={selectedLatitude ?? undefined}
+                        initialLng={selectedLongitude ?? undefined}
+                        onLocationSelect={(location) => {
+                          applySelectedLocation(location, { lock: true });
+                          setIsLocationDialogOpen(false);
+                        }}
+                      />
+                    </DialogContent>
+                  </Dialog>
                 </div>
               )}
 

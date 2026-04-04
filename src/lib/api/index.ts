@@ -4,14 +4,14 @@
  */
 
 import {
-  get, post, put, del, patch, patchFormData,
+  get, post, put, del, patch, postFormData, patchFormData,
   setTokens, clearTokens, getAccessToken,
   API_BASE_URL,
   ApiResponse
 } from './client';
 
 export {
-  get, post, put, del, patch, patchFormData,
+  get, post, put, del, patch, postFormData, patchFormData,
   setTokens, clearTokens, getAccessToken,
   API_BASE_URL
 };
@@ -56,6 +56,14 @@ export async function verifyOtp(phone_number: string, otp_code: string): Promise
   });
   if (response.success && response.data) {
     setTokens(response.data.token, response.data.refresh_token);
+    return {
+      success: true,
+      data: {
+        ...response.data,
+        user: normalizeUser(response.data.user),
+      },
+      message: response.message,
+    };
   }
   return response;
 }
@@ -67,6 +75,14 @@ export async function devLogin(phone_number: string): Promise<ApiResponse<T.DevL
   const response = await post<T.DevLoginResponse>('/auth/dev-login', { phone_number });
   if (response.success && response.data) {
     setTokens(response.data.token, response.data.refresh_token);
+    return {
+      success: true,
+      data: {
+        ...response.data,
+        user: normalizeUser(response.data.user),
+      },
+      message: response.message,
+    };
   }
   return response;
 }
@@ -97,21 +113,33 @@ export async function logout(): Promise<ApiResponse<null>> {
  * Get current user profile
  */
 export async function getProfile(): Promise<ApiResponse<T.User>> {
-  return get<T.User>('/user/profile', true);
+  const response = await get<T.User>('/user/profile', true);
+  if (response.success && response.data) {
+    return { ...response, data: normalizeUser(response.data) };
+  }
+  return response;
 }
 
 /**
  * Create user profile (new user registration)
  */
 export async function createProfile(data: T.CreateProfileRequest): Promise<ApiResponse<T.User>> {
-  return post<T.User>('/user/profile', data, true);
+  const response = await post<T.User>('/user/profile', data, true);
+  if (response.success && response.data) {
+    return { ...response, data: normalizeUser(response.data) };
+  }
+  return response;
 }
 
 /**
  * Update user profile
  */
 export async function updateProfile(data: T.UpdateProfileRequest): Promise<ApiResponse<T.User>> {
-  return put<T.User>('/user/profile', data, true);
+  const response = await put<T.User>('/user/profile', data, true);
+  if (response.success && response.data) {
+    return { ...response, data: normalizeUser(response.data) };
+  }
+  return response;
 }
 
 /**
@@ -399,7 +427,7 @@ export async function getDistributors(params: T.DistributorsQuery): Promise<ApiR
   if (!res.success || !res.data) return res as ApiResponse<T.Distributor[]>;
 
   const raw = res.data;
-  const list = (raw.distributors ?? raw.data ?? []) as unknown as Record<string, unknown>[];
+  const list = (raw.items ?? raw.distributors ?? raw.data ?? []) as unknown as Record<string, unknown>[];
   const mapped: T.Distributor[] = list.map((d) => {
     const addr = d.address as Record<string, string> | undefined;
     const loc = d.location as { lat?: number; lng?: number } | undefined;
@@ -416,8 +444,10 @@ export async function getDistributors(params: T.DistributorsQuery): Promise<ApiR
       email: d.email as string | undefined,
       latitude: (loc?.lat ?? d.latitude) as number | undefined,
       longitude: (loc?.lng ?? d.longitude) as number | undefined,
-      distance_km: d.distance_km as number | undefined,
+      distance_km: (d.distance_km ?? d.distanceKm ?? d.distance) as number | undefined,
+      verification_status: (d.verification_status ?? d.verificationStatus ?? 'APPROVED') as T.VerificationStatus,
       is_active: (d.is_active ?? true) as boolean,
+      created_at: (d.created_at ?? d.createdAt ?? new Date().toISOString()) as string,
     };
   });
   return { success: true, data: mapped };
@@ -431,10 +461,176 @@ export async function getDistributorById(id: string): Promise<ApiResponse<T.Dist
 }
 
 /**
+ * Get current user's distributor profile
+ */
+export async function getMyDistributorProfile(): Promise<ApiResponse<T.Distributor | null>> {
+  const response = await get<T.Distributor | null>('/distributors/my-profile', true);
+  if (response.success) {
+    return {
+      ...response,
+      data: response.data ? normalizeAdminDistributor(response.data) : null,
+    };
+  }
+  return response;
+}
+
+export async function verifyDistributorPan(data: {
+  pan_number: string;
+  business_name?: string;
+}): Promise<ApiResponse<T.DistributorPanVerificationResponse>> {
+  return post<T.DistributorPanVerificationResponse>('/distributors/verify/pan', data, true);
+}
+
+export async function verifyDistributorGst(data: {
+  gst_number: string;
+  business_name?: string;
+}): Promise<ApiResponse<T.DistributorGstVerificationResponse>> {
+  return post<T.DistributorGstVerificationResponse>('/distributors/verify/gst', data, true);
+}
+
+export async function initiateDistributorAadhaarVerification(data: {
+  aadhaar_number: string;
+}): Promise<ApiResponse<T.DistributorAadhaarInitiateResponse>> {
+  return post<T.DistributorAadhaarInitiateResponse>('/distributors/verify/aadhaar/initiate', data, true);
+}
+
+export async function getDistributorAadhaarVerificationStatus(
+  verificationId: string
+): Promise<ApiResponse<T.DistributorAadhaarStatusResponse>> {
+  return get<T.DistributorAadhaarStatusResponse>(`/distributors/verify/aadhaar/status/${verificationId}`, true);
+}
+
+/**
+ * Onboard distributor (multipart/form-data)
+ */
+export async function onboardDistributor(formData: FormData): Promise<ApiResponse<T.Distributor>> {
+  const response = await postFormData<T.Distributor>('/distributors/onboard', formData, true);
+  if (response.success && response.data) {
+    return { ...response, data: normalizeAdminDistributor(response.data) };
+  }
+  return response;
+}
+
+/**
+ * Admin: list distributors
  * Get distributor coverage
  */
 export async function getDistributorCoverage(id: string): Promise<ApiResponse<T.DistributorCoverage>> {
   return get<T.DistributorCoverage>(`/distributors/${id}/coverage`);
+}
+
+/**
+ * Admin: list distributors
+ */
+export async function getAdminDistributors(params: {
+  page?: number;
+  limit?: number;
+  q?: string;
+  status?: string;
+  requestOnly?: boolean;
+}): Promise<ApiResponse<{ distributors: T.Distributor[]; pagination: T.Pagination }>> {
+  const searchParams = new URLSearchParams();
+  if (params.page) searchParams.append("page", String(params.page));
+  if (params.limit) searchParams.append("limit", String(params.limit));
+  if (params.q) searchParams.append("q", params.q);
+  if (params.status) searchParams.append("status", params.status);
+  if (params.requestOnly) searchParams.append("request_only", "true");
+
+  const res = await adminGet<{ distributors: any[]; pagination: T.Pagination }>(
+    `/admin/distributors?${searchParams.toString()}`
+  );
+
+  if (!res.success || !res.data) return res as any;
+
+  const distributors = res.data.distributors.map(normalizeAdminDistributor);
+
+  return { success: true, data: { distributors, pagination: res.data.pagination } };
+}
+
+function normalizeAdminDistributor(d: any): T.Distributor {
+  return {
+    ...d,
+    business_name: d.business_name || d.businessName || d.name,
+    owner_name: d.owner_name || d.ownerName || "",
+    owner_email: d.owner_email || d.ownerEmail || d.email || undefined,
+    owner_phone: d.owner_phone || d.ownerPhone || d.phone || undefined,
+    address:
+      d.address ||
+      [d.address_street || d.addressStreet, d.address_area || d.addressArea]
+        .filter(Boolean)
+        .join(", "),
+    address_street: d.address_street || d.addressStreet || undefined,
+    address_area: d.address_area || d.addressArea || undefined,
+    address_city: d.address_city || d.addressCity || d.city || undefined,
+    address_state: d.address_state || d.addressState || d.state || undefined,
+    address_pincode: d.address_pincode || d.addressPincode || d.pincode || undefined,
+    city: d.city || d.address_city || d.addressCity || "",
+    state: d.state || d.address_state || d.addressState || "",
+    pincode: d.pincode || d.address_pincode || d.addressPincode || "",
+    phone: d.phone || d.owner_phone || d.ownerPhone || "",
+    email: d.email || undefined,
+    latitude: d.latitude ?? d.location_lat ?? d.locationLat,
+    longitude: d.longitude ?? d.location_lng ?? d.locationLng,
+    location_lat: d.location_lat ?? d.locationLat ?? d.latitude,
+    location_lng: d.location_lng ?? d.locationLng ?? d.longitude,
+    verification_status: d.verification_status || d.verificationStatus,
+    dealer_code: d.dealer_code || d.dealerCode,
+    aadhaar_number: d.aadhaar_number || d.aadhaarNumber,
+    aadhaar_photo_url:
+      d.aadhaar_photo_url ||
+      d.aadhaar_front_photo_url ||
+      d.aadhaarPhotoUrl ||
+      d.aadhaarFrontPhotoUrl,
+    aadhaar_front_photo_url:
+      d.aadhaar_front_photo_url || d.aadhaarFrontPhotoUrl || d.aadhaar_photo_url,
+    aadhaar_back_photo_url:
+      d.aadhaar_back_photo_url || d.aadhaarBackPhotoUrl,
+    pan_number: d.pan_number || d.panNumber,
+    pan_photo_url: d.pan_photo_url || d.panPhotoUrl,
+    license_number: d.license_number || d.licenseNumber,
+    license_photo_url: d.license_photo_url || d.licensePhotoUrl,
+    gst_number: d.gst_number || d.gstNumber,
+    gst_photo_url: d.gst_photo_url || d.gstPhotoUrl,
+    expected_business_volume: d.expected_business_volume || d.expectedBusinessVolume,
+    is_aadhaar_verified: d.is_aadhaar_verified ?? d.isAadhaarVerified,
+    is_pan_verified: d.is_pan_verified ?? d.isPanVerified,
+    security_deposit_amount: d.security_deposit_amount || d.securityDepositAmount,
+    security_deposit_check_photo: d.security_deposit_check_photo || d.securityDepositCheckPhoto,
+    security_deposit_check_number: d.security_deposit_check_number || d.securityDepositCheckNumber,
+    bank_name: d.bank_name || d.bankName,
+    is_active: d.is_active ?? d.isActive ?? false,
+    created_at: d.created_at || d.createdAt,
+    owner_id: d.owner_id || d.ownerId,
+    has_profile_changes: d.has_profile_changes ?? d.hasProfileChanges ?? false,
+    profile_change_count: d.profile_change_count ?? d.profileChangeCount ?? d.profile_changes?.length ?? d.profileChanges?.length ?? 0,
+    profile_changes: d.profile_changes ?? d.profileChanges ?? [],
+  };
+}
+
+function normalizeUser(user: any): T.User {
+  return {
+    ...user,
+    phone_number: user.phone_number || user.phoneNumber || user.phone || "",
+    full_name: user.full_name || user.fullName || user.name || "",
+    pin_code: user.pin_code || user.pinCode || user.pincode || undefined,
+    full_address: user.full_address || user.fullAddress || user.address || undefined,
+    state: user.state || undefined,
+    district: user.district || undefined,
+    profile_image_url: user.profile_image_url || user.profileImageUrl || undefined,
+    created_at: user.created_at || user.createdAt,
+    last_login: user.last_login || user.lastLogin || undefined,
+    distributor: user.distributor ? normalizeAdminDistributor(user.distributor) : null,
+  };
+}
+
+/**
+ * Admin: verify distributor
+ */
+export async function adminVerifyDistributor(
+  id: string,
+  data: { status: T.VerificationStatus; remarks?: string; dealer_code?: string }
+): Promise<ApiResponse<T.Distributor>> {
+  return adminPatch<T.Distributor>(`/admin/distributors/${id}/verify`, data);
 }
 
 // ==================== Coupons APIs ====================
@@ -1185,39 +1381,30 @@ export async function deleteCampaign(id: string): Promise<ApiResponse<null>> {
 }
 
 // Admin Distributors
-export async function getAdminDistributors(
-  pageOrOptions: number | { page?: number; limit?: number; q?: string; status?: string } = 1,
-  limit = 10
-): Promise<ApiResponse<T.DistributorsResponse>> {
-  let page = 1;
-  let l = limit;
-  let q: string | undefined;
-  let status: string | undefined;
-
-  if (typeof pageOrOptions === 'object') {
-    page = pageOrOptions.page || 1;
-    l = pageOrOptions.limit || 10;
-    q = pageOrOptions.q;
-    status = pageOrOptions.status;
-  } else {
-    page = pageOrOptions;
-  }
-
-  const params = new URLSearchParams({ page: String(page), limit: String(l) });
-  if (q) params.append('q', q);
-  if (status && status !== 'all') params.append('status', status);
-  return adminGet<T.DistributorsResponse>(`/admin/distributors?${params.toString()}`);
-}
+// Removed duplicate getAdminDistributors
 
 export async function getAdminDistributor(id: string): Promise<ApiResponse<T.Distributor>> {
-  return adminGet<T.Distributor>(`/admin/distributors/${id}`);
+  const res = await adminGet<any>(`/admin/distributors/${id}`);
+  if (!res.success || !res.data) return res as ApiResponse<T.Distributor>;
+  return { ...res, data: normalizeAdminDistributor(res.data) };
 }
 
-export async function createDistributor(data: T.CreateDistributorRequest): Promise<ApiResponse<T.Distributor>> {
+export async function createDistributor(
+  data: T.CreateDistributorRequest | FormData
+): Promise<ApiResponse<T.Distributor>> {
+  if (data instanceof FormData) {
+    return adminPostFormData<T.Distributor>('/admin/distributors', data);
+  }
   return adminPost<T.Distributor>('/admin/distributors', data);
 }
 
-export async function updateDistributor(id: string, data: Partial<T.CreateDistributorRequest>): Promise<ApiResponse<T.Distributor>> {
+export async function updateDistributor(
+  id: string,
+  data: Partial<T.CreateDistributorRequest> | FormData
+): Promise<ApiResponse<T.Distributor>> {
+  if (data instanceof FormData) {
+    return adminPutFormData<T.Distributor>(`/admin/distributors/${id}`, data);
+  }
   return adminPut<T.Distributor>(`/admin/distributors/${id}`, data);
 }
 
@@ -1414,6 +1601,12 @@ export const distributorsApi = {
   searchByPincode: (pincode: string) => getDistributors({ pincode }),
   getById: getDistributorById,
   getCoverage: getDistributorCoverage,
+  getMyProfile: getMyDistributorProfile,
+  verifyPan: verifyDistributorPan,
+  verifyGst: verifyDistributorGst,
+  initiateAadhaarVerification: initiateDistributorAadhaarVerification,
+  getAadhaarVerificationStatus: getDistributorAadhaarVerificationStatus,
+  onboard: onboardDistributor,
 };
 
 // Coupons API namespace

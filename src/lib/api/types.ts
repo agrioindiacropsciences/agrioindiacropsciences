@@ -46,7 +46,7 @@ export interface User {
   phone_number: string;
   full_name?: string;
   email?: string;
-  role: 'USER' | 'ADMIN' | 'SUPER_ADMIN';
+  role: 'FARMER' | 'DEALER' | 'ADMIN' | 'SUPER_ADMIN';
   pin_code?: string;
   full_address?: string;
   state?: string;
@@ -57,6 +57,7 @@ export interface User {
   is_active: boolean;
   created_at: string;
   last_login?: string;
+  distributor?: Distributor | null;
 }
 
 export interface UserStats {
@@ -83,6 +84,7 @@ export interface UpdateProfileRequest {
   full_address?: string;
   state?: string;
   district?: string;
+  role?: 'FARMER' | 'DEALER';
 }
 
 // ==================== Crops ====================
@@ -171,20 +173,67 @@ export interface ProductsQuery {
 }
 
 // ==================== Distributors ====================
+export type VerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface DistributorProfileChange {
+  field: string;
+  label: string;
+  previous?: string | null;
+  current?: string | null;
+}
+
 export interface Distributor {
   id: string;
+  owner_id?: string;
   name: string;
+  business_name?: string;
   owner_name: string;
+  owner_email?: string;
+  owner_phone?: string;
   address: string;
+  address_street?: string;
+  address_area?: string;
+  address_city?: string;
+  address_state?: string;
+  address_pincode?: string;
   city: string;
   state: string;
   pincode: string;
   phone: string;
+  whatsapp?: string;
   email?: string;
   latitude?: number;
   longitude?: number;
+  location_lat?: number;
+  location_lng?: number;
   distance_km?: number;
+  verification_status: VerificationStatus;
+  is_verified?: boolean;
+  dealer_code?: string;
+  aadhaar_number?: string;
+  aadhaar_photo_url?: string;
+  aadhaar_front_photo_url?: string;
+  aadhaar_back_photo_url?: string;
+  pan_number?: string;
+  pan_photo_url?: string;
+  license_number?: string;
+  license_photo_url?: string;
+  gst_number?: string;
+  gst_photo_url?: string;
+  expected_business_volume?: string;
+  is_aadhaar_verified?: boolean;
+  is_pan_verified?: boolean;
+  is_gst_verified?: boolean;
+  security_deposit_amount?: number;
+  security_deposit_check_photo?: string;
+  security_deposit_check_number?: string;
+  bank_name?: string;
   is_active: boolean;
+  is_verified_by_admin?: boolean;
+  created_at: string;
+  has_profile_changes?: boolean;
+  profile_change_count?: number;
+  profile_changes?: DistributorProfileChange[];
 }
 
 export interface DistributorCoverage {
@@ -200,7 +249,50 @@ export interface DistributorCoverage {
 export interface DistributorsResponse {
   distributors?: Distributor[];
   data?: Distributor[];
+  items?: Distributor[];
   pagination?: Pagination;
+}
+
+export interface DistributorPanVerificationResponse {
+  verification_id?: string | number;
+  registered_name?: string | null;
+  pan_number?: string;
+  pan_status?: string;
+  pan_type?: string;
+  name_match_score?: number;
+  name_match_result?: string;
+  name_match_bypassed?: boolean;
+  raw?: Record<string, unknown>;
+}
+
+export interface DistributorGstVerificationResponse {
+  verification_id?: string | number;
+  status?: string;
+  gst_number?: string;
+  legal_name?: string | null;
+  name_match_score?: number;
+  name_match_result?: string;
+  name_match_bypassed?: boolean;
+  raw?: Record<string, unknown>;
+}
+
+export interface DistributorAadhaarInitiateResponse {
+  verification_id: string;
+  reference_id?: string | number | null;
+  status?: string;
+  user_flow?: string;
+  verification_url?: string;
+  redirect_url?: string;
+  raw?: Record<string, unknown>;
+}
+
+export interface DistributorAadhaarStatusResponse {
+  verification_id: string;
+  reference_id?: string | number | null;
+  status?: string;
+  user_details?: Record<string, unknown>;
+  document_data?: Record<string, unknown> | null;
+  is_verified?: boolean;
 }
 
 export interface DistributorsQuery {
@@ -656,13 +748,35 @@ export interface CampaignsResponse {
 
 export interface CreateDistributorRequest {
   name: string;
-  owner_name: string;
-  address: string;
-  city: string;
-  state: string;
-  pincode: string;
+  business_name?: string;
+  owner_name?: string;
+  address?:
+    | string
+    | {
+        street?: string;
+        area?: string;
+        city?: string;
+        state?: string;
+        pincode?: string;
+      };
+  address_area?: string;
+  address_city?: string;
+  address_state?: string;
+  address_pincode?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   phone: string;
+  whatsapp?: string;
   email?: string;
+  expected_business_volume?: string;
+  aadhaar_number?: string;
+  pan_number?: string;
+  license_number?: string;
+  gst_number?: string;
+  security_deposit_check_number?: string;
+  bank_name?: string;
+  dealer_code?: string;
   latitude?: number;
   longitude?: number;
 }

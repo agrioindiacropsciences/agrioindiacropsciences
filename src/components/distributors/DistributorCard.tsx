@@ -37,7 +37,7 @@ export function DistributorCard({ distributor }: DistributorCardProps) {
                     <div className="flex items-start justify-between mb-5">
                         <div className="flex items-start gap-4">
                             {/* Store Icon in Gradient Circle */}
-                            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/10 to-emerald-500/10 flex items-center justify-center shadow-inner group-hover:from-primary group-hover:to-emerald-500 transition-colors duration-300">
+                            <div className="h-14 w-14 min-h-14 min-w-14 shrink-0 rounded-2xl bg-gradient-to-br from-primary/10 to-emerald-500/10 flex items-center justify-center shadow-inner group-hover:from-primary group-hover:to-emerald-500 transition-colors duration-300">
                                 <Store className="h-7 w-7 text-primary group-hover:text-white transition-colors duration-300" />
                             </div>
 
@@ -45,12 +45,14 @@ export function DistributorCard({ distributor }: DistributorCardProps) {
                                 <h3 className="font-bold text-xl text-gray-900 group-hover:text-primary transition-colors">
                                     {distributor.name}
                                 </h3>
-                                <div className="flex items-start gap-1 text-sm text-gray-500">
-                                    <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary/60" />
-                                    <p className="line-clamp-2">
-                                        {distributor.address}, {distributor.city}
-                                    </p>
-                                </div>
+                                {(distributor.address || distributor.city) && (
+                                    <div className="flex items-start gap-1 text-sm text-gray-500">
+                                        <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary/60" />
+                                        <p className="line-clamp-2">
+                                            {[distributor.address, distributor.city].filter(Boolean).join(", ")}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

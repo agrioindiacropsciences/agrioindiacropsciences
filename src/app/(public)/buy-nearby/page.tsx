@@ -25,8 +25,6 @@ import * as api from "@/lib/api";
 import type { Distributor } from "@/lib/api";
 import {
   AnimatedSection,
-  AnimatedContainer,
-  AnimatedItem,
   FloatingElement,
 } from "@/components/ui/animated-section";
 import { TractorLoader } from "@/components/ui/tractor-loader";
@@ -78,7 +76,7 @@ export default function BuyNearbyPage() {
       const params = isPincode(trimmed)
         ? { pincode: trimmed.replace(/\s/g, "") }
         : { q: trimmed };
-      const response = await api.getDistributors({ ...params, limit: 50 });
+      const response = await api.getDistributors(params);
       if (response.success && response.data) {
         setDistributors(response.data);
         setSearchedFor(trimmed);
@@ -158,7 +156,6 @@ export default function BuyNearbyPage() {
             const response = await api.getDistributors({
               lat: latitude,
               lng: longitude,
-              limit: 20,
             });
             if (response.success && response.data) {
               setDistributors(response.data);
@@ -374,13 +371,18 @@ export default function BuyNearbyPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               >
-                <AnimatedContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-6" staggerDelay={0.1}>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {distributors.map((distributor) => (
-                    <AnimatedItem key={distributor.id}>
+                    <motion.div
+                      key={distributor.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4 }}
+                    >
                       <DistributorCard distributor={distributor} />
-                    </AnimatedItem>
+                    </motion.div>
                   ))}
-                </AnimatedContainer>
+                </div>
 
               </motion.div>
             ) : hasSearched ? (

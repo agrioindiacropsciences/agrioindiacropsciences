@@ -69,7 +69,7 @@ export default function DistributorsPage() {
     setHasSearched(true);
     try {
       const params = isPincode(trimmed) ? { pincode: trimmed.replace(/\s/g, "") } : { q: trimmed };
-      const response = await api.getDistributors({ ...params, limit: 50 });
+      const response = await api.getDistributors(params);
       if (response.success && response.data) {
         setDistributors(response.data);
         setSearchedFor(trimmed);
@@ -147,7 +147,6 @@ export default function DistributorsPage() {
             const response = await api.getDistributors({
               lat: latitude,
               lng: longitude,
-              limit: 20,
             });
             
             if (response.success && response.data) {

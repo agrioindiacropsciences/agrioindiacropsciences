@@ -300,6 +300,7 @@ export interface DistributorsQuery {
   q?: string;
   lat?: number;
   lng?: number;
+  radius?: number;
   page?: number;
   limit?: number;
 }

@@ -420,6 +420,7 @@ export async function getDistributors(params: T.DistributorsQuery): Promise<ApiR
   if (params.q?.trim()) searchParams.append('q', params.q.trim());
   if (params.lat !== undefined) searchParams.append('lat', String(params.lat));
   if (params.lng !== undefined) searchParams.append('lng', String(params.lng));
+  if (params.radius !== undefined) searchParams.append('radius', String(params.radius));
   if (params.page) searchParams.append('page', String(params.page));
   if (params.limit) searchParams.append('limit', String(params.limit));
 
@@ -431,22 +432,29 @@ export async function getDistributors(params: T.DistributorsQuery): Promise<ApiR
   const mapped: T.Distributor[] = list.map((d) => {
     const addr = d.address as Record<string, string> | undefined;
     const loc = d.location as { lat?: number; lng?: number } | undefined;
-    const addrParts = addr ? [addr.street, addr.area, addr.city].filter(Boolean) : [];
+
+    const street = addr?.street ?? d.addressStreet ?? d.address_street ?? '';
+    const area = addr?.area ?? d.addressArea ?? d.address_area ?? '';
+    const city = addr?.city ?? d.addressCity ?? d.address_city ?? d.city ?? '';
+    const state = addr?.state ?? d.addressState ?? d.address_state ?? d.state ?? '';
+    const pincode = addr?.pincode ?? d.addressPincode ?? d.address_pincode ?? d.pincode ?? '';
+    const addressStr = [street, area, city, state, pincode].filter(Boolean).join(', ');
+
     return {
       id: d.id as string,
-      name: d.name as string,
-      owner_name: (d.owner_name ?? d.business_name ?? '') as string,
-      address: (addr ? addrParts.join(', ') : (d.address as string) ?? '') as string,
-      city: (addr?.city ?? d.city ?? '') as string,
-      state: (addr?.state ?? d.state ?? '') as string,
-      pincode: (addr?.pincode ?? d.pincode ?? '') as string,
-      phone: d.phone as string,
+      name: (d.name ?? d.businessName ?? d.business_name ?? '') as string,
+      owner_name: (d.owner_name ?? d.ownerName ?? d.business_name ?? d.businessName ?? '') as string,
+      address: addressStr,
+      city: city as string,
+      state: state as string,
+      pincode: pincode as string,
+      phone: (d.phone ?? '') as string,
       email: d.email as string | undefined,
-      latitude: (loc?.lat ?? d.latitude) as number | undefined,
-      longitude: (loc?.lng ?? d.longitude) as number | undefined,
+      latitude: (loc?.lat ?? d.latitude ?? d.locationLat ?? d.location_lat) as number | undefined,
+      longitude: (loc?.lng ?? d.longitude ?? d.locationLng ?? d.location_lng) as number | undefined,
       distance_km: (d.distance_km ?? d.distanceKm ?? d.distance) as number | undefined,
       verification_status: (d.verification_status ?? d.verificationStatus ?? 'APPROVED') as T.VerificationStatus,
-      is_active: (d.is_active ?? true) as boolean,
+      is_active: (d.is_active ?? d.isActive ?? true) as boolean,
       created_at: (d.created_at ?? d.createdAt ?? new Date().toISOString()) as string,
     };
   });

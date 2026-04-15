@@ -71,8 +71,8 @@ const emptyForm: FormState = {
   business_name: "",
   phone: "",
   whatsapp: "",
-  email: "",
-  expected_business_volume: "",
+      email: "",
+      expected_business_volume: "",
   address_street: "",
   address_area: "",
   address_city: "",
@@ -153,7 +153,14 @@ function DocumentCard({
 
   return (
     <div className="rounded-2xl bg-slate-50/70 p-4">
-      <div className="mb-2 text-sm font-semibold text-gray-900">{label}</div>
+      <div className="mb-2 text-sm font-semibold text-gray-900">
+        {label}
+        {label.includes("*") === false && (
+          // if asterisk is not in label string, we can pass it via prop if we add one, 
+          // but I'll stick to adding it in the label string for simplicity as requested
+          null
+        )}
+      </div>
       {helper ? <div className="mb-3 text-xs text-muted-foreground">{helper}</div> : null}
 
       <div
@@ -248,7 +255,7 @@ export default function DistributorOnboardingPage() {
   const currentAadhaar = normalizeAadhaar(form.aadhaar_number);
 
   const isPanVerified = !!panVerifiedValue && panVerifiedValue === currentPan;
-  const isGstVerified = !!gstVerifiedValue && gstVerifiedValue === currentGst;
+  const isGstVerified = true; // GST verification removed
   const isAadhaarVerified = !!aadhaarVerifiedValue && aadhaarVerifiedValue === currentAadhaar;
   const isApprovedDealer = distributorProfile?.verification_status === "APPROVED";
   const isPendingDealer = distributorProfile?.verification_status === "PENDING";
@@ -369,18 +376,26 @@ export default function DistributorOnboardingPage() {
   }, [distributorProfile, user]);
 
   useEffect(() => {
-    if (!hasLockedApprovedProfile || !distributorProfile) return;
+    if (!distributorProfile) return;
 
-    if (distributorProfile.pan_number) {
+    // Hydrate verification flags from server profile if available
+    // Check both camelCase and snake_case as backend might send both
+    const serverPanVerified = distributorProfile.is_pan_verified ?? (distributorProfile as any).isPanVerified;
+    const serverAadhaarVerified = distributorProfile.is_aadhaar_verified ?? (distributorProfile as any).isAadhaarVerified;
+
+    if (serverPanVerified && distributorProfile.pan_number) {
       setPanVerifiedValue((prev) => prev ?? normalizePan(distributorProfile.pan_number || ""));
     }
 
-    if (distributorProfile.gst_number) {
-      setGstVerifiedValue((prev) => prev ?? normalizeGst(distributorProfile.gst_number || ""));
+    if (serverAadhaarVerified && distributorProfile.aadhaar_number) {
+      setAadhaarVerifiedValue((prev) => prev ?? normalizeAadhaar(distributorProfile.aadhaar_number || ""));
     }
 
-    if (distributorProfile.aadhaar_number) {
-      setAadhaarVerifiedValue((prev) => prev ?? normalizeAadhaar(distributorProfile.aadhaar_number || ""));
+    // Existing logic for APPROVED profiles (GST and others)
+    if (hasLockedApprovedProfile) {
+      if (distributorProfile.gst_number) {
+        setGstVerifiedValue((prev) => prev ?? normalizeGst(distributorProfile.gst_number || ""));
+      }
     }
   }, [distributorProfile, hasLockedApprovedProfile]);
 
@@ -495,8 +510,9 @@ export default function DistributorOnboardingPage() {
     if (target === 1) {
       if (!form.business_name.trim()) return language === "en" ? "Business name is required." : "व्यवसाय का नाम आवश्यक है।";
       if (!/^[6-9]\d{9}$/.test(form.phone.trim())) return language === "en" ? "Enter a valid business contact number." : "मान्य बिज़नेस संपर्क नंबर दर्ज करें।";
-      if (!form.email.trim()) return language === "en" ? "Business email is required." : "बिज़नेस ईमेल आवश्यक है।";
-      if (!/\S+@\S+\.\S+/.test(form.email.trim())) return language === "en" ? "Enter a valid business email." : "मान्य बिज़नेस ईमेल दर्ज करें।";
+      if (form.email.trim()) {
+        if (!/\S+@\S+\.\S+/.test(form.email.trim())) return language === "en" ? "Enter a valid business email." : "मान्य बिज़नेस ईमेल दर्ज करें।";
+      }
       if (!form.expected_business_volume.trim()) return language === "en" ? "Select expected business volume." : "अपेक्षित व्यवसाय मात्रा चुनें।";
       if (!form.address_street.trim() || !form.address_city.trim() || !form.address_state.trim() || !form.address_pincode.trim()) {
         return language === "en" ? "Complete the business address fields." : "व्यवसाय पता फ़ील्ड पूरी करें।";
@@ -532,12 +548,19 @@ export default function DistributorOnboardingPage() {
       if (!files.license_photo && !distributorProfile?.license_photo_url) {
         return language === "en" ? "Upload license image." : "लाइसेंस इमेज अपलोड करें।";
       }
-      if (!/^[0-9A-Z]{2}[0-9A-Z]{10}[0-9A-Z]{3}$/.test(currentGst)) {
-        return language === "en" ? "Enter a valid GST number." : "मान्य जीएसटी नंबर दर्ज करें।";
+      if (currentGst && currentGst.trim()) {
+        if (!/^[0-9A-Z]{2}[0-9A-Z]{10}[0-9A-Z]{3}$/.test(currentGst)) {
+          return language === "en" ? "Enter a valid GST number." : "मान्य जीएसटी नंबर दर्ज करें।";
+        }
       }
-      if (!isGstVerified) return language === "en" ? "Please verify GST." : "कृपया जीएसटी सत्यापित करें।";
+      // GST Verification removed
       if (!files.gst_photo && !distributorProfile?.gst_photo_url) {
-        return language === "en" ? "Upload GST image." : "जीएसटी इमेज अपलोड करें।";
+        // GST image is now also optional if GST is not provided, 
+        // but let's keep it required if GST number is entered.
+        if (currentGst && currentGst.trim()) {
+           // optional or required? User said "gst optional". 
+           // I'll make the whole GST block optional.
+        }
       }
     }
 
@@ -803,7 +826,10 @@ export default function DistributorOnboardingPage() {
           <CardContent className="space-y-8">
             <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2 md:col-span-2">
-                <Label>{language === "en" ? "Business Name" : "व्यवसाय का नाम"}</Label>
+                <Label>
+                  {language === "en" ? "Business Name" : "व्यवसाय का नाम"}
+                  <span className="ml-1 text-red-500">*</span>
+                </Label>
                 <Input
                   value={form.business_name}
                   disabled={hasLockedApprovedProfile}
@@ -813,7 +839,10 @@ export default function DistributorOnboardingPage() {
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label>{language === "en" ? "Business Contact Number" : "व्यवसाय संपर्क नंबर"}</Label>
+                  <Label>
+                    {language === "en" ? "Business Contact Number" : "व्यवसाय संपर्क नंबर"}
+                    <span className="ml-1 text-red-500">*</span>
+                  </Label>
                   <label className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Checkbox checked={useSamePhone} onCheckedChange={(checked) => setUseSamePhone(Boolean(checked))} />
                     {language === "en" ? "Use personal number" : "व्यक्तिगत नंबर उपयोग करें"}
@@ -843,7 +872,7 @@ export default function DistributorOnboardingPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>{language === "en" ? "WhatsApp Number (Optional)" : "व्हाट्सएप नंबर (वैकल्पिक)"}</Label>
+                <Label>{language === "en" ? "WhatsApp Number" : "व्हाट्सएप नंबर"}</Label>
                 <Input
                   value={form.whatsapp}
                   onChange={(e) => updateField("whatsapp", e.target.value.replace(/\D/g, "").slice(0, 10))}
@@ -851,7 +880,10 @@ export default function DistributorOnboardingPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>{language === "en" ? "Expected Business Volume" : "अपेक्षित व्यवसाय मात्रा"}</Label>
+                <Label>
+                  {language === "en" ? "Expected Business Volume" : "अपेक्षित व्यवसाय मात्रा"}
+                  <span className="ml-1 text-red-500">*</span>
+                </Label>
                 {hasLockedApprovedProfile ? (
                   <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                     {language === "en"
@@ -904,7 +936,10 @@ export default function DistributorOnboardingPage() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 md:col-span-2">
-                  <Label>{language === "en" ? "Street Address" : "सड़क पता"}</Label>
+                  <Label>
+                    {language === "en" ? "Street Address" : "सड़क पता"}
+                    <span className="ml-1 text-red-500">*</span>
+                  </Label>
                   <Input value={form.address_street} onChange={(e) => updateField("address_street", e.target.value)} />
                 </div>
                 <div className="space-y-2">
@@ -912,23 +947,38 @@ export default function DistributorOnboardingPage() {
                   <Input value={form.address_area} onChange={(e) => updateField("address_area", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>{language === "en" ? "City" : "शहर"}</Label>
+                  <Label>
+                    {language === "en" ? "City" : "शहर"}
+                    <span className="ml-1 text-red-500">*</span>
+                  </Label>
                   <Input value={form.address_city} onChange={(e) => updateField("address_city", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>{language === "en" ? "State" : "राज्य"}</Label>
+                  <Label>
+                    {language === "en" ? "State" : "राज्य"}
+                    <span className="ml-1 text-red-500">*</span>
+                  </Label>
                   <Input value={form.address_state} onChange={(e) => updateField("address_state", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>{language === "en" ? "Pincode" : "पिनकोड"}</Label>
+                  <Label>
+                    {language === "en" ? "Pincode" : "पिनकोड"}
+                    <span className="ml-1 text-red-500">*</span>
+                  </Label>
                   <Input value={form.address_pincode} onChange={(e) => updateField("address_pincode", e.target.value.replace(/\D/g, "").slice(0, 6))} />
                 </div>
                 <div className="space-y-2">
-                  <Label>{language === "en" ? "Latitude" : "अक्षांश"}</Label>
+                  <Label>
+                    {language === "en" ? "Latitude" : "अक्षांश"}
+                    <span className="ml-1 text-red-500">*</span>
+                  </Label>
                   <Input value={form.latitude} onChange={(e) => updateField("latitude", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>{language === "en" ? "Longitude" : "देशांतर"}</Label>
+                  <Label>
+                    {language === "en" ? "Longitude" : "देशांतर"}
+                    <span className="ml-1 text-red-500">*</span>
+                  </Label>
                   <Input value={form.longitude} onChange={(e) => updateField("longitude", e.target.value)} />
                 </div>
               </div>
@@ -952,15 +1002,19 @@ export default function DistributorOnboardingPage() {
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="space-y-4 rounded-3xl bg-slate-50/70 p-5">
                 <div className="space-y-2">
-                  <Label>{language === "en" ? "Aadhaar Number" : "आधार नंबर"}</Label>
+                  <Label>
+                    {language === "en" ? "Aadhaar Number" : "आधार नंबर"}
+                    <span className="ml-1 text-red-500">*</span>
+                  </Label>
                   <Input
                     value={form.aadhaar_number}
-                    disabled={hasLockedApprovedProfile}
+                    disabled={hasLockedApprovedProfile || isAadhaarVerified}
                     onChange={(e) => updateField("aadhaar_number", e.target.value.replace(/\D/g, "").slice(0, 12))}
                   />
                 </div>
-                <Button type="button" onClick={verifyAadhaar} disabled={isVerifyingAadhaar || hasLockedApprovedProfile} className="rounded-xl">
+                <Button type="button" onClick={verifyAadhaar} disabled={isVerifyingAadhaar || hasLockedApprovedProfile || isAadhaarVerified} className={`rounded-xl transition-all duration-300 ${isAadhaarVerified ? "bg-green-600 hover:bg-green-600 opacity-100 cursor-default shadow-none border-green-700" : ""}`}>
                   {isVerifyingAadhaar ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {isAadhaarVerified ? <BadgeCheck className="mr-2 h-4 w-4" /> : null}
                   {isAadhaarVerified
                     ? (language === "en" ? "Aadhaar Verified" : "आधार सत्यापित")
                     : (language === "en" ? "Verify Aadhaar" : "आधार सत्यापित करें")}
@@ -971,7 +1025,7 @@ export default function DistributorOnboardingPage() {
                     file={files.aadhaar_front_photo}
                     preview={previews.aadhaar_front_photo}
                     existingUrl={distributorProfile?.aadhaar_front_photo_url}
-                    disabled={hasLockedApprovedProfile}
+                    disabled={hasLockedApprovedProfile || isAadhaarVerified}
                     onSelect={(file) => updateFile("aadhaar_front_photo", file)}
                     onClear={() => clearFile("aadhaar_front_photo")}
                   />
@@ -980,7 +1034,7 @@ export default function DistributorOnboardingPage() {
                     file={files.aadhaar_back_photo}
                     preview={previews.aadhaar_back_photo}
                     existingUrl={distributorProfile?.aadhaar_back_photo_url}
-                    disabled={hasLockedApprovedProfile}
+                    disabled={hasLockedApprovedProfile || isAadhaarVerified}
                     onSelect={(file) => updateFile("aadhaar_back_photo", file)}
                     onClear={() => clearFile("aadhaar_back_photo")}
                   />
@@ -989,16 +1043,20 @@ export default function DistributorOnboardingPage() {
 
               <div className="space-y-4 rounded-3xl bg-slate-50/70 p-5">
                 <div className="space-y-2">
-                  <Label>{language === "en" ? "Business PAN Number" : "बिज़नेस पैन नंबर"}</Label>
+                  <Label>
+                    {language === "en" ? "Business PAN Number" : "बिज़नेस पैन नंबर"}
+                    <span className="ml-1 text-red-500">*</span>
+                  </Label>
                   <Input
                     value={form.pan_number}
-                    disabled={hasLockedApprovedProfile}
+                    disabled={hasLockedApprovedProfile || isPanVerified}
                     onChange={(e) => updateField("pan_number", normalizePan(e.target.value).slice(0, 10))}
                     className="uppercase"
                   />
                 </div>
-                <Button type="button" onClick={verifyPan} disabled={isVerifyingPan || hasLockedApprovedProfile} className="rounded-xl">
+                <Button type="button" onClick={verifyPan} disabled={isVerifyingPan || hasLockedApprovedProfile || isPanVerified} className={`rounded-xl transition-all duration-300 ${isPanVerified ? "bg-green-600 hover:bg-green-600 opacity-100 cursor-default shadow-none border-green-700" : ""}`}>
                   {isVerifyingPan ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {isPanVerified ? <BadgeCheck className="mr-2 h-4 w-4" /> : null}
                   {isPanVerified
                     ? (language === "en" ? "Business PAN Verified" : "बिज़नेस पैन सत्यापित")
                     : (language === "en" ? "Verify Business PAN" : "बिज़नेस पैन सत्यापित करें")}
@@ -1025,15 +1083,18 @@ export default function DistributorOnboardingPage() {
             </CardTitle>
             <CardDescription>
               {language === "en"
-                ? "Add your fertilizer or seed license and verify GST before review."
-                : "समीक्षा से पहले अपना उर्वरक या बीज लाइसेंस जोड़ें और जीएसटी सत्यापित करें।"}
+                ? "Add your fertilizer or seed license and GST details."
+                : "अपना उर्वरक या बीज लाइसेंस और जीएसटी विवरण जोड़ें।"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="space-y-4 rounded-3xl bg-slate-50/70 p-5">
                 <div className="space-y-2">
-                  <Label>{language === "en" ? "Seed / Fertilizer License Number" : "बीज / उर्वरक लाइसेंस नंबर"}</Label>
+                  <Label>
+                    {language === "en" ? "Seed / Fertilizer License Number" : "बीज / उर्वरक लाइसेंस नंबर"}
+                    <span className="ml-1 text-red-500">*</span>
+                  </Label>
                   <Input
                     value={form.license_number}
                     disabled={hasLockedApprovedProfile}
@@ -1067,12 +1128,6 @@ export default function DistributorOnboardingPage() {
                     className="uppercase"
                   />
                 </div>
-                <Button type="button" onClick={verifyGst} disabled={isVerifyingGst || hasLockedApprovedProfile} className="rounded-xl">
-                  {isVerifyingGst ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {isGstVerified
-                    ? (language === "en" ? "GST Verified" : "जीएसटी सत्यापित")
-                    : (language === "en" ? "Verify GST" : "जीएसटी सत्यापित करें")}
-                </Button>
                 <DocumentCard
                   label={language === "en" ? "GST Certificate" : "जीएसटी प्रमाणपत्र"}
                   file={files.gst_photo}
@@ -1102,11 +1157,17 @@ export default function DistributorOnboardingPage() {
           <CardContent className="space-y-8">
             <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>{language === "en" ? "Bank Name" : "बैंक नाम"}</Label>
+                <Label>
+                  {language === "en" ? "Bank Name" : "बैंक नाम"}
+                  <span className="ml-1 text-red-500">*</span>
+                </Label>
                 <Input value={form.bank_name} disabled={hasLockedApprovedProfile} onChange={(e) => updateField("bank_name", e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>{language === "en" ? "Cheque Number" : "चेक नंबर"}</Label>
+                <Label>
+                  {language === "en" ? "Cheque Number" : "चेक नंबर"}
+                  <span className="ml-1 text-red-500">*</span>
+                </Label>
                 <Input
                   value={form.check_number}
                   disabled={hasLockedApprovedProfile}

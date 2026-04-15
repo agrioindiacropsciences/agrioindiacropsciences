@@ -173,7 +173,7 @@ export interface ProductsQuery {
 }
 
 // ==================== Distributors ====================
-export type VerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type VerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'ONBOARDING';
 
 export interface DistributorProfileChange {
   field: string;

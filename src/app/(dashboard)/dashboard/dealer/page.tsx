@@ -87,7 +87,7 @@ export default function DealerHomePage() {
   }, [appConfig?.price_list_pdf_url]);
 
   React.useEffect(() => {
-    const fetchAgreementPreview = async () => {
+    const fetchAgreementPreview = React.useCallback(async () => {
       setIsAgreementLoading(true);
       try {
         const blob = await api.getDealerAgreementBlob(false);
@@ -100,7 +100,7 @@ export default function DealerHomePage() {
       } finally {
         setIsAgreementLoading(false);
       }
-    };
+    }, [setIsAgreementLoading, setAgreementPreviewUrl]);
     if (distributorProfile?.verification_status === 'APPROVED') {
       fetchAgreementPreview();
     }
@@ -108,12 +108,12 @@ export default function DealerHomePage() {
     return () => {
       if (agreementPreviewUrl) URL.revokeObjectURL(agreementPreviewUrl);
     };
-  }, [distributorProfile?.verification_status]);
+  }, [distributorProfile?.verification_status, fetchAgreementPreview, agreementPreviewUrl]);
 
-  const nextBanner = () => {
+  const nextBanner = React.useCallback(() => {
     if (banners.length === 0) return;
     setCurrentBanner((prev) => (prev + 1) % banners.length);
-  };
+  }, [banners.length]);
 
   const prevBanner = () => {
     if (banners.length === 0) return;
@@ -124,7 +124,7 @@ export default function DealerHomePage() {
     if (banners.length <= 1) return;
     const timer = setInterval(nextBanner, 5000);
     return () => clearInterval(timer);
-  }, [banners.length]);
+  }, [banners.length, nextBanner]);
 
   const businessName =
     distributorProfile?.business_name ||

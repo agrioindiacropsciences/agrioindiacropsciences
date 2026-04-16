@@ -297,7 +297,7 @@ export default function PriceListPage() {
                                 <AlertCircle className="h-10 w-10 opacity-30" />
                                 <p className="text-xs font-bold uppercase tracking-widest text-center px-4">
                                   Preview Unavailable<br/>
-                                  <span className="opacity-60 text-[10px] normal-case font-normal mt-1 block">Click "Open Original" to view the file</span>
+                                  <span className="opacity-60 text-[10px] normal-case font-normal mt-1 block">Click &quot;Open Original&quot; to view the file</span>
                                 </p>
                               </div>
                             )}

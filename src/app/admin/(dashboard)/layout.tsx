@@ -22,6 +22,7 @@ import {
   Bot,
   LayoutGrid,
   FileClock,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,7 @@ const navItems = [
   { href: "/admin/coupons", icon: Ticket, label: "Coupons" },
   { href: "/admin/distributors", icon: MapPin, label: "Distributors" },
   { href: "/admin/distributors-req", icon: FileClock, label: "Distributors Req" },
+  { href: "/admin/price-list", icon: FileText, label: "Price List" },
   { href: "/admin/banners", icon: ImageIcon, label: "Banners" },
   { href: "/admin/notifications", icon: Bell, label: "Notifications" },
   { href: "/admin/ai-knowledge", icon: Bot, label: "AI Knowledge" },

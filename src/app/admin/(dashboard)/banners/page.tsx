@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   ImageIcon,
@@ -42,7 +41,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import * as api from "@/lib/api";
-import type { Banner } from "@/lib/api";
+import type { Banner, Product, Category } from "@/lib/api";
 
 export default function BannersPage() {
   const { toast } = useToast();
@@ -52,6 +51,8 @@ export default function BannersPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const [formData, setFormData] = useState({
     section: "HOME",
@@ -62,6 +63,7 @@ export default function BannersPage() {
     link_value: "",
     display_order: 0,
     is_active: true,
+    target_audience: "BUYER" as "BUYER" | "DEALER" | "ALL",
   });
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
@@ -87,9 +89,27 @@ export default function BannersPage() {
     setIsLoading(false);
   }, [toast]);
 
+  const fetchLinkData = useCallback(async () => {
+    try {
+      const [prodRes, catRes] = await Promise.all([
+        api.getProducts({ limit: 100 }),
+        api.getCategories(),
+      ]);
+      if (prodRes.success && prodRes.data) {
+        setProducts(prodRes.data.products || []);
+      }
+      if (catRes.success && catRes.data) {
+        setCategories(catRes.data || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch link data:", error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchBanners();
-  }, [fetchBanners]);
+    fetchLinkData();
+  }, [fetchBanners, fetchLinkData]);
 
   const resetForm = () => {
     setFormData({
@@ -101,6 +121,7 @@ export default function BannersPage() {
       link_value: "",
       display_order: banners.length,
       is_active: true,
+      target_audience: "BUYER",
     });
     setSelectedImage(null);
     setImagePreview("");
@@ -147,6 +168,7 @@ export default function BannersPage() {
       fd.append("linkValue", formData.link_value || "");
       fd.append("displayOrder", String(formData.display_order));
       fd.append("isActive", String(formData.is_active));
+      fd.append("targetAudience", formData.target_audience);
       if (formData.title) fd.append("title", formData.title);
 
       fd.append("image", selectedImage);
@@ -191,6 +213,7 @@ export default function BannersPage() {
       link_value: (banner as any).link_value || "",
       display_order: banner.display_order ?? 0,
       is_active: banner.is_active ?? true,
+      target_audience: (banner as any).target_audience || "BUYER",
     });
     setSelectedImage(null);
     setImagePreview("");
@@ -218,6 +241,7 @@ export default function BannersPage() {
       fd.append("linkValue", formData.link_value || "");
       fd.append("displayOrder", String(formData.display_order));
       fd.append("isActive", String(formData.is_active));
+      fd.append("targetAudience", formData.target_audience);
       if (formData.title) fd.append("title", formData.title);
 
       if (selectedImage) {
@@ -340,7 +364,7 @@ export default function BannersPage() {
                     <TableHead className="w-10" />
                     <TableHead className="font-semibold">Preview</TableHead>
                     <TableHead className="font-semibold">Title</TableHead>
-                    <TableHead className="font-semibold">Section</TableHead>
+                    <TableHead className="font-semibold">Target Audience</TableHead>
                     <TableHead className="font-semibold">Order</TableHead>
                     <TableHead className="font-semibold">Status</TableHead>
                     <TableHead className="font-semibold">Actions</TableHead>
@@ -356,7 +380,7 @@ export default function BannersPage() {
                         <TableCell>
                           <div className="relative h-16 w-24 rounded-lg bg-gray-100 overflow-hidden">
                             {banner.image_url ? (
-                              // eslint-disable-next-line @next/next/no-img-element
+                              /* eslint-disable-next-line @next/next/no-img-element */
                               <img
                                 src={banner.image_url}
                                 alt={banner.title || "Banner"}
@@ -371,7 +395,9 @@ export default function BannersPage() {
                         </TableCell>
                         <TableCell className="font-medium">{banner.title || "-"}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary">{(banner as any).section || "HOME"}</Badge>
+                          <Badge variant="outline" className="text-[10px] uppercase">
+                            {(banner as any).target_audience || "BUYER"}
+                          </Badge>
                         </TableCell>
                         <TableCell>{banner.display_order ?? 0}</TableCell>
                         <TableCell>
@@ -405,7 +431,7 @@ export default function BannersPage() {
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-12">
                         <div className="h-16 w-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                          <ImageIcon className="h-8 w-8 text-gray-400" />
+                           <ImageIcon className="h-8 w-8 text-gray-400" />
                         </div>
                         <p className="text-gray-500">No banners yet</p>
                         <Button
@@ -434,18 +460,18 @@ export default function BannersPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Section</Label>
+              <Label>Target Audience</Label>
               <Select
-                value={formData.section}
-                onValueChange={(v) => setFormData({ ...formData, section: v })}
+                value={formData.target_audience}
+                onValueChange={(v: any) => setFormData({ ...formData, target_audience: v })}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="HOME">Home</SelectItem>
-                  <SelectItem value="OFFERS">Offers</SelectItem>
-                  <SelectItem value="PRODUCTS">Products</SelectItem>
+                  <SelectItem value="BUYER">Buyer (Users)</SelectItem>
+                  <SelectItem value="DEALER">Dealer</SelectItem>
+                  <SelectItem value="ALL">All Users</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -531,7 +557,7 @@ export default function BannersPage() {
               <Label>Link Type</Label>
               <Select
                 value={formData.link_type}
-                onValueChange={(v: any) => setFormData({ ...formData, link_type: v })}
+                onValueChange={(v: any) => setFormData({ ...formData, link_type: v, link_value: "" })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -547,11 +573,100 @@ export default function BannersPage() {
             {formData.link_type !== "NONE" && (
               <div>
                 <Label>Link Value</Label>
-                <Input
-                  placeholder={formData.link_type === "URL" ? "https://..." : "ID or slug"}
-                  value={formData.link_value}
-                  onChange={(e) => setFormData({ ...formData, link_value: e.target.value })}
-                />
+                {formData.link_type === "URL" ? (
+                  <Input
+                    placeholder="https://..."
+                    value={formData.link_value}
+                    onChange={(e) => setFormData({ ...formData, link_value: e.target.value })}
+                  />
+                ) : formData.link_type === "PRODUCT" ? (
+                  <Select
+                    value={formData.link_value}
+                    onValueChange={(v) => setFormData({ ...formData, link_value: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          <div className="flex items-center gap-2">
+                            {p.image_url && (
+                              <div className="h-6 w-8 rounded overflow-hidden bg-gray-100 flex-shrink-0">
+                                <img src={p.image_url} alt="" className="w-full h-full object-cover" />
+                              </div>
+                            )}
+                            <span>{p.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : formData.link_type === "CATEGORY" ? (
+                  <Select
+                    value={formData.link_value}
+                    onValueChange={(v) => setFormData({ ...formData, link_value: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={c.slug}>
+                          <div className="flex items-center gap-2">
+                            {c.image_url && (
+                              <div className="h-6 w-8 rounded overflow-hidden bg-gray-100 flex-shrink-0">
+                                <img src={c.image_url} alt="" className="w-full h-full object-cover" />
+                              </div>
+                            )}
+                            <span>{c.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : null}
+
+                {/* Selected Link Preview */}
+                {formData.link_type === "PRODUCT" && formData.link_value && (
+                  <div className="mt-2 p-2 rounded-lg border bg-gray-50 flex items-center gap-3">
+                    {products.find(p => p.id === formData.link_value)?.image_url && (
+                      <div className="h-12 w-16 rounded-md overflow-hidden bg-white border">
+                        <img 
+                          src={products.find(p => p.id === formData.link_value)?.image_url || ""} 
+                          alt="Product" 
+                          className="w-full h-full object-contain" 
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold truncate">
+                        {products.find(p => p.id === formData.link_value)?.name}
+                      </p>
+                      <p className="text-[10px] text-gray-500 uppercase">Product ID: {formData.link_value}</p>
+                    </div>
+                  </div>
+                )}
+
+                {formData.link_type === "CATEGORY" && formData.link_value && (
+                  <div className="mt-2 p-2 rounded-lg border bg-gray-50 flex items-center gap-3">
+                    {categories.find(c => c.slug === formData.link_value)?.image_url && (
+                      <div className="h-12 w-16 rounded-md overflow-hidden bg-white border">
+                        <img 
+                          src={categories.find(c => c.slug === formData.link_value)?.image_url || ""} 
+                          alt="Category" 
+                          className="w-full h-full object-contain" 
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold truncate">
+                        {categories.find(c => c.slug === formData.link_value)?.name}
+                      </p>
+                      <p className="text-[10px] text-gray-500 uppercase">Category Slug: {formData.link_value}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             <div>
@@ -658,6 +773,22 @@ export default function BannersPage() {
               )}
             </div>
             <div>
+              <Label>Target Audience</Label>
+              <Select
+                value={formData.target_audience}
+                onValueChange={(v: any) => setFormData({ ...formData, target_audience: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BUYER">Buyer (Users)</SelectItem>
+                  <SelectItem value="DEALER">Dealer</SelectItem>
+                  <SelectItem value="ALL">All Users</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label>Title</Label>
               <Input
                 placeholder="Banner title"
@@ -669,7 +800,7 @@ export default function BannersPage() {
               <Label>Link Type</Label>
               <Select
                 value={formData.link_type}
-                onValueChange={(v: any) => setFormData({ ...formData, link_type: v })}
+                onValueChange={(v: any) => setFormData({ ...formData, link_type: v, link_value: "" })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -685,10 +816,99 @@ export default function BannersPage() {
             {formData.link_type !== "NONE" && (
               <div>
                 <Label>Link Value</Label>
-                <Input
-                  value={formData.link_value}
-                  onChange={(e) => setFormData({ ...formData, link_value: e.target.value })}
-                />
+                {formData.link_type === "URL" ? (
+                  <Input
+                    value={formData.link_value}
+                    onChange={(e) => setFormData({ ...formData, link_value: e.target.value })}
+                  />
+                ) : formData.link_type === "PRODUCT" ? (
+                  <Select
+                    value={formData.link_value}
+                    onValueChange={(v) => setFormData({ ...formData, link_value: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          <div className="flex items-center gap-2">
+                            {p.image_url && (
+                              <div className="h-6 w-8 rounded overflow-hidden bg-gray-100 flex-shrink-0">
+                                <img src={p.image_url} alt="" className="w-full h-full object-cover" />
+                              </div>
+                            )}
+                            <span>{p.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : formData.link_type === "CATEGORY" ? (
+                  <Select
+                    value={formData.link_value}
+                    onValueChange={(v) => setFormData({ ...formData, link_value: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c.slug} value={c.slug}>
+                          <div className="flex items-center gap-2">
+                            {c.image_url && (
+                              <div className="h-6 w-8 rounded overflow-hidden bg-gray-100 flex-shrink-0">
+                                <img src={c.image_url} alt="" className="w-full h-full object-cover" />
+                              </div>
+                            )}
+                            <span>{c.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : null}
+
+                {/* Selected Link Preview */}
+                {formData.link_type === "PRODUCT" && formData.link_value && (
+                  <div className="mt-2 p-2 rounded-lg border bg-gray-50 flex items-center gap-3">
+                    {products.find(p => p.id === formData.link_value)?.image_url && (
+                      <div className="h-12 w-16 rounded-md overflow-hidden bg-white border">
+                        <img 
+                          src={products.find(p => p.id === formData.link_value)?.image_url || ""} 
+                          alt="Product" 
+                          className="w-full h-full object-contain" 
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold truncate">
+                        {products.find(p => p.id === formData.link_value)?.name}
+                      </p>
+                      <p className="text-[10px] text-gray-500 uppercase">Product ID: {formData.link_value}</p>
+                    </div>
+                  </div>
+                )}
+
+                {formData.link_type === "CATEGORY" && formData.link_value && (
+                  <div className="mt-2 p-2 rounded-lg border bg-gray-50 flex items-center gap-3">
+                    {categories.find(c => c.slug === formData.link_value)?.image_url && (
+                      <div className="h-12 w-16 rounded-md overflow-hidden bg-white border">
+                        <img 
+                          src={categories.find(c => c.slug === formData.link_value)?.image_url || ""} 
+                          alt="Category" 
+                          className="w-full h-full object-contain" 
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold truncate">
+                        {categories.find(c => c.slug === formData.link_value)?.name}
+                      </p>
+                      <p className="text-[10px] text-gray-500 uppercase">Category Slug: {formData.link_value}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             <div>

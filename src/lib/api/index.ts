@@ -5,14 +5,14 @@
 
 import {
   get, post, put, del, patch, postFormData, patchFormData,
-  setTokens, clearTokens, getAccessToken,
+  setTokens, clearTokens, getAccessToken, getBlob,
   API_BASE_URL,
   ApiResponse
 } from './client';
 
 export {
   get, post, put, del, patch, postFormData, patchFormData,
-  setTokens, clearTokens, getAccessToken,
+  setTokens, clearTokens, getAccessToken, getBlob,
   API_BASE_URL
 };
 export type { ApiResponse };
@@ -812,8 +812,11 @@ export async function getAppConfig(): Promise<ApiResponse<T.AppConfig>> {
 /**
  * Get banners
  */
-export async function getBanners(): Promise<ApiResponse<T.Banner[]>> {
-  return get<T.Banner[]>('/config/banners');
+export async function getBanners(role?: string): Promise<ApiResponse<T.Banner[]>> {
+  const params = new URLSearchParams();
+  if (role) params.append('role', role);
+  const qs = params.toString();
+  return get<T.Banner[]>(`/config/banners${qs ? `?${qs}` : ''}`);
 }
 
 // ==================== Admin APIs ====================
@@ -1188,6 +1191,36 @@ async function adminPutFormData<T>(endpoint: string, formData: FormData): Promis
   }
 }
 
+async function adminPatchFormData<T>(endpoint: string, formData: FormData): Promise<ApiResponse<T>> {
+  const token = getAdminToken();
+  const headers: HeadersInit = {
+    ...(token && { 'Authorization': `Bearer ${token}` }),
+  };
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'PATCH',
+      headers,
+      body: formData,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data?.error || { code: 'REQUEST_FAILED', message: data?.message || `Request failed (${response.status})` },
+      } as ApiResponse<T>;
+    }
+    return data as ApiResponse<T>;
+  } catch (error) {
+    return {
+      success: false,
+      error: { code: 'NETWORK_ERROR', message: error instanceof Error ? error.message : 'Network error' },
+    } as ApiResponse<T>;
+  }
+}
+
 // Admin Users
 export async function getAdminUsers(
   pageOrOptions: number | { page?: number; limit?: number; query?: string; status?: string } = 1,
@@ -1425,8 +1458,38 @@ export async function getAdminSettings(): Promise<ApiResponse<Record<string, unk
   return adminGet<Record<string, unknown>>('/admin/settings');
 }
 
+/**
+ * Get a fresh signed URL for the price list (Admin)
+ */
+export async function getPriceListSignedUrl(download = false): Promise<ApiResponse<{ url: string }>> {
+  return adminGet<{ url: string }>(`/admin/settings/price-list/signed-url?download=${download}`);
+}
+
+/**
+ * Get a fresh signed URL for the price list (Public/Dealer)
+ */
+export async function getDealerPriceListSignedUrl(download = false): Promise<ApiResponse<{ url: string }>> {
+  return get<{ url: string }>(`/config/price-list/signed-url?download=${download}`, true);
+}
+
+/**
+ * Get dealer agreement blob for preview/download
+ */
+export async function getDealerAgreementBlob(download = false): Promise<Blob | null> {
+  return getBlob(`/distributors/my-agreement?download=${download}`, true);
+}
+
 export async function updateAdminSettings(data: Record<string, unknown>): Promise<ApiResponse<null>> {
   return adminPut<null>('/admin/settings', data);
+}
+
+/**
+ * Upload official price list PDF
+ */
+export async function updatePriceList(file: File): Promise<ApiResponse<{ url: string }>> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return adminPatchFormData<{ url: string }>('/admin/settings/price-list', formData);
 }
 
 // Admin Reports
@@ -1734,6 +1797,7 @@ export const adminApi = {
   // Settings
   getSettings: getAdminSettings,
   updateSettings: updateAdminSettings,
+  updatePriceList,
   // Reports
   getReport,
   exportReport,

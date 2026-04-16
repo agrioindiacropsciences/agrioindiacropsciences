@@ -155,6 +155,44 @@ export const patch = <T>(endpoint: string, body: unknown, auth = false) =>
 export const del = <T>(endpoint: string, auth = false) =>
   request<T>(endpoint, { method: 'DELETE' }, auth);
 
+/**
+ * Fetch raw binary data as a Blob
+ */
+export async function getBlob(endpoint: string, auth = false): Promise<Blob | null> {
+  const headers: HeadersInit = {};
+  if (auth) {
+    const token = getAccessToken();
+    if (!token) return null;
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (response.status === 401 && auth) {
+      const refreshed = await refreshTokens();
+      if (refreshed) {
+        const newToken = getAccessToken();
+        if (newToken) headers['Authorization'] = `Bearer ${newToken}`;
+        const retryRes = await fetch(`${API_BASE_URL}${endpoint}`, {
+          method: 'GET',
+          headers,
+        });
+        if (retryRes.ok) return await retryRes.blob();
+      }
+    }
+
+    if (response.ok) return await response.blob();
+    return null;
+  } catch (error) {
+    console.error('Failed to fetch blob:', error);
+    return null;
+  }
+}
+
 // FormData upload helper (for file uploads)
 export async function postFormData<T>(endpoint: string, formData: FormData, auth = false): Promise<ApiResponse<T>> {
   const headers: HeadersInit = {};

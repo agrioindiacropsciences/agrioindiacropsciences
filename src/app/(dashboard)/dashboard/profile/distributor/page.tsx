@@ -1025,7 +1025,7 @@ export default function DistributorOnboardingPage() {
                     file={files.aadhaar_front_photo}
                     preview={previews.aadhaar_front_photo}
                     existingUrl={distributorProfile?.aadhaar_front_photo_url}
-                    disabled={hasLockedApprovedProfile || isAadhaarVerified}
+                    disabled={hasLockedApprovedProfile}
                     onSelect={(file) => updateFile("aadhaar_front_photo", file)}
                     onClear={() => clearFile("aadhaar_front_photo")}
                   />
@@ -1034,7 +1034,7 @@ export default function DistributorOnboardingPage() {
                     file={files.aadhaar_back_photo}
                     preview={previews.aadhaar_back_photo}
                     existingUrl={distributorProfile?.aadhaar_back_photo_url}
-                    disabled={hasLockedApprovedProfile || isAadhaarVerified}
+                    disabled={hasLockedApprovedProfile}
                     onSelect={(file) => updateFile("aadhaar_back_photo", file)}
                     onClear={() => clearFile("aadhaar_back_photo")}
                   />

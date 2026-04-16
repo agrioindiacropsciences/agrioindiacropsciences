@@ -556,17 +556,25 @@ export interface AppConfig {
       app_bg_farmer: string;
     };
   };
+  price_list_pdf_url: string | null;
+  price_list_updated_at?: string | null;
 }
 
 export interface Banner {
   id: string;
-  title: string;
-  title_hi: string;
+  section: string;
+  target_audience: 'BUYER' | 'DEALER' | 'ALL';
+  title?: string;
+  title_hi?: string;
   image_url: string;
-  link?: string;
+  image_url_hi?: string;
+  link_type: 'PRODUCT' | 'CATEGORY' | 'URL' | 'NONE';
+  link_value?: string;
   display_order: number;
   is_active: boolean;
-  created_at: string;
+  start_date?: string;
+  end_date?: string;
+  created_at?: string;
 }
 
 export interface SearchResponse {

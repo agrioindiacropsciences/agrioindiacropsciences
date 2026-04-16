@@ -86,21 +86,22 @@ export default function DealerHomePage() {
     fetchDirectPreview();
   }, [appConfig?.price_list_pdf_url]);
 
-  React.useEffect(() => {
-    const fetchAgreementPreview = React.useCallback(async () => {
-      setIsAgreementLoading(true);
-      try {
-        const blob = await api.getDealerAgreementBlob(false);
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          setAgreementPreviewUrl(url);
-        }
-      } catch (error) {
-        console.error("Failed to fetch agreement preview:", error);
-      } finally {
-        setIsAgreementLoading(false);
+  const fetchAgreementPreview = React.useCallback(async () => {
+    setIsAgreementLoading(true);
+    try {
+      const blob = await api.getDealerAgreementBlob(false);
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        setAgreementPreviewUrl(url);
       }
-    }, [setIsAgreementLoading, setAgreementPreviewUrl]);
+    } catch (error) {
+      console.error("Failed to fetch agreement preview:", error);
+    } finally {
+      setIsAgreementLoading(false);
+    }
+  }, [distributorProfile?.verification_status]);
+
+  React.useEffect(() => {
     if (distributorProfile?.verification_status === 'APPROVED') {
       fetchAgreementPreview();
     }
@@ -108,7 +109,7 @@ export default function DealerHomePage() {
     return () => {
       if (agreementPreviewUrl) URL.revokeObjectURL(agreementPreviewUrl);
     };
-  }, [distributorProfile?.verification_status, fetchAgreementPreview, agreementPreviewUrl]);
+  }, [distributorProfile?.verification_status, fetchAgreementPreview]);
 
   const nextBanner = React.useCallback(() => {
     if (banners.length === 0) return;

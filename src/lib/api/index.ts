@@ -548,9 +548,11 @@ export async function getAdminDistributors(params: {
   if (params.status) searchParams.append("status", params.status);
   if (params.requestOnly) searchParams.append("request_only", "true");
 
-  const res = await adminGet<{ distributors: any[]; pagination: T.Pagination }>(
-    `/admin/distributors?${searchParams.toString()}`
-  );
+  const res = await adminGet<{
+    distributors: any[];
+    pagination: T.Pagination;
+    stats?: { pending: number; approved: number; rejected: number };
+  }>(`/admin/distributors?${searchParams.toString()}`);
 
   if (!res.success || !res.data) return res as any;
 

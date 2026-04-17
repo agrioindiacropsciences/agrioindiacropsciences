@@ -208,6 +208,37 @@ export default function DealerHomePage() {
     }
   };
 
+  const handleAgreementPrint = async () => {
+    if (!agreementPreviewUrl) return;
+    setIsPrinting(true);
+    try {
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src = agreementPreviewUrl;
+      document.body.appendChild(iframe);
+
+      iframe.onload = () => {
+        setTimeout(() => {
+          try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+          } catch (e) {
+            console.error("Print failed:", e);
+          }
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+          }, 60000);
+        }, 500);
+      };
+    } catch (error) {
+      console.error("Failed to print agreement:", error);
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-8">
       <div className="rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 p-6 text-white shadow-xl theme-transition">
@@ -489,7 +520,17 @@ export default function DealerHomePage() {
                 variant="ghost" 
                 size="icon" 
                 className="h-8 w-8 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+                onClick={handleAgreementPrint}
+                disabled={isPrinting || isAgreementLoading}
+              >
+                {isPrinting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
                 onClick={handleAgreementDownload}
+                disabled={isAgreementLoading}
               >
                 <Download className="h-4 w-4" />
               </Button>

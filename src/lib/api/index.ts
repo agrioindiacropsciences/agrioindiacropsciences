@@ -536,7 +536,11 @@ export async function getAdminDistributors(params: {
   q?: string;
   status?: string;
   requestOnly?: boolean;
-}): Promise<ApiResponse<{ distributors: T.Distributor[]; pagination: T.Pagination }>> {
+}): Promise<ApiResponse<{
+  distributors: T.Distributor[];
+  pagination: T.Pagination;
+  stats?: { pending: number; approved: number; rejected: number };
+}>> {
   const searchParams = new URLSearchParams();
   if (params.page) searchParams.append("page", String(params.page));
   if (params.limit) searchParams.append("limit", String(params.limit));
@@ -552,7 +556,14 @@ export async function getAdminDistributors(params: {
 
   const distributors = res.data.distributors.map(normalizeAdminDistributor);
 
-  return { success: true, data: { distributors, pagination: res.data.pagination } };
+  return {
+    success: true,
+    data: {
+      distributors,
+      pagination: res.data.pagination,
+      stats: res.data.stats,
+    },
+  };
 }
 
 function normalizeAdminDistributor(d: any): T.Distributor {
@@ -1470,6 +1481,14 @@ export async function getPriceListSignedUrl(download = false): Promise<ApiRespon
  */
 export async function getDealerPriceListSignedUrl(download = false): Promise<ApiResponse<{ url: string }>> {
   return get<{ url: string }>(`/config/price-list/signed-url?download=${download}`, true);
+}
+
+/**
+ * Get dealer agreement blob for preview/download (Admin)
+ */
+export async function getAdminDealerAgreementBlob(distributorId: string, download = false): Promise<Blob | null> {
+  // Use the admin route which is correctly mounted for admin authentication
+  return getBlob(`/admin/distributors/${distributorId}/agreement?download=${download}`, true);
 }
 
 /**

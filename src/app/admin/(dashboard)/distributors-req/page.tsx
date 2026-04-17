@@ -16,8 +16,10 @@ import {
   Search,
   ShieldCheck,
   XCircle,
+  FileSignature,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AgreementViewer } from "@/components/distributors/AgreementViewer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -170,6 +172,7 @@ export default function DistributorRequestsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0 });
 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Distributor | null>(null);
@@ -178,6 +181,8 @@ export default function DistributorRequestsPage() {
   const [dealerCode, setDealerCode] = useState("");
   const [reviewRemarks, setReviewRemarks] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [agreementViewerOpen, setAgreementViewerOpen] = useState(false);
+  const [viewingAgreementId, setViewingAgreementId] = useState<string | null>(null);
 
   const fetchRequests = useCallback(async () => {
     setIsLoading(true);
@@ -195,6 +200,9 @@ export default function DistributorRequestsPage() {
         if (response.data.pagination) {
           setTotalPages(response.data.pagination.totalPages);
           setTotal(response.data.pagination.total);
+        }
+        if (response.data.stats) {
+          setStats(response.data.stats);
         }
       }
     } catch (error) {
@@ -223,11 +231,11 @@ export default function DistributorRequestsPage() {
 
   const visibleStats = useMemo(() => {
     return {
-      pending: requests.filter((item) => item.verification_status === "PENDING").length,
-      approved: requests.filter((item) => item.verification_status === "APPROVED").length,
-      rejected: requests.filter((item) => item.verification_status === "REJECTED").length,
+      pending: stats.pending,
+      approved: stats.approved,
+      rejected: stats.rejected,
     };
-  }, [requests]);
+  }, [stats]);
 
   const activeRequest = selectedRequestDetail || selectedRequest;
   const mapLink = getMapLink(activeRequest);
@@ -314,19 +322,43 @@ export default function DistributorRequestsPage() {
           </p>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <Card className="min-w-[120px] border-yellow-200 bg-yellow-50">
+          <Card
+            className={`min-w-[120px] cursor-pointer transition-all duration-200 border-yellow-200 bg-yellow-50 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] ${
+              statusFilter === "PENDING" ? "ring-2 ring-yellow-400 ring-offset-2" : ""
+            }`}
+            onClick={() => {
+              setStatusFilter("PENDING");
+              setPage(1);
+            }}
+          >
             <CardContent className="p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-yellow-700">Pending</p>
               <p className="mt-2 text-2xl font-bold text-yellow-900">{visibleStats.pending}</p>
             </CardContent>
           </Card>
-          <Card className="min-w-[120px] border-green-200 bg-green-50">
+          <Card
+            className={`min-w-[120px] cursor-pointer transition-all duration-200 border-green-200 bg-green-50 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] ${
+              statusFilter === "APPROVED" ? "ring-2 ring-green-400 ring-offset-2" : ""
+            }`}
+            onClick={() => {
+              setStatusFilter("APPROVED");
+              setPage(1);
+            }}
+          >
             <CardContent className="p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-green-700">Approved</p>
               <p className="mt-2 text-2xl font-bold text-green-900">{visibleStats.approved}</p>
             </CardContent>
           </Card>
-          <Card className="min-w-[120px] border-red-200 bg-red-50">
+          <Card
+            className={`min-w-[120px] cursor-pointer transition-all duration-200 border-red-200 bg-red-50 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] ${
+              statusFilter === "REJECTED" ? "ring-2 ring-red-400 ring-offset-2" : ""
+            }`}
+            onClick={() => {
+              setStatusFilter("REJECTED");
+              setPage(1);
+            }}
+          >
             <CardContent className="p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-red-700">Rejected</p>
               <p className="mt-2 text-2xl font-bold text-red-900">{visibleStats.rejected}</p>
@@ -440,14 +472,30 @@ export default function DistributorRequestsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openDetails(request)}
-                        >
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          {request.verification_status === "APPROVED" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-emerald-700 hover:text-emerald-800 border-emerald-100 hover:bg-emerald-50"
+                              onClick={() => {
+                                setViewingAgreementId(request.id);
+                                setAgreementViewerOpen(true);
+                              }}
+                            >
+                              <FileSignature className="mr-2 h-4 w-4" />
+                              Agreement
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openDetails(request)}
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            Details
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -547,15 +595,30 @@ export default function DistributorRequestsPage() {
                       and take an approval decision from this panel.
                     </p>
                   </div>
-                  <div className="grid min-w-[240px] grid-cols-2 gap-3">
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <p className="text-xs uppercase tracking-wide text-slate-400">Owner</p>
-                      <p className="mt-2 font-semibold">{displayValue(activeRequest.owner_name)}</p>
+                  <div className="flex flex-col gap-3 min-w-[240px]">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <p className="text-xs uppercase tracking-wide text-slate-400">Owner</p>
+                        <p className="mt-2 font-semibold font-mono text-sm leading-tight">{displayValue(activeRequest.owner_name)}</p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <p className="text-xs uppercase tracking-wide text-slate-400">Contact</p>
+                        <p className="mt-2 font-semibold font-mono text-sm leading-tight">{displayValue(activeRequest.phone)}</p>
+                      </div>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <p className="text-xs uppercase tracking-wide text-slate-400">Contact</p>
-                      <p className="mt-2 font-semibold">{displayValue(activeRequest.phone)}</p>
-                    </div>
+                    {activeRequest.verification_status === "APPROVED" && (
+                      <Button
+                        variant="secondary"
+                        className="w-full bg-white/10 text-white hover:bg-white/20 border-white/10"
+                        onClick={() => {
+                          setViewingAgreementId(activeRequest.id);
+                          setAgreementViewerOpen(true);
+                        }}
+                      >
+                        <FileSignature className="mr-2 h-4 w-4 text-emerald-400" />
+                        View Signed Agreement
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -666,7 +729,7 @@ export default function DistributorRequestsPage() {
                       url={activeRequest.aadhaar_back_photo_url}
                     />
                     <DocumentCard
-                      title="Business PAN"
+                      title="Individual PAN"
                       subtitle={displayValue(activeRequest.pan_number)}
                       url={activeRequest.pan_photo_url}
                     />
@@ -777,6 +840,22 @@ export default function DistributorRequestsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Agreement Viewer */}
+      <AgreementViewer
+        isOpen={agreementViewerOpen}
+        onClose={() => {
+          setAgreementViewerOpen(false);
+          setViewingAgreementId(null);
+        }}
+        distributorId={viewingAgreementId || undefined}
+        businessName={
+          activeRequest?.business_name || 
+          activeRequest?.name || 
+          "Dealer Agreement"
+        }
+        dealerCode={activeRequest?.dealer_code}
+      />
     </div>
   );
 }

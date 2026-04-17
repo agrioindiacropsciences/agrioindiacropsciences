@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import * as api from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 export default function PriceListPage() {
   const { toast } = useToast();
@@ -251,16 +252,18 @@ export default function PriceListPage() {
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-                          <Button variant="outline" size="lg" className="flex-1 lg:flex-none h-12 bg-white hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors" onClick={handleDownload}>
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
-                          </Button>
-                          <Button variant="outline" size="lg" className="flex-1 lg:flex-none h-12 bg-white hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors" onClick={handlePrint}>
-                            <Printer className="h-4 w-4 mr-2" />
-                            Print
-                          </Button>
-                          <Button variant="default" size="lg" className="flex-1 lg:flex-none h-12 shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all" onClick={handleOpenOriginal}>
+                        <div className="flex flex-wrap lg:flex-nowrap items-center gap-3 w-full lg:w-auto">
+                          <div className="flex items-center gap-3 flex-1 lg:flex-none">
+                            <Button variant="outline" size="lg" className="flex-1 lg:flex-none h-12 bg-white hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors" onClick={handleDownload}>
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
+                            </Button>
+                            <Button variant="outline" size="lg" className="flex-1 lg:flex-none h-12 bg-white hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors" onClick={handlePrint}>
+                              <Printer className="h-4 w-4 mr-2" />
+                              Print
+                            </Button>
+                          </div>
+                          <Button variant="default" size="lg" className="w-full lg:w-auto h-12 shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all font-bold" onClick={handleOpenOriginal}>
                             <Eye className="h-4 w-4 mr-2" />
                             Open Original
                           </Button>
@@ -305,53 +308,67 @@ export default function PriceListPage() {
                         </div>
 
                         {/* Replace Section */}
-                        <div className="p-8 rounded-2xl bg-gray-50/50 border border-gray-100 flex flex-col justify-center">
-                          <div className="max-w-xl mx-auto w-full text-center space-y-6">
-                            <div className="space-y-2">
-                              <h4 className="text-xl font-bold text-gray-900">Need to update pricing?</h4>
-                              <p className="text-sm text-gray-500">Upload a New PDF to replace the current version. This will immediately update the price list for all users in the mobile app.</p>
-                            </div>
+                        <div className="rounded-2xl border border-gray-100 overflow-hidden bg-gray-50/50 h-full flex flex-col">
+                          <div className="p-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                            <h4 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                              <Plus className="h-4 w-4" />
+                              Update Pricing
+                            </h4>
+                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                              Instant Distribution
+                            </span>
+                          </div>
+                          
+                          <div className="flex-1 p-6 sm:p-8 flex flex-col justify-center bg-white/50">
+                            <div className="max-w-xl mx-auto w-full text-center space-y-6">
+                              <div className="space-y-2">
+                                <h4 className="text-xl font-bold text-gray-900 leading-tight">Need to update pricing?</h4>
+                                <p className="text-sm text-gray-500">
+                                  Upload a New PDF to replace the current version. Changes reflect immediately across the mobile platform.
+                                </p>
+                              </div>
 
-                            <div className="relative">
-                              <Input
-                                type="file"
-                                accept="application/pdf"
-                                onChange={handleFileUpload}
-                                className="hidden"
-                                id="pdf-replace"
-                                disabled={saving}
-                              />
-                              <Label
-                                htmlFor="pdf-replace"
-                                className={cn(
-                                  "flex flex-col items-center justify-center gap-4 w-full py-12 px-8 rounded-2xl border-2 border-dashed transition-all duration-300 cursor-pointer",
-                                  saving 
-                                    ? "border-gray-200 bg-gray-100 cursor-not-allowed" 
-                                    : "border-gray-200 bg-white hover:border-primary hover:bg-primary/5 hover:shadow-inner group"
-                                )}
-                              >
-                                <div className={cn(
-                                  "h-14 w-14 rounded-xl flex items-center justify-center transition-all duration-300",
-                                  saving ? "bg-gray-200" : "bg-primary/10 text-primary group-hover:scale-110 group-hover:bg-primary group-hover:text-white"
-                                )}>
-                                  {saving ? (
-                                    <Loader2 className="h-7 w-7 animate-spin" />
-                                  ) : (
-                                    <Plus className="h-7 w-7" />
+                              <div className="relative">
+                                <Input
+                                  type="file"
+                                  accept="application/pdf"
+                                  onChange={handleFileUpload}
+                                  className="hidden"
+                                  id="pdf-replace"
+                                  disabled={saving}
+                                />
+                                <Label
+                                  htmlFor="pdf-replace"
+                                  className={cn(
+                                    "flex flex-col items-center justify-center gap-4 w-full py-10 px-6 rounded-2xl border-2 border-dashed transition-all duration-300 cursor-pointer",
+                                    saving 
+                                      ? "border-gray-200 bg-gray-100 cursor-not-allowed" 
+                                      : "border-gray-200 bg-white hover:border-primary hover:bg-primary/5 hover:shadow-inner group"
                                   )}
-                                </div>
-                                <div>
-                                  <p className="font-bold text-gray-900 text-lg">
-                                    {saving ? "Replacing Current Version..." : "Replace with New PDF"}
-                                  </p>
-                                  {!saving && <p className="text-sm text-gray-500 mt-1">Drag and drop or click to select file</p>}
-                                </div>
-                              </Label>
-                            </div>
+                                >
+                                  <div className={cn(
+                                    "h-14 w-14 rounded-xl flex items-center justify-center transition-all duration-300 shadow-sm",
+                                    saving ? "bg-gray-200" : "bg-primary/10 text-primary group-hover:scale-110 group-hover:bg-primary group-hover:text-white"
+                                  )}>
+                                    {saving ? (
+                                      <Loader2 className="h-7 w-7 animate-spin" />
+                                    ) : (
+                                      <Plus className="h-7 w-7" />
+                                    )}
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="font-bold text-gray-900 text-lg">
+                                      {saving ? "Replacing Current Version..." : "Replace with New PDF"}
+                                    </p>
+                                    {!saving && <p className="text-xs text-gray-500 font-medium italic">Drag and drop or click to browse</p>}
+                                  </div>
+                                </Label>
+                              </div>
 
-                            <div className="flex items-center justify-center gap-2 p-4 rounded-xl bg-orange-50 text-orange-700 text-xs font-semibold border border-orange-100">
-                              <AlertCircle className="h-4 w-4" />
-                              Warning: This action will permanently overwrite the current document.
+                              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-orange-50/80 text-orange-700 text-[10px] sm:text-[11px] font-bold border border-orange-100 uppercase tracking-tight">
+                                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                This action will permanently overwrite the current document.
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -413,6 +430,5 @@ export default function PriceListPage() {
   );
 }
 
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(" ");
-}
+// Helper function not needed anymore as we import from lib/utils
+

@@ -19,8 +19,10 @@ import {
   ExternalLink,
   Upload,
   XCircle,
+  FileSignature,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AgreementViewer } from "@/components/distributors/AgreementViewer";
 import LocationPicker from "@/components/LocationPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -394,6 +396,8 @@ export default function DistributorsPage() {
     setEditingDistributor(null);
   };
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [agreementViewerOpen, setAgreementViewerOpen] = useState(false);
+  const [viewingAgreementId, setViewingAgreementId] = useState<string | null>(null);
 
   const verificationProfileChangeMap = useMemo(
     () => new Map((verifyingDistributor?.profile_changes || []).map((change) => [change.field, change])),
@@ -886,6 +890,20 @@ export default function DistributorsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
+                          {dist.verification_status === "APPROVED" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                              title="View Agreement"
+                              onClick={() => {
+                                setViewingAgreementId(dist.id);
+                                setAgreementViewerOpen(true);
+                              }}
+                            >
+                              <FileSignature className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1166,19 +1184,34 @@ export default function DistributorsPage() {
                       and compliance information from this panel.
                     </p>
                   </div>
-                  <div className="grid min-w-[240px] grid-cols-2 gap-3">
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <p className="text-xs uppercase tracking-wide text-slate-400">Owner</p>
-                      <p className="mt-2 font-semibold">
-                        {displayValue(editingDistributor.owner_name || editingDistributor.name)}
-                      </p>
+                  <div className="flex flex-col gap-3 min-w-[240px]">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <p className="text-xs uppercase tracking-wide text-slate-400">Owner</p>
+                        <p className="mt-2 font-semibold">
+                          {displayValue(editingDistributor.owner_name || editingDistributor.name)}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <p className="text-xs uppercase tracking-wide text-slate-400">Contact</p>
+                        <p className="mt-2 font-semibold">
+                          {displayValue(formData.phone || editingDistributor.phone)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <p className="text-xs uppercase tracking-wide text-slate-400">Contact</p>
-                      <p className="mt-2 font-semibold">
-                        {displayValue(formData.phone || editingDistributor.phone)}
-                      </p>
-                    </div>
+                    {editingDistributor.verification_status === "APPROVED" && (
+                      <Button
+                        variant="secondary"
+                        className="w-full bg-white/10 text-white hover:bg-white/20 border-white/10"
+                        onClick={() => {
+                          setViewingAgreementId(editingDistributor.id);
+                          setAgreementViewerOpen(true);
+                        }}
+                      >
+                        <FileSignature className="mr-2 h-4 w-4 text-emerald-400" />
+                        View Signed Agreement
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1895,6 +1928,20 @@ export default function DistributorsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AgreementViewer
+        isOpen={agreementViewerOpen}
+        onClose={() => {
+          setAgreementViewerOpen(false);
+          setViewingAgreementId(null);
+        }}
+        distributorId={viewingAgreementId || undefined}
+        businessName={
+          editingDistributor?.business_name || 
+          verifyingDistributor?.business_name ||
+          "Dealer Agreement"
+        }
+        dealerCode={editingDistributor?.dealer_code || verifyingDistributor?.dealer_code}
+      />
     </div>
   );
 }

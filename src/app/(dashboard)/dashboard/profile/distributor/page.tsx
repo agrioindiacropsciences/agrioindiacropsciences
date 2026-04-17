@@ -531,10 +531,10 @@ export default function DistributorOnboardingPage() {
       if (!files.aadhaar_back_photo && !distributorProfile?.aadhaar_back_photo_url) {
         return language === "en" ? "Upload Aadhaar back image." : "आधार बैक इमेज अपलोड करें।";
       }
-      if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(currentPan)) return language === "en" ? "Enter a valid business PAN number." : "मान्य बिज़नेस पैन नंबर दर्ज करें।";
-      if (!isPanVerified) return language === "en" ? "Please verify business PAN." : "कृपया बिज़नेस पैन सत्यापित करें।";
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(currentPan)) return language === "en" ? "Enter a valid Individual PAN number." : "मान्य व्यक्तिगत पैन नंबर दर्ज करें।";
+      if (!isPanVerified) return language === "en" ? "Please verify Individual PAN." : "कृपया व्यक्तिगत पैन सत्यापित करें।";
       if (!files.pan_photo && !distributorProfile?.pan_photo_url) {
-        return language === "en" ? "Upload business PAN image." : "बिज़नेस पैन इमेज अपलोड करें।";
+        return language === "en" ? "Upload Individual PAN image." : "व्यक्तिगत पैन इमेज अपलोड करें।";
       }
     }
 
@@ -608,10 +608,10 @@ export default function DistributorOnboardingPage() {
     if (response.success) {
       setPanVerifiedValue(currentPan);
       toast({
-        title: language === "en" ? "Business PAN verified" : "बिज़नेस पैन सत्यापित",
+        title: language === "en" ? "Individual PAN verified" : "व्यक्तिगत पैन सत्यापित",
         description: language === "en"
-          ? "Business PAN verification completed successfully."
-          : "बिज़नेस पैन सत्यापन सफलतापूर्वक पूरा हो गया।",
+          ? "Individual PAN verification completed successfully."
+          : "व्यक्तिगत पैन सत्यापन सफलतापूर्वक पूरा हो गया।",
         variant: "success",
       });
       return;
@@ -994,8 +994,8 @@ export default function DistributorOnboardingPage() {
             </CardTitle>
             <CardDescription>
               {language === "en"
-                ? "Verify dealer Aadhaar and business PAN before submitting."
-                : "सबमिट करने से पहले डीलर आधार और बिज़नेस पैन सत्यापित करें।"}
+                ? "Verify dealer Aadhaar and Individual PAN before submitting."
+                : "सबमिट करने से पहले डीलर आधार और व्यक्तिगत पैन सत्यापित करें।"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
@@ -1044,7 +1044,7 @@ export default function DistributorOnboardingPage() {
               <div className="space-y-4 rounded-3xl bg-slate-50/70 p-5">
                 <div className="space-y-2">
                   <Label>
-                    {language === "en" ? "Business PAN Number" : "बिज़नेस पैन नंबर"}
+                    {language === "en" ? "Individual PAN Number" : "व्यक्तिगत पैन नंबर"}
                     <span className="ml-1 text-red-500">*</span>
                   </Label>
                   <Input
@@ -1058,11 +1058,11 @@ export default function DistributorOnboardingPage() {
                   {isVerifyingPan ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   {isPanVerified ? <BadgeCheck className="mr-2 h-4 w-4" /> : null}
                   {isPanVerified
-                    ? (language === "en" ? "Business PAN Verified" : "बिज़नेस पैन सत्यापित")
-                    : (language === "en" ? "Verify Business PAN" : "बिज़नेस पैन सत्यापित करें")}
+                    ? (language === "en" ? "Individual PAN Verified" : "व्यक्तिगत पैन सत्यापित")
+                    : (language === "en" ? "Verify Individual PAN" : "व्यक्तिगत पैन सत्यापित करें")}
                 </Button>
                 <DocumentCard
-                  label={language === "en" ? "Business PAN Photo" : "बिज़नेस पैन फोटो"}
+                  label={language === "en" ? "Individual PAN Photo" : "व्यक्तिगत पैन फोटो"}
                   file={files.pan_photo}
                   preview={previews.pan_photo}
                   existingUrl={distributorProfile?.pan_photo_url}

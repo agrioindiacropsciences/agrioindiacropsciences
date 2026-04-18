@@ -7,14 +7,18 @@ import {
   ArrowLeft,
   BadgeCheck,
   Building2,
+  CheckCircle2,
   CreditCard,
   FileCheck2,
   Loader2,
   MapPin,
   ShieldCheck,
   Upload,
+  Camera,
 } from "lucide-react";
 import LocationPicker from "@/components/LocationPicker";
+import CameraCapture from "@/components/CameraCapture";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -33,7 +37,9 @@ type DocKey =
   | "pan_photo"
   | "license_photo"
   | "gst_photo"
-  | "check_photo";
+  | "check_photo"
+  | "check_photo_2"
+  | "owner_photo";
 
 type FormState = {
   business_name: string;
@@ -54,6 +60,14 @@ type FormState = {
   gst_number: string;
   bank_name: string;
   check_number: string;
+  bank_name_2: string;
+  check_number_2: string;
+  bank_account_number: string;
+  bank_ifsc_code: string;
+  bank_account_holder_name: string;
+  bank_actual_name: string;
+  onboarding_lat: string;
+  onboarding_lng: string;
 };
 
 type DraftState = {
@@ -65,6 +79,7 @@ type DraftState = {
   gstVerifiedValue: string | null;
   aadhaarVerifiedValue: string | null;
   aadhaarVerificationId: string | null;
+  bankVerifiedValue: string | null;
 };
 
 const emptyForm: FormState = {
@@ -86,6 +101,14 @@ const emptyForm: FormState = {
   gst_number: "",
   bank_name: "",
   check_number: "",
+  bank_name_2: "",
+  check_number_2: "",
+  bank_account_number: "",
+  bank_ifsc_code: "",
+  bank_account_holder_name: "",
+  bank_actual_name: "",
+  onboarding_lat: "",
+  onboarding_lng: "",
 };
 
 const businessVolumeOptions = [
@@ -138,6 +161,7 @@ function DocumentCard({
   disabled = false,
   onSelect,
   onClear,
+  onCameraClick,
 }: {
   label: string;
   helper?: string;
@@ -145,8 +169,9 @@ function DocumentCard({
   preview: string | null;
   existingUrl?: string | null;
   disabled?: boolean;
-  onSelect: (file: File) => void;
+  onSelect?: (file: File) => void;
   onClear: () => void;
+  onCameraClick?: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const displayPreview = preview || existingUrl || null;
@@ -166,7 +191,12 @@ function DocumentCard({
       <div
         className={`group relative flex h-48 w-full items-center justify-center overflow-hidden rounded-2xl border border-slate-200/80 bg-white md:h-52 ${disabled ? "cursor-not-allowed opacity-75" : "cursor-pointer"}`}
         onClick={() => {
-          if (!disabled) inputRef.current?.click();
+          if (disabled) return;
+          if (onCameraClick) {
+            onCameraClick();
+          } else {
+            inputRef.current?.click();
+          }
         }}
       >
         {displayPreview ? (
@@ -179,9 +209,11 @@ function DocumentCard({
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-4 py-10 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <Upload className="h-5 w-5" />
+              {onCameraClick ? <Camera className="h-5 w-5" /> : <Upload className="h-5 w-5" />}
             </div>
-            <div className="text-sm font-medium text-gray-900">Upload image</div>
+            <div className="text-sm font-medium text-gray-900">
+              {onCameraClick ? "Take real-time photo" : "Upload image"}
+            </div>
           </div>
         )}
       </div>
@@ -193,6 +225,10 @@ function DocumentCard({
         className="hidden"
         disabled={disabled}
         onChange={(event) => {
+          if (onCameraClick) {
+            onCameraClick();
+            return;
+          }
           const selected = event.target.files?.[0];
           if (selected) onSelect(selected);
           event.currentTarget.value = "";
@@ -232,6 +268,8 @@ export default function DistributorOnboardingPage() {
     license_photo: null,
     gst_photo: null,
     check_photo: null,
+    check_photo_2: null,
+    owner_photo: null,
   });
   const [previews, setPreviews] = useState<Record<DocKey, string | null>>({
     aadhaar_front_photo: null,
@@ -240,6 +278,8 @@ export default function DistributorOnboardingPage() {
     license_photo: null,
     gst_photo: null,
     check_photo: null,
+    check_photo_2: null,
+    owner_photo: null,
   });
   const [panVerifiedValue, setPanVerifiedValue] = useState<string | null>(null);
   const [gstVerifiedValue, setGstVerifiedValue] = useState<string | null>(null);
@@ -248,7 +288,13 @@ export default function DistributorOnboardingPage() {
   const [isVerifyingPan, setIsVerifyingPan] = useState(false);
   const [isVerifyingGst, setIsVerifyingGst] = useState(false);
   const [isVerifyingAadhaar, setIsVerifyingAadhaar] = useState(false);
+  const [bankVerifiedValue, setBankVerifiedValue] = useState<string | null>(null);
+  const [verifiedBankName, setVerifiedBankName] = useState<string | null>(null);
+  const [verifiedBankHolder, setVerifiedBankHolder] = useState<string | null>(null);
+  const [isVerifyingBank, setIsVerifyingBank] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [isCapturingLocation, setIsCapturingLocation] = useState(false);
 
   const currentPan = normalizePan(form.pan_number);
   const currentGst = normalizeGst(form.gst_number);
@@ -257,6 +303,7 @@ export default function DistributorOnboardingPage() {
   const isPanVerified = !!panVerifiedValue && panVerifiedValue === currentPan;
   const isGstVerified = true; // GST verification removed
   const isAadhaarVerified = !!aadhaarVerifiedValue && aadhaarVerifiedValue === currentAadhaar;
+  const isBankVerified = !!bankVerifiedValue && bankVerifiedValue === form.bank_account_number;
   const isApprovedDealer = distributorProfile?.verification_status === "APPROVED";
   const isPendingDealer = distributorProfile?.verification_status === "PENDING";
   const hasLockedApprovedProfile = isApprovedDealer;
@@ -308,6 +355,9 @@ export default function DistributorOnboardingPage() {
         setGstVerifiedValue(parsed.gstVerifiedValue);
         setAadhaarVerifiedValue(parsed.aadhaarVerifiedValue);
         setAadhaarVerificationId(parsed.aadhaarVerificationId);
+        setBankVerifiedValue(parsed.bankVerifiedValue);
+        setVerifiedBankName(parsed.verifiedBankName);
+        setVerifiedBankHolder(parsed.verifiedBankHolder);
       } catch {
         // ignore malformed draft
       }
@@ -372,6 +422,10 @@ export default function DistributorOnboardingPage() {
       gst_number: prev.gst_number || distributorProfile?.gst_number || "",
       bank_name: prev.bank_name || distributorProfile?.bank_name || "",
       check_number: prev.check_number || distributorProfile?.security_deposit_check_number || "",
+      bank_name_2: prev.bank_name_2 || distributorProfile?.bank_name2 || "",
+      check_number_2: prev.check_number_2 || distributorProfile?.security_deposit_check_number2 || "",
+      bank_account_number: prev.bank_account_number || distributorProfile?.bank_account_number || (distributorProfile as any)?.bankAccountNumber || "",
+      bank_ifsc_code: prev.bank_ifsc_code || distributorProfile?.bank_ifsc_code || (distributorProfile as any)?.bankIfscCode || "",
     }));
   }, [distributorProfile, user]);
 
@@ -397,6 +451,16 @@ export default function DistributorOnboardingPage() {
         setGstVerifiedValue((prev) => prev ?? normalizeGst(distributorProfile.gst_number || ""));
       }
     }
+
+    // Bank verification hydration
+    const serverBankVerified = distributorProfile.is_bank_verified ?? (distributorProfile as any).isBankVerified;
+    const accountNumber = distributorProfile.bank_account_number || (distributorProfile as any).bankAccountNumber;
+    
+    if (serverBankVerified && accountNumber) {
+      setBankVerifiedValue((prev) => prev ?? accountNumber);
+      setVerifiedBankName((prev) => prev ?? (distributorProfile.actual_bank_name || (distributorProfile as any).actualBankName || distributorProfile.bank_name || null));
+      setVerifiedBankHolder((prev) => prev ?? (distributorProfile.bank_account_holder_name || (distributorProfile as any).bankAccountHolderName || null));
+    }
   }, [distributorProfile, hasLockedApprovedProfile]);
 
   useEffect(() => {
@@ -411,6 +475,29 @@ export default function DistributorOnboardingPage() {
     }
   }, [useSameEmail, user?.email]);
 
+  // IFSC Auto-fill Bank Name
+  useEffect(() => {
+    const ifsc = form.bank_ifsc_code?.trim().toUpperCase();
+    if (ifsc?.length === 11) {
+      const lookupBank = async () => {
+        try {
+          const res = await fetch(`https://ifsc.razorpay.com/${ifsc}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.BANK && !form.bank_actual_name) {
+              updateField("bank_actual_name", data.BANK);
+              // Also auto-fill cheque 1 bank name if empty
+              if (!form.bank_name) updateField("bank_name", data.BANK);
+            }
+          }
+        } catch (err) {
+          console.error("IFSC lookup failed:", err);
+        }
+      };
+      lookupBank();
+    }
+  }, [form.bank_ifsc_code]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -423,6 +510,9 @@ export default function DistributorOnboardingPage() {
       gstVerifiedValue,
       aadhaarVerifiedValue,
       aadhaarVerificationId,
+      bankVerifiedValue,
+      verifiedBankName,
+      verifiedBankHolder,
     };
     window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
   }, [
@@ -567,14 +657,94 @@ export default function DistributorOnboardingPage() {
     if (target === 4) {
       if (!form.bank_name.trim()) return language === "en" ? "Bank name is required." : "बैंक नाम आवश्यक है।";
       if (!CHEQUE_NUMBER_REGEX.test(form.check_number.trim())) {
-        return language === "en" ? "Cheque number must be exactly 6 digits." : "चेक नंबर ठीक 6 अंकों का होना चाहिए।";
+        return language === "en" ? "First cheque number must be exactly 6 digits." : "पहला चेक नंबर ठीक 6 अंकों का होना चाहिए।";
       }
       if (!files.check_photo && !distributorProfile?.security_deposit_check_photo) {
-        return language === "en" ? "Upload cheque image." : "चेक इमेज अपलोड करें।";
+        return language === "en" ? "Upload first cheque image." : "पहली चेक इमेज अपलोड करें।";
+      }
+
+      if (!form.bank_name_2.trim()) return language === "en" ? "Second bank name is required." : "दूसरा बैंक नाम आवश्यक है।";
+      if (!CHEQUE_NUMBER_REGEX.test(form.check_number_2.trim())) {
+        return language === "en" ? "Second cheque number must be exactly 6 digits." : "दूसरा चेक नंबर ठीक 6 अंकों का होना चाहिए।";
+      }
+      if (!files.check_photo_2 && !distributorProfile?.security_deposit_check_photo2) {
+        return language === "en" ? "Upload second cheque image." : "दूसरी चेक इमेज अपलोड करें।";
+      }
+      if (!isBankVerified) {
+        return language === "en" ? "Please verify your bank account." : "कृपया अपना बैंक खाता सत्यापित करें।";
       }
     }
 
     return null;
+  };
+
+  const handleVerifyBank = async () => {
+    if (!form.bank_account_number || !form.bank_ifsc_code) {
+      toast({
+        title: language === "en" ? "Missing Details" : "विवरण गायब हैं",
+        description: language === "en" ? "Please enter bank account number and IFSC code." : "कृपया बैंक खाता संख्या और IFSC कोड दर्ज करें।",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsVerifyingBank(true);
+    try {
+      const res = await api.distributorsApi.verifyDistributorBank({
+        bank_account: form.bank_account_number,
+        ifsc: form.bank_ifsc_code,
+        name: form.bank_account_holder_name || form.business_name
+      });
+
+      if (res.success && res.data) {
+        setBankVerifiedValue(form.bank_account_number);
+        setVerifiedBankName(res.data.bank_name || null);
+        setVerifiedBankHolder(res.data.registered_name || null);
+        toast({
+          title: language === "en" ? "Bank Verified" : "बैंक सत्यापित",
+          description: language === "en" 
+            ? `Verified: ${res.data.registered_name} (${res.data.bank_name})`
+            : `सत्यापित: ${res.data.registered_name} (${res.data.bank_name})`,
+          variant: "success"
+        });
+      } else {
+        toast({
+          title: language === "en" ? "Verification Failed" : "सत्यापन विफल",
+          description: res.message || (language === "en" ? "Could not verify bank account." : "बैंक खाते को सत्यापित नहीं किया जा सका।"),
+          variant: "destructive"
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: language === "en" ? "Error" : "त्रुटि",
+        description: err.message || "Failed to verify bank account",
+        variant: "destructive"
+      });
+    } finally {
+      setIsVerifyingBank(false);
+    }
+  };
+
+  const captureOnboardingLocation = async () => {
+    if (!navigator.geolocation) return;
+    
+    setIsCapturingLocation(true);
+    return new Promise<void>((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          updateField("onboarding_lat", String(pos.coords.latitude));
+          updateField("onboarding_lng", String(pos.coords.longitude));
+          setIsCapturingLocation(false);
+          resolve();
+        },
+        (err) => {
+          console.error("Location capture failed:", err);
+          setIsCapturingLocation(false);
+          resolve(); // Still resolve to not block, but backend will see missing coords if needed
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    });
   };
 
   const validateAllSteps = () => {
@@ -714,10 +884,16 @@ export default function DistributorOnboardingPage() {
     }
 
     setIsSubmitting(true);
+    
+    // Always capture fresh location before submittting
+    await captureOnboardingLocation();
+
     const formData = new FormData();
     formData.append("business_name", form.business_name.trim());
     formData.append("name", form.business_name.trim());
     formData.append("owner_name", user?.full_name || "");
+    formData.append("onboarding_lat", form.onboarding_lat);
+    formData.append("onboarding_lng", form.onboarding_lng);
     formData.append("phone", form.phone.trim());
     formData.append("whatsapp", form.whatsapp.trim());
     formData.append("email", form.email.trim());
@@ -735,6 +911,8 @@ export default function DistributorOnboardingPage() {
     formData.append("gst_number", currentGst);
     formData.append("bank_name", form.bank_name.trim());
     formData.append("check_number", form.check_number.trim());
+    formData.append("bank_name_2", form.bank_name_2.trim());
+    formData.append("check_number_2", form.check_number_2.trim());
 
     (Object.entries(files) as [DocKey, File | null][]).forEach(([key, file]) => {
       if (file) formData.append(key, file);
@@ -994,11 +1172,33 @@ export default function DistributorOnboardingPage() {
             </CardTitle>
             <CardDescription>
               {language === "en"
-                ? "Verify dealer Aadhaar and Individual PAN before submitting."
-                : "सबमिट करने से पहले डीलर आधार और व्यक्तिगत पैन सत्यापित करें।"}
+                ? "Verify Aadhaar and Individual PAN before submitting."
+                : "सबमिट करने से पहले आधार और व्यक्तिगत पैन सत्यापित करें।"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
+            <div className="mb-6 rounded-3xl bg-emerald-50/50 p-6 border border-emerald-100 flex flex-col md:flex-row items-center gap-6">
+              <div className="flex-1 space-y-2 text-center md:text-left">
+                <h4 className="font-bold text-emerald-900 flex items-center justify-center md:justify-start gap-2 text-lg">
+                  <Camera className="h-6 w-6" />
+                  Live Verification Snapshot (Mandatory)
+                </h4>
+                <p className="text-sm text-emerald-700">
+                  Please take a real-time photo for identity verification. This is required for security and account safety.
+                </p>
+              </div>
+              <div className="w-full md:w-auto">
+                <DocumentCard
+                  label=""
+                  file={files.owner_photo}
+                  preview={previews.owner_photo}
+                  existingUrl={distributorProfile?.owner_photo_url}
+                  disabled={hasLockedApprovedProfile}
+                  onCameraClick={() => setShowCamera(true)}
+                  onClear={() => clearFile("owner_photo")}
+                />
+              </div>
+            </div>
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="space-y-4 rounded-3xl bg-slate-50/70 p-5">
                 <div className="space-y-2">
@@ -1150,42 +1350,203 @@ export default function DistributorOnboardingPage() {
             </CardTitle>
             <CardDescription>
               {language === "en"
-                ? "Add the bank and cheque details required for dealer verification."
-                : "डीलर सत्यापन के लिए आवश्यक बैंक और चेक विवरण जोड़ें।"}
+                ? "Add the bank and cheque details required for verification."
+                : "सत्यापन के लिए आवश्यक बैंक और चेक विवरण जोड़ें।"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
-            <div className="grid gap-5 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>
-                  {language === "en" ? "Bank Name" : "बैंक नाम"}
-                  <span className="ml-1 text-red-500">*</span>
-                </Label>
-                <Input value={form.bank_name} disabled={hasLockedApprovedProfile} onChange={(e) => updateField("bank_name", e.target.value)} />
+            <div className="space-y-6">
+              {/* Sub-section 1: Bank Account Verification */}
+              <div className="rounded-2xl bg-primary/5 p-6 border border-primary/10">
+                <h4 className="text-sm font-bold text-primary flex items-center gap-2 mb-4">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white text-xs">1</span>
+                  {language === "en" ? "Account Verification (Penny Drop)" : "बैंक खाता सत्यापन"}
+                </h4>
+                <CardDescription className="mb-4">
+                  {language === "en" 
+                    ? "Enter your actual bank account details. We will verify this by depositing ₹1 and matching details."
+                    : "अपना वास्तविक बैंक खाता विवरण दर्ज करें। हम ₹1 जमा करके और विवरणों का मिलान करके इसे सत्यापित करेंगे।"}
+                </CardDescription>
+
+                <div className="grid gap-5 md:grid-cols-2 mb-4">
+                  <div className="space-y-2">
+                    <Label>
+                      {language === "en" ? "Account Holder Name" : "खाताधारक का नाम"}
+                      <span className="ml-1 text-red-500">*</span>
+                    </Label>
+                    <Input 
+                      value={form.bank_account_holder_name} 
+                      disabled={hasLockedApprovedProfile || isBankVerified} 
+                      onChange={(e) => updateField("bank_account_holder_name", e.target.value)} 
+                      placeholder="As per bank records"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>
+                      {language === "en" ? "Bank Name" : "बैंक नाम"}
+                      <span className="ml-1 text-red-500">*</span>
+                    </Label>
+                    <Input 
+                      value={form.bank_actual_name} 
+                      disabled={hasLockedApprovedProfile || isBankVerified} 
+                      onChange={(e) => updateField("bank_actual_name", e.target.value)} 
+                      placeholder="e.g. HDFC Bank"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>
+                      {language === "en" ? "Account Number" : "खाता संख्या"}
+                      <span className="ml-1 text-red-500">*</span>
+                    </Label>
+                    <Input 
+                      value={form.bank_account_number} 
+                      disabled={hasLockedApprovedProfile || isBankVerified} 
+                      onChange={(e) => updateField("bank_account_number", e.target.value.replace(/\D/g, ""))} 
+                      placeholder="000000000000"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>
+                      {language === "en" ? "IFSC Code" : "IFSC कोड"}
+                      <span className="ml-1 text-red-500">*</span>
+                    </Label>
+                    <Input 
+                      value={form.bank_ifsc_code} 
+                      disabled={hasLockedApprovedProfile || isBankVerified} 
+                      className="uppercase"
+                      onChange={(e) => updateField("bank_ifsc_code", e.target.value.toUpperCase().slice(0, 11))} 
+                      placeholder="SBIN0001234"
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={handleVerifyBank}
+                  disabled={isVerifyingBank || isBankVerified || hasLockedApprovedProfile}
+                  className="w-full md:w-auto"
+                >
+                  {isVerifyingBank ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {language === "en" ? "Verifying..." : "सत्यापित किया जा रहा है..."}
+                    </>
+                  ) : isBankVerified ? (
+                    <>
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      {language === "en" ? "Verified" : "सत्यापित"}
+                    </>
+                  ) : (
+                    language === "en" ? "Verify Account" : "खाता सत्यापित करें"
+                  )}
+                </Button>
+
+                {isBankVerified && (
+                  <div className="mt-6 rounded-2xl bg-primary/5 p-4 border border-primary/10">
+                    <div className="text-xs font-bold text-primary uppercase tracking-wider mb-3">
+                      Verified Bank Details
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <div className="text-[10px] text-muted-foreground uppercase">Account Holder</div>
+                        <div className="text-sm font-semibold">{verifiedBankHolder || "--"}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-muted-foreground uppercase">Bank Name</div>
+                        <div className="text-sm font-semibold">{verifiedBankName || "--"}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-muted-foreground uppercase">Account No.</div>
+                        <div className="text-sm font-semibold">{form.bank_account_number}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-muted-foreground uppercase">IFSC Code</div>
+                        <div className="text-sm font-semibold uppercase">{form.bank_ifsc_code}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="space-y-2">
-                <Label>
-                  {language === "en" ? "Cheque Number" : "चेक नंबर"}
-                  <span className="ml-1 text-red-500">*</span>
-                </Label>
-                <Input
-                  value={form.check_number}
+
+              <hr className="my-2 border-slate-200" />
+
+              {/* Sub-section 2: Security Cheque 1 */}
+              <div className="rounded-2xl bg-slate-50 p-6 border border-slate-200">
+                <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2 mb-4">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-400 text-white text-xs">2</span>
+                  {language === "en" ? "Security Cheque 1" : "सुरक्षा चेक 1"}
+                </h4>
+                <div className="grid gap-5 md:grid-cols-2 mb-4">
+                  <div className="space-y-2">
+                    <Label>
+                      {language === "en" ? "Bank Name" : "बैंक नाम"}
+                      <span className="ml-1 text-red-500">*</span>
+                    </Label>
+                    <Input value={form.bank_name} disabled={hasLockedApprovedProfile} onChange={(e) => updateField("bank_name", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>
+                      {language === "en" ? "Cheque Number" : "चेक नंबर"}
+                      <span className="ml-1 text-red-500">*</span>
+                    </Label>
+                    <Input
+                      value={form.check_number}
+                      disabled={hasLockedApprovedProfile}
+                      inputMode="numeric"
+                      maxLength={6}
+                      onChange={(e) => updateField("check_number", e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    />
+                  </div>
+                </div>
+                <DocumentCard
+                  label={language === "en" ? "Cheque Photo" : "चेक फोटो"}
+                  file={files.check_photo}
+                  preview={previews.check_photo}
+                  existingUrl={distributorProfile?.security_deposit_check_photo}
                   disabled={hasLockedApprovedProfile}
-                  inputMode="numeric"
-                  maxLength={6}
-                  onChange={(e) => updateField("check_number", e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onSelect={(file) => updateFile("check_photo", file)}
+                  onClear={() => clearFile("check_photo")}
+                />
+              </div>
+
+              <div className="rounded-2xl bg-slate-50 p-6 border border-slate-200">
+                <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2 mb-4">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-400 text-white text-xs">3</span>
+                  {language === "en" ? "Security Cheque 2" : "सुरक्षा चेक 2"}
+                </h4>
+                <div className="grid gap-5 md:grid-cols-2 mb-4">
+                  <div className="space-y-2">
+                    <Label>
+                      {language === "en" ? "Bank Name" : "बैंक नाम"}
+                      <span className="ml-1 text-red-500">*</span>
+                    </Label>
+                    <Input value={form.bank_name_2} disabled={hasLockedApprovedProfile} onChange={(e) => updateField("bank_name_2", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>
+                      {language === "en" ? "Cheque Number" : "चेक नंबर"}
+                      <span className="ml-1 text-red-500">*</span>
+                    </Label>
+                    <Input
+                      value={form.check_number_2}
+                      disabled={hasLockedApprovedProfile}
+                      inputMode="numeric"
+                      maxLength={6}
+                      onChange={(e) => updateField("check_number_2", e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    />
+                  </div>
+                </div>
+                <DocumentCard
+                  label={language === "en" ? "Cheque Photo" : "चेक फोटो"}
+                  file={files.check_photo_2}
+                  preview={previews.check_photo_2}
+                  existingUrl={distributorProfile?.security_deposit_check_photo2}
+                  disabled={hasLockedApprovedProfile}
+                  onSelect={(file) => updateFile("check_photo_2", file)}
+                  onClear={() => clearFile("check_photo_2")}
                 />
               </div>
             </div>
-            <DocumentCard
-              label={language === "en" ? "Cheque Photo" : "चेक फोटो"}
-              file={files.check_photo}
-              preview={previews.check_photo}
-              existingUrl={distributorProfile?.security_deposit_check_photo}
-              disabled={hasLockedApprovedProfile}
-              onSelect={(file) => updateFile("check_photo", file)}
-              onClear={() => clearFile("check_photo")}
-            />
           </CardContent>
         </Card>
 
@@ -1219,6 +1580,31 @@ export default function DistributorOnboardingPage() {
               ? "Your progress on this website form is saved locally as you move between steps. Uploaded files need to be selected again if you switch devices or clear browser storage."
               : "जब आप चरण बदलते हैं, तो इस वेबसाइट फ़ॉर्म की प्रगति स्थानीय रूप से सेव होती रहती है। यदि आप डिवाइस बदलते हैं या ब्राउज़र स्टोरेज साफ करते हैं, तो अपलोड की गई फ़ाइलें फिर से चुननी होंगी।")}
       </div>
+
+      <Dialog open={isSubmitting}>
+        <DialogContent className="flex flex-col items-center justify-center border-0 bg-transparent p-0 shadow-none outline-none">
+          <Loader2 className="h-12 w-12 animate-spin text-white" />
+          <p className="mt-4 font-semibold text-white text-center px-6">
+            {isCapturingLocation 
+              ? (language === "en" ? "Verifying Presence & Location..." : "उपस्थिति और स्थान सत्यापित किया जा रहा है...")
+              : (language === "en" ? "Submitting Application..." : "आवेदन जमा किया जा रहा है...")}
+          </p>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCamera} onOpenChange={setShowCamera}>
+        <DialogContent className="max-w-lg p-0 border-0 bg-transparent shadow-none">
+          <DialogTitle className="sr-only">Take Photo</DialogTitle>
+          <CameraCapture 
+            onCapture={async (file) => {
+              updateFile("owner_photo", file);
+              await captureOnboardingLocation();
+              setShowCamera(false);
+            }} 
+            onCancel={() => setShowCamera(false)} 
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

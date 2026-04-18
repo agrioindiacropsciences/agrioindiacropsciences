@@ -508,6 +508,15 @@ export async function getDistributorAadhaarVerificationStatus(
   return get<T.DistributorAadhaarStatusResponse>(`/distributors/verify/aadhaar/status/${verificationId}`, true);
 }
 
+export async function verifyDistributorBank(data: {
+  bank_account: string;
+  ifsc: string;
+  name?: string;
+  phone?: string;
+}): Promise<ApiResponse<T.DistributorBankVerificationResponse>> {
+  return post<T.DistributorBankVerificationResponse>('/distributors/verify/bank', data, true);
+}
+
 /**
  * Onboard distributor (multipart/form-data)
  */
@@ -619,6 +628,14 @@ function normalizeAdminDistributor(d: any): T.Distributor {
     security_deposit_check_photo: d.security_deposit_check_photo || d.securityDepositCheckPhoto,
     security_deposit_check_number: d.security_deposit_check_number || d.securityDepositCheckNumber,
     bank_name: d.bank_name || d.bankName,
+    security_deposit_check_photo2: d.security_deposit_check_photo2 || d.security_deposit_check_photo_2 || d.securityDepositCheckPhoto2,
+    security_deposit_check_number2: d.security_deposit_check_number2 || d.security_deposit_check_number_2 || d.securityDepositCheckNumber2,
+    bank_name2: d.bank_name2 || d.bank_name_2 || d.bankName2,
+    bank_account_number: d.bank_account_number || d.bankAccountNumber,
+    bank_ifsc_code: d.bank_ifsc_code || d.bank_ifsc || d.bankIfscCode || d.bankIfsc,
+    bank_account_holder_name: d.bank_account_holder_name || d.bankAccountHolderName,
+    actual_bank_name: d.actual_bank_name || d.actualBankName,
+    is_bank_verified: d.is_bank_verified ?? d.isBankVerified ?? false,
     is_active: d.is_active ?? d.isActive ?? false,
     created_at: d.created_at || d.createdAt,
     owner_id: d.owner_id || d.ownerId,

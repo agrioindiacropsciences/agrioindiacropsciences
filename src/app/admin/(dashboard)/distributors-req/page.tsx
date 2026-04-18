@@ -147,7 +147,7 @@ function DetailItem({
   mono = false,
 }: {
   label: string;
-  value?: string | number | null;
+  value?: React.ReactNode;
   mono?: boolean;
 }) {
   return (
@@ -155,9 +155,9 @@ function DetailItem({
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
-      <p className={mono ? "font-mono text-sm text-slate-900" : "text-sm font-medium text-slate-900"}>
-        {displayValue(value)}
-      </p>
+      <div className={mono ? "font-mono text-sm text-slate-900" : "text-sm font-medium text-slate-900"}>
+        {value ?? <span className="text-slate-400">Not provided</span>}
+      </div>
     </div>
   );
 }
@@ -628,13 +628,41 @@ export default function DistributorRequestsPage() {
                   <CardContent className="space-y-4 p-6">
                     <div className="flex items-center gap-2">
                       <ShieldCheck className="h-5 w-5 text-primary" />
-                      <h3 className="text-lg font-semibold">Owner Profile</h3>
+                      <h3 className="text-lg font-semibold">Identity Profile</h3>
                     </div>
+                    {activeRequest.owner_photo_url && (
+                      <div className="mb-4 aspect-square max-w-[120px] overflow-hidden rounded-2xl border-2 border-primary/20 ring-4 ring-primary/5">
+                        <Image
+                          src={activeRequest.owner_photo_url}
+                          alt="Identity Snap"
+                          width={120}
+                          height={120}
+                          className="h-full w-full object-cover"
+                          unoptimized
+                        />
+                      </div>
+                    )}
                     <div className="grid gap-4 sm:grid-cols-2">
                       <DetailItem label="Full Name" value={activeRequest.owner_name} />
                       <DetailItem label="Registered Mobile" value={activeRequest.owner_phone || activeRequest.phone} />
                       <DetailItem label="Email Address" value={activeRequest.owner_email || activeRequest.email} />
                       <DetailItem label="Verification Status" value={activeRequest.verification_status} />
+                      {(activeRequest as any).onboarding_lat && (activeRequest as any).onboarding_lng && (
+                        <DetailItem 
+                          label="Snapshot Location" 
+                          value={
+                            <a 
+                              href={`https://www.google.com/maps?q=${(activeRequest as any).onboarding_lat},${(activeRequest as any).onboarding_lng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-primary hover:underline hover:text-emerald-700 font-bold"
+                            >
+                              <MapPin className="h-3.5 w-3.5" />
+                              View on Google Maps
+                            </a>
+                          }
+                        />
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -671,7 +699,7 @@ export default function DistributorRequestsPage() {
                       <DetailItem label="State" value={activeRequest.address_state || activeRequest.state} />
                       <DetailItem label="Pincode" value={activeRequest.address_pincode || activeRequest.pincode} mono />
                       <DetailItem
-                        label="Coordinates"
+                        label="Store Coordinates"
                         value={
                           activeRequest.latitude && activeRequest.longitude
                             ? `${activeRequest.latitude}, ${activeRequest.longitude}`
@@ -679,6 +707,23 @@ export default function DistributorRequestsPage() {
                         }
                         mono
                       />
+                      {activeRequest.onboarding_lat && activeRequest.onboarding_lng && (
+                        <div className="col-span-full rounded-2xl bg-emerald-50/50 p-3 border border-emerald-100 mt-2">
+                          <DetailItem
+                            label="Onboarding Geofence (Verified)"
+                            value={`${activeRequest.onboarding_lat}, ${activeRequest.onboarding_lng}`}
+                            mono
+                          />
+                          <a
+                            href={`https://www.google.com/maps?q=${activeRequest.onboarding_lat},${activeRequest.onboarding_lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 flex items-center gap-1 text-[10px] font-bold uppercase text-emerald-700 hover:underline"
+                          >
+                            Verify Registration Location <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
+                      )}
                     </div>
                     {mapLink ? (
                       <div className="pt-2">
@@ -703,8 +748,22 @@ export default function DistributorRequestsPage() {
                       <h3 className="text-lg font-semibold">Bank & Deposit</h3>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <DetailItem label="Cheque Number" value={activeRequest.security_deposit_check_number} mono />
-                      <DetailItem label="Bank Name" value={activeRequest.bank_name} />
+                      <DetailItem label="Cheque 1 Number" value={activeRequest.security_deposit_check_number} mono />
+                      <DetailItem label="Cheque 1 Bank" value={activeRequest.bank_name} />
+                      {hasValue(activeRequest.security_deposit_check_number2) && (
+                        <>
+                          <DetailItem label="Cheque 2 Number" value={activeRequest.security_deposit_check_number2} mono />
+                          <DetailItem label="Cheque 2 Bank" value={activeRequest.bank_name2} />
+                        </>
+                      )}
+                      {activeRequest.is_bank_verified && (
+                        <>
+                          <DetailItem label="Verified Acc No." value={activeRequest.bank_account_number} mono />
+                          <DetailItem label="Verified IFSC" value={activeRequest.bank_ifsc_code} mono />
+                          <DetailItem label="Account Holder" value={activeRequest.bank_account_holder_name} />
+                          <DetailItem label="Verified Bank" value={activeRequest.actual_bank_name} />
+                        </>
+                      )}
                       <DetailItem label="Dealer Code" value={activeRequest.dealer_code} mono />
                     </div>
                   </CardContent>
@@ -718,6 +777,11 @@ export default function DistributorRequestsPage() {
                     <h3 className="text-lg font-semibold">Verification Documents</h3>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <DocumentCard
+                      title="Live Identity Snapshot"
+                      subtitle="Mandatory identity snapshot"
+                      url={activeRequest.owner_photo_url}
+                    />
                     <DocumentCard
                       title="Aadhaar Front"
                       subtitle={displayValue(activeRequest.aadhaar_number)}
@@ -744,10 +808,17 @@ export default function DistributorRequestsPage() {
                       url={activeRequest.gst_photo_url}
                     />
                     <DocumentCard
-                      title="Security Deposit Cheque"
+                      title="Cheque 1 Photo"
                       subtitle={displayValue(activeRequest.security_deposit_check_number)}
                       url={activeRequest.security_deposit_check_photo}
                     />
+                    {hasValue(activeRequest.security_deposit_check_photo2) && (
+                      <DocumentCard
+                        title="Cheque 2 Photo"
+                        subtitle={displayValue(activeRequest.security_deposit_check_number2)}
+                        url={activeRequest.security_deposit_check_photo2}
+                      />
+                    )}
                   </div>
                 </CardContent>
               </Card>

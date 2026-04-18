@@ -228,6 +228,17 @@ export interface Distributor {
   security_deposit_check_photo?: string;
   security_deposit_check_number?: string;
   bank_name?: string;
+  security_deposit_check_photo2?: string;
+  security_deposit_check_number2?: string;
+  bank_name2?: string;
+  bank_account_number?: string;
+  bank_account_holder_name?: string;
+  bank_ifsc_code?: string;
+  actual_bank_name?: string;
+  is_bank_verified?: boolean;
+  owner_photo_url?: string;
+  onboarding_lat?: number;
+  onboarding_lng?: number;
   is_active: boolean;
   is_verified_by_admin?: boolean;
   created_at: string;
@@ -290,9 +301,22 @@ export interface DistributorAadhaarStatusResponse {
   verification_id: string;
   reference_id?: string | number | null;
   status?: string;
-  user_details?: Record<string, unknown>;
-  document_data?: Record<string, unknown> | null;
-  is_verified?: boolean;
+  message?: string;
+  data?: {
+    full_name?: string;
+    aadhaar_number?: string;
+    [key: string]: any;
+  };
+  raw?: Record<string, unknown>;
+}
+
+export interface DistributorBankVerificationResponse {
+  status?: string;
+  bank_account?: string;
+  ifsc?: string;
+  registered_name?: string | null;
+  bank_name?: string | null;
+  raw?: Record<string, unknown>;
 }
 
 export interface DistributorsQuery {

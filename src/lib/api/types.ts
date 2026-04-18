@@ -273,6 +273,7 @@ export interface DistributorPanVerificationResponse {
   name_match_score?: number;
   name_match_result?: string;
   name_match_bypassed?: boolean;
+  is_verified?: boolean;
   raw?: Record<string, unknown>;
 }
 
@@ -284,6 +285,7 @@ export interface DistributorGstVerificationResponse {
   name_match_score?: number;
   name_match_result?: string;
   name_match_bypassed?: boolean;
+  is_verified?: boolean;
   raw?: Record<string, unknown>;
 }
 
@@ -315,6 +317,7 @@ export interface DistributorAadhaarStatusResponse {
 
 export interface DistributorBankVerificationResponse {
   status?: string;
+  is_verified?: boolean;
   bank_account?: string;
   ifsc?: string;
   registered_name?: string | null;

@@ -1715,6 +1715,7 @@ export const distributorsApi = {
   verifyGst: verifyDistributorGst,
   initiateAadhaarVerification: initiateDistributorAadhaarVerification,
   getAadhaarVerificationStatus: getDistributorAadhaarVerificationStatus,
+  verifyDistributorBank,
   onboard: onboardDistributor,
 };
 

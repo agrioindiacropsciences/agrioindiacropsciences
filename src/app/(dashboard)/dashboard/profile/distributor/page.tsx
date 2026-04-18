@@ -193,7 +193,7 @@ function DocumentCard({
         onClick={() => {
           if (disabled) return;
           if (onCameraClick) {
-            onCameraClick();
+            onCameraClick?.();
           } else {
             inputRef.current?.click();
           }
@@ -226,11 +226,11 @@ function DocumentCard({
         disabled={disabled}
         onChange={(event) => {
           if (onCameraClick) {
-            onCameraClick();
+            onCameraClick?.();
             return;
           }
           const selected = event.target.files?.[0];
-          if (selected) onSelect(selected);
+          if (selected) onSelect?.(selected);
           event.currentTarget.value = "";
         }}
       />

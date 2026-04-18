@@ -302,6 +302,9 @@ export interface DistributorAadhaarStatusResponse {
   reference_id?: string | number | null;
   status?: string;
   message?: string;
+  is_verified?: boolean;
+  user_details?: any;
+  document_data?: any;
   data?: {
     full_name?: string;
     aadhaar_number?: string;

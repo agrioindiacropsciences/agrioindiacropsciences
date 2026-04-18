@@ -80,6 +80,8 @@ type DraftState = {
   aadhaarVerifiedValue: string | null;
   aadhaarVerificationId: string | null;
   bankVerifiedValue: string | null;
+  verifiedBankName: string | null;
+  verifiedBankHolder: string | null;
 };
 
 const emptyForm: FormState = {
